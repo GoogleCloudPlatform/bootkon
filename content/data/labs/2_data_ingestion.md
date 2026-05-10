@@ -9,20 +9,20 @@
 Welcome back{% if MY_NAME %}, {{ MY_NAME }}{% endif %} 😍!
 
 During this lab, you ingest fraudulent and non fraudulent transactions into BigQuery using three methods:
-* **Method 1**: Using BigLake with data stored in [Google Cloud Storage (GCS)](https://cloud.google.com/storage/docs)
+* **Method 1**: Using Lakehouse for Apache Iceberg with data stored in [Google Cloud Storage (GCS)](https://cloud.google.com/storage/docs)
 * **Method 2**: Near real-time ingestion into BigQuery using [Cloud Pub/Sub](https://cloud.google.com/pubsub/docs)
-* **Method 3**: Batch ingestion into BigQuery using [Dataproc Serverless](https://cloud.google.com/dataproc-serverless/docs)
+* **Method 3**: Batch ingestion into BigQuery using [Managed Service for Apache Spark](https://docs.cloud.google.com/dataproc-serverless/docs)
 
 
 For all methods, we are ingesting data from the bucket you have created in the previous lab.
 
 ***
 
-### Method 1: External table using BigLake
+### Method 1: External table using Lakehouse for Apache Iceberg (aka Lakehouse)
 
-BigLake tables allow querying structured data in external data stores with access delegation. For an overview, refer to the [BigLake documentation](https://cloud.google.com/biglake). Access delegation decouples access to the BigLake table from access to the underlying data store. An external connection associated with a service account is used to connect to the data store.
+Lakehouse tables allow querying structured data in external data stores with access delegation. For an overview, refer to the [Lakehouse documentation](https://docs.cloud.google.com/lakehouse/docs/introduction). Access delegation decouples access to the Lakehouse table from access to the underlying data store. An external connection associated with a service account is used to connect to the data store.
 
-Because the service account handles retrieving data from the data store, you only have to grant users access to the BigLake table. This lets you enforce fine-grained security at the table level, including row-level and column-level security.
+Because the service account handles retrieving data from the data store, you only have to grant users access to the Lakehouse table. This lets you enforce fine-grained security at the table level, including row-level and column-level security.
 
 First, we create the connection resource in BigQuery:
 ```bash
@@ -127,7 +127,7 @@ Note that you can also execute a query using the `bq` tool:
 bq --location=us query --nouse_legacy_sql "SELECT Time, V1, Amount, Class FROM {{ PROJECT_ID }}.ml_datasets.ulb_fraud_detection_biglake LIMIT 10;"
 ```
 
-The data you are querying still resides on Cloud Storage and there are no copies stored in BigQuery. When using BigLake, BigQuery acts as query engine but not as storage layer.
+The data you are querying still resides on Cloud Storage and there are no copies stored in BigQuery. When using Lakehouse, BigQuery acts as query engine but not as storage layer.
 
 ***
 
@@ -220,9 +220,9 @@ Next, have a look at <walkthrough-editor-open-file filePath="src/data_ingestion/
 
 ***
 
-### Method 3: Ingestion using Cloud Dataproc (Apache Spark)
+### Method 3: Ingestion using Managed Service for Apache Spark (aka Managed Apache Spark)
 
-[Dataproc](https://cloud.google.com/dataproc/docs/concepts/overview) is a fully managed and scalable service for running Apache Hadoop, Apache Spark, Apache Flink, Presto, and 30+ open source tools and frameworks. Dataproc allows data to be loaded and also transformed or pre-processed as it is brought in.
+[Managed Apache Spark](https://docs.cloud.google.com/dataproc/docs/concepts/overview) is a fully managed and scalable service for running Apache Hadoop, Apache Spark, Apache Flink, Presto, and 30+ open source tools and frameworks. Managed Apache Spark allows data to be loaded and also transformed or pre-processed as it is brought in.
 
 Create an empty BigQuery table:
 ```bash
@@ -251,9 +251,9 @@ gcloud dataproc batches submit pyspark content/data/src/data_ingestion/import_pa
     --deps-bucket=gs://${PROJECT_ID}-bucket
 ```
 
-While the command is still running, open the [DataProc Console](https://console.cloud.google.com/dataproc/batches) and monitor the job.
+While the command is still running, open the [Managed Apache Spark Console](https://console.cloud.google.com/dataproc/batches) and monitor the job.
 
-After the Dataproc job completes, confirm that data has been loaded into the BigQuery table. You should see over 200,000 records, but the exact count isn't critical:
+After the Managed Apache Spark job completes, confirm that data has been loaded into the BigQuery table. You should see over 200,000 records, but the exact count isn't critical:
 ```bash
 bq --location=us query --nouse_legacy_sql "SELECT count(*) as count FROM {{ PROJECT_ID }}.ml_datasets.ulb_fraud_detection_dataproc;"
 ```
@@ -266,6 +266,6 @@ bq --location=us query --nouse_legacy_sql "SELECT count(*) as count FROM {{ PROJ
 
 🎉 Congratulations{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! 🚀
 
-You’ve officially leveled up in data wizardry! By conquering the BigQuery Code Lab, you've shown your skills in not just one, but three epic methods: BigLake (riding the waves of data), DataProc (processing like a boss), and Pub/Sub (broadcasting brilliance).
+You’ve officially leveled up in data wizardry! By conquering the BigQuery Code Lab, you've shown your skills in not just one, but three epic methods: Lakehouse (riding the waves of data), Managed Apache Spark (processing like a boss), and Pub/Sub (broadcasting brilliance).
 
 Your pipelines are now flawless, your tables well-fed, and your data destiny secured. Welcome to the realm of BigQuery heroes —{% if MY_NAME %}{{ MY_NAME }}, {% endif %} the Master of Ingestion! 🦾💻
