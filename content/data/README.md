@@ -10,10 +10,10 @@ This event is comprised of the following code labs:
 | Duration | Topic | Details |
 | --- | --- | --- |
 | 30min | Environment Setup | Log into your GCP account and set up your environment. |
-| 45min | Data Ingestion | Ingest data using three different methods: BigLake, Pub/Sub, and DataProc |
+| 45min | Data Ingestion | Ingest data using three different methods: Lakehouse for Apache Iceberg (formerly BigLake), Pub/Sub, and Managed Service for Apache Spark (formerly Dataproc) |
 | 45min | Dataform | Create version-controlled SQL workflows for BigQuery |
 | 60min | Machine Learning | Train a model on fraud detection and create an automated ML pipeline | 
-| 60min | Dataplex | Data governance at scale using Dataplex | 
+| 60min | Dataplex | Data governance at scale using Knowledge Catalog (formerly Dataplex) | 
 
 You can navigate this handbook using the `<` and `>` buttons on the right and left hand side, respectively. To get started, please press the `>` button on the right hand side now.
 
@@ -29,7 +29,7 @@ Those data files are stored in a github repository. Your first task is to store 
 
 **Data Ingestion Layer**  
 You will bring this data into your [BigQuery AI Lakehouse](https://services.google.com/fh/files/emails/google-cloud-analytics-lakehouse_.pdf) environment. 
-For batch data, you’ll use [Dataproc Serverless](https://cloud.google.com/dataproc-serverless/docs) and [BigLake](https://cloud.google.com/biglake?e=48754805&hl=en). 
+For batch data, you’ll use [Managed Service for Apache Spark](https://docs.cloud.google.com/dataproc-serverless/docs) and [Lakehouse for Apache Iceberg](https://docs.cloud.google.com/lakehouse/docs/introduction). 
 For near real-time data, you’ll use [Pub/Sub](https://cloud.google.com/pubsub/docs/overview) to handle data as it comes in. 
 Because we want to simulate data ingestion at scale, we will be using the raw data that you have stored in GCS to simulate both batch and real time ingestion.
 These tools help you get the data ready for processing and analysis.
@@ -39,10 +39,10 @@ These tools help you get the data ready for processing and analysis.
 Think of this as the main camp where all your data hangs out. It’s a GCP product called BigQuery, and it’s designed to work with different types of data, whether it’s structured neatly in tables or unstructured like a pile of text documents. Here, you can run different data operations without moving data around.
 
 **Data Governance Layer**
-This is where you ensure that your data is clean, secure, and used properly. Using [Dataplex](https://cloud.google.com/dataplex), you’ll set rules and checks to maintain data quality and governance.
+This is where you ensure that your data is clean, secure, and used properly. Using [Knowledge Catalog](https://cloud.google.com/products/knowledge-catalog), you’ll set rules and checks to maintain data quality and governance.
 
 **Consumption Layer**   
-Once you have your insights, you’ll use tools like [Vertex AI](https://cloud.google.com/vertex-ai) for machine learning tasks and [Looker Studio](https://cloud.google.com/looker-studio) for creating reports and dashboards. This is where you turn data into something valuable, like detecting fraud or understanding customer sentiment.
+Once you have your insights, you’ll use tools like [Gemini Enterprise Agent Platform](https://cloud.google.com/products/gemini-enterprise-agent-platform) (formerly Vertex AI) for machine learning tasks and [Data Studio](https://cloud.google.com/data-studio) (formerly Looker Studio) for creating reports and dashboards. This is where you turn data into something valuable, like detecting fraud or understanding customer sentiment.
 Your goal is to share the results of your data predictions to your customers in a secure and private way. You will be using Analytics Hub for data sharing.
 
 Throughout the event, you’ll be moving through these layers, using each tool to prepare, analyze, and draw insights from the data. You’ll see how they all connect to make a complete data analytics workflow on the cloud.

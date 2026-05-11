@@ -27,7 +27,7 @@ project_id = os.environ['PROJECT_ID']
 topic_id = "fraud-detection-topic"
 bucket_name = os.environ['PROJECT_ID'] + "-bucket"
 csv_folder_path = "data/csv/ulb_fraud_detection/"
-schema_file_path = "src/data_ingestion/fraud_detection_pubsub_schema.json"
+schema_file_path = "content/data/src/data_ingestion/fraud_detection_pubsub_schema.json"
 
 # Initialize Cloud Storage client
 storage_client = storage.Client()
