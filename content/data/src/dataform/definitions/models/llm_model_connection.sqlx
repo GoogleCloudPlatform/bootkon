@@ -14,4 +14,4 @@ config {
 
 CREATE OR REPLACE MODEL ulb_fraud_detection_llm.ulb_fraud_detection_llm_model
   REMOTE WITH CONNECTION `us.llm-connection`
-  OPTIONS (ENDPOINT = 'gemini-2.0-flash');
+  OPTIONS (ENDPOINT = 'gemini-2.5-flash');
