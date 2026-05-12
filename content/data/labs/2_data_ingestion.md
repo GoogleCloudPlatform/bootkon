@@ -87,7 +87,7 @@ Next, we connect the data in Cloud Storage to BigQuery:
 - Dataset: `ml_datasets`
 - Table: `ulb_fraud_detection_biglake`
 - Table type: `External table`
-- Check *Create a BigLake table using a Cloud Resource connection*
+- Check *Create a Lakehouse table using a Cloud Resource connection*
 - Connection ID: Select `us.fraud-transactions-conn`
 - Schema: `Auto detect`
 6. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Create table'})">Create table</walkthrough-spotlight-pointer>
