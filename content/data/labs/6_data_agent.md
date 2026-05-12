@@ -48,4 +48,19 @@ Join relationships:
 - This is a single denormalized lakehouse table. No joins are necessary for standard fraud analysis.
 ``` 
 
+
 To get the most out of the BigQuery Conversational Agent, we provided it with context about our dataset. Our `Time` column, for example, currently contains a `FLOAT` representing the number of seconds elapsed since **September 1, 2013, at 00:00:00**. We can instruct the agent to automatically convert this for us, along with defining synonyms and exclusions.
+
+Let us now publish the agent. In the top bar, 
+1. Click ``Save``
+2. Followed by ``Publish``
+
+Now you can start a conversation. Locate the ``Create conversation`` button in the top bar and press it.
+
+You can try any of the following questions or come up with your own:
+
+- What is the total number of transactions and the percentage of fraudulent ones?
+- What was the largest transaction amount recorded for a fraudulent transaction?
+- Forecast the expected transaction volume for the next 7 days based on historical trends.
+
+
