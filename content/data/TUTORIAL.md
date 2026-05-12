@@ -72,6 +72,9 @@ If neither is `None`, press the `START` button below to get started!
 
 {% include 'data/labs/5_dataplex.md' %}
 
+{% include 'data/labs/6_data_agent.md' %}
+
+
 ## The end
 
 You've made it! Congratulations and thank you for participating in this event.
