@@ -207,14 +207,14 @@ Go to [Dataform](https://console.cloud.google.com/bigquery/dataform)\> <walkthro
 
 ### Execute the workspace workflow
 
-For  the sentiment inference step to succeed, you need to grant the external connection service account the Vertex AI user privilege. More details can be found in this [link](https://cloud.google.com/bigquery/docs/generate-text-tutorial#grant-permissions). 
+For  the sentiment inference step to succeed, you need to grant the external connection service account the Agent Platform User role. More details can be found in this [link](https://cloud.google.com/bigquery/docs/generate-text-tutorial#grant-permissions). 
 
 1. You can find the service account ID under [BigQuery Studio](https://console.cloud.google.com/bigquery) \> <walkthrough-spotlight-pointer locator="semantic({tab 'Explorer'})">Explorer</walkthrough-spotlight-pointer> \> ``{{ PROJECT_ID }}`` \> <walkthrough-spotlight-pointer locator="semantic({treeitem 'Connections'})">Connections</walkthrough-spotlight-pointer> \> `fraud-transactions-conn`  
      
  <img src= "../img/lab3/serviceaccountconnection.png" alt="serviceaccountconnection" style="border: 1px solid grey;">  
 
-2. Take note of the service account and grant it the `Vertex AI User` role in [IAM](https://console.cloud.google.com/iam-admin).   
- <img src= "../img/lab3/vertexairole.png" alt="vertexairole" style="border: 1px solid grey;">
+2. Take note of the service account and grant it the `Agent Platform User` role in [IAM](https://console.cloud.google.com/iam-admin).   
+ <img src= "../img/lab3/agentplatformrole.png" alt="agentplatformrole" style="border: 1px solid grey;">
      
 3. Back in your [Dataform](https://console.cloud.google.com/bigquery/dataform) workspace, click <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})"> Start execution</walkthrough-spotlight-pointer> from the top menu, then <walkthrough-spotlight-pointer locator="semantic({menuitem 'Execute actions'})">Execute Actions</walkthrough-spotlight-pointer>
 
