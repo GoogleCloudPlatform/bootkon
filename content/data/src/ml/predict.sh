@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-INPUT_DATA_FILE="src/ml/instances.json"
+INPUT_DATA_FILE="content/data/src/ml/instances.json"
 ENDPOINT_ID="$(gcloud ai endpoints list --region=$REGION \
     --filter=display_name=bootkon-endpoint \
     | grep ENDPOINT_ID | awk '{ print $2 }' | head -n 1)"
