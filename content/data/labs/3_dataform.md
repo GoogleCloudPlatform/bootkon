@@ -42,7 +42,7 @@ First step in implementing a pipeline in Dataform is to set up a repository and 
 
 Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of the BigQuery console).
 
-1. Click on <walkthrough-spotlight-pointer locator="css(a[id$=create-repository])">+ CREATE REPOSITORY</walkthrough-spotlight-pointer>
+1. Click on <walkthrough-spotlight-pointer locator="css(a[id$=create-repository])">Create Repository</walkthrough-spotlight-pointer>
 
 2. Use the following values when creating the repository:
 
@@ -52,7 +52,7 @@ Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of th
 3. For the service account, enter and manually choose the following service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
 
 
-4. And click on <walkthrough-spotlight-pointer locator="text('create')">CREATE</walkthrough-spotlight-pointer>
+4. And click on <walkthrough-spotlight-pointer locator="text('create')">Create</walkthrough-spotlight-pointer>
 
 
 5. Select <walkthrough-spotlight-pointer locator="semantic({button 'Grant all'})">Grant all</walkthrough-spotlight-pointer> required roles for the service-account to execute queries in Dataform
