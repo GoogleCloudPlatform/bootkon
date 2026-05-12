@@ -6,7 +6,7 @@
 <bootkon-cloud-shell-note/>
 
 During this lab, you gather user feedback to assess the impact of model adjustments on real-world use (prediction), ensuring that our fraud detection system effectively balances accuracy with user satisfaction. 
-* Use Dataform, BigQuery and Gemini to Perform sentiment analysis of customer feedback.
+* Use Dataform, BigQuery and Gemini to perform sentiment analysis of customer feedback.
 ### Dataform 
 
 Dataform is a fully managed service that helps data teams build, version control, and orchestrate SQL workflows in BigQuery. It provides an end-to-end experience for data transformation, including:
@@ -47,16 +47,13 @@ Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of th
 2. Use the following values when creating the repository:
 
     Repository ID: `hackathon-repository` \
-    Region: `us-central1` \
-    Service Account: `Default Dataform service account`
+    Region: `us-central1` 
 
-3. Set actAs permission checks to `Don't enforce`
+3. For the service account, enter and manually choose the following service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
+
 
 4. And click on <walkthrough-spotlight-pointer locator="text('create')">CREATE</walkthrough-spotlight-pointer>
 
-{% set DATAFORM_SA = "service-{}@gcp-sa-dataform.iam.gserviceaccount.com".format(PROJECT_NUMBER) %}
-
-    The dataform service account you see on your screen should be `{{ DATAFORM_SA }}`. We will need it later.
 
 5. Select <walkthrough-spotlight-pointer locator="semantic({button 'Grant all'})">Grant all</walkthrough-spotlight-pointer> required roles for the service-account to execute queries in Dataform
 
@@ -83,7 +80,7 @@ In the **Create development workspace** window, do the following:
 
 We will now set up our custom workflow.
 
-1. Edit the `workflow_settings.yaml`file :
+1. Edit the `workflow_settings.yaml`file
 
 2. Replace `defaultDataset` value with ``ml_datasets``
 
@@ -167,22 +164,22 @@ Notice the usage of `$ref` in line 11, of `definitions/mview_ulb_fraud_detection
 
 Run the dataset creation by **Tag**. Tag allow you to just execute parts of the workflows and not the entire workflow. 
 
-Note: If you have previously granted all required roles for the service account `{{ DATAFORM_SA }}` then you can skip step 1-5
+Note: If you have previously granted all required roles for the service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com` then you can skip step 1-5
 
 1. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})">Start execution</walkthrough-spotlight-pointer> > <walkthrough-spotlight-pointer locator="text('tags')">Tags</walkthrough-spotlight-pointer> \> <walkthrough-spotlight-pointer locator="text('dataset_ulb_fraud_detection_llm')">dataset_ulb_fraud_detection_llm</walkthrough-spotlight-pointer>
 
-    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `{{ DATAFORM_SA }}`
+    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
 
     Then click 
     <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})"> Start execution</walkthrough-spotlight-pointer>
 
 2. Click on <walkthrough-spotlight-pointer locator="semantic({link 'Details'})">DETAILS</walkthrough-spotlight-pointer>
 
-    Notice the Access Denied error on BigQuery for the dataform service account `{{ DATAFORM_SA }}`. If did not receive an error, you can skip step 3-6.
+    Notice the Access Denied error on BigQuery for the dataform service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`. If you did not receive an error, you can skip step 3-6.
 
 3. Go to [IAM & Admin](https://console.cloud.google.com/iam-admin)
 
-4. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Grant access'})">GRANT ACCESS</walkthrough-spotlight-pointer> and grant `BigQuery Data Editor , BigQuery Job User and BigQuery Connection User` to the principal `{{ DATAFORM_SA }}`.
+4. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Grant access'})">GRANT ACCESS</walkthrough-spotlight-pointer> and grant `BigQuery Data Editor , BigQuery Job User and BigQuery Connection User` to the principal `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`.
 
 5. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Save'})">SAVE</walkthrough-spotlight-pointer>
 
@@ -193,7 +190,7 @@ Note: If you have previously granted all required roles for the service account 
 6. Go back to [Dataform](https://console.cloud.google.com/bigquery/dataform) within in BigQuery, and retry <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})">Start execution</walkthrough-spotlight-pointer> > <walkthrough-spotlight-pointer locator="text('tags')">Tags</walkthrough-spotlight-pointer> \> <walkthrough-spotlight-pointer locator="text('dataset_ulb_fraud_detection_llm')">dataset_ulb_fraud_detection_llm</walkthrough-spotlight-pointer>
 
 
-    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `{{ DATAFORM_SA }}`
+    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
 
     Then click 
     <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})"> Start execution</walkthrough-spotlight-pointer>
@@ -201,7 +198,7 @@ Note: If you have previously granted all required roles for the service account 
 Notice the execution status. It should be a success.  
  
 7. Lastly, go to Compiled graph and explore it.
-Go to [Dataform](https://console.cloud.google.com/bigquery/dataform)\> <walkthrough-spotlight-pointer locator="text('hackathon-repository')">hackathon-repository</walkthrough-spotlight-pointer>>`hackathon-{{ MY_NAME | lower }}-workspace` \> <walkthrough-spotlight-pointer locator="semantic({tab 'Compiled graph tab'})">COMPILED GRAPH</walkthrough-spotlight-pointer>
+Go to [Dataform](https://console.cloud.google.com/bigquery/dataform)\> <walkthrough-spotlight-pointer locator="text('hackathon-repository')">hackathon-repository</walkthrough-spotlight-pointer>>`hackathon-{{ MY_NAME | lower }}-workspace` \> <walkthrough-spotlight-pointer locator="semantic({tab 'Compiled graph tab'})">Compiled Graph</walkthrough-spotlight-pointer>
 
 ***
 
@@ -218,9 +215,8 @@ For  the sentiment inference step to succeed, you need to grant the external con
      
 3. Back in your [Dataform](https://console.cloud.google.com/bigquery/dataform) workspace, click <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})"> Start execution</walkthrough-spotlight-pointer> from the top menu, then <walkthrough-spotlight-pointer locator="semantic({menuitem 'Execute actions'})">Execute Actions</walkthrough-spotlight-pointer>
 
-    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `{{ DATAFORM_SA }}`
+    At the top where it says "Authentication", make sure you select `Execute with selected service account ` and choose your dataform service account: `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
 
- 
 4. Click on <walkthrough-spotlight-pointer locator="semantic({radio 'All actions'})">ALL ACTIONS</walkthrough-spotlight-pointer> Tab followed by choosing <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})">Start execution</walkthrough-spotlight-pointer>  
  
 5. Check the execution status. It should be a success.  
