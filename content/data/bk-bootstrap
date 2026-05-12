@@ -86,6 +86,8 @@ declare -a dataform_roles=(
     "roles/bigquery.connectionUser" # BigQuery Connection User
     "roles/bigquery.dataEditor"     # BigQuery Data Editor
     "roles/bigquery.jobUser"        # BigQuery Job User
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
 )
 
 for role in "${dataform_roles[@]}"; do
