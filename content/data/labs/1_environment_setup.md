@@ -33,6 +33,7 @@ First, we need to enable some Google Cloud Platform (GCP) services. Enabling GCP
   cloudaicompanion.googleapis.com,
   iam.googleapis.com,
   iap.googleapis.com,
+  iamconnectors.googleapis.com,
   geminidataanalytics.googleapis.com,
   cloudfunctions.googleapis.com,
   artifactregistry.googleapis.com">
