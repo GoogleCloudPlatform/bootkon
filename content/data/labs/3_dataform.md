@@ -49,7 +49,7 @@ Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of th
     Repository ID: `hackathon-repository` \
     Region: `us-central1` 
 
-3. For the service account, enter and manually choose the following service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`
+3. Service account: `Bootkon Dataform Service Account (dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com)`
 
 
 4. And click on <walkthrough-spotlight-pointer locator="text('create')">Create</walkthrough-spotlight-pointer>
