@@ -17,7 +17,7 @@ declare -a user_roles=(
     "roles/storage.admin" # Admin on Cloud Storage
     "roles/storage.objectViewer" # Can view Cloud Storage objects
     "roles/storage.objectAdmin" # Admin on Cloud Storage objects
-    "roles/iam.serviceAccountUser" # Can use service accounts
+    "roles/iam.serviceAccountAdmin" # Can use service accounts
     "roles/pubsub.admin" # Admin on Pub/Sub
     "roles/artifactregistry.admin" # Artifact Registry admin
     "roles/resourcemanager.projectIamAdmin" # Project IAM admin
