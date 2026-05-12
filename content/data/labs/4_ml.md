@@ -74,7 +74,7 @@ Once the training job has finished, the resulting model is uploaded to the model
 2. Click <walkthrough-spotlight-pointer locator="semantic({link 'bootkon-model'})">bootkon-model</walkthrough-spotlight-pointer>
 3. Click <walkthrough-spotlight-pointer locator="semantic({tab 'Version details'})">Version details</walkthrough-spotlight-pointer>
 
-Here you can can see that a model in the Vertex AI Model Registry is made up from a **Container image** as well as a **Model artifact location**. When you deploy a model, Vertex AI simply starts the container and points it to the artifact location.
+Here you can can see that a model in the Agent Platform Model Registry is made up from a **Container image** as well as a **Model artifact location**. When you deploy a model, Vertex AI simply starts the container and points it to the artifact location.
 
 ### Endpoint for Predictions
 
@@ -85,9 +85,9 @@ The endpoint is created in a parallel branch in the pipeline you just ran. You c
 
 You can see that the endpoint has one model deployed currently, and all the traffic is routed to it (traffic split is 100%). When scrolling down, you get live graphs as soon as predictions are coming in.
 
-You can also train and deploy models on Vertex in the UI only. Let's have a more detailed look. Click <walkthrough-spotlight-pointer locator="semantic({button 'Edit settings'})">Edit Settings</walkthrough-spotlight-pointer>. Here you can find many options for model monitoring -- why don't you try to enable prediction drift detection?
+You can also train and deploy models on Agent Platform in the UI only. Let's have a more detailed look. Click <walkthrough-spotlight-pointer locator="semantic({button 'Edit settings'})">Edit Settings</walkthrough-spotlight-pointer>. Here you can find many options for model monitoring -- why don't you try to enable prediction drift detection?
 
-### Vertex AI Pipelines
+### Agent Platform Pipelines
 
 Let's have a look at the Pipeline as well.
 
@@ -96,7 +96,7 @@ Let's have a look at the Pipeline as well.
 
 You can now see the individual steps in the pipeline. Please click through the individual steps of the pipeline and have a look at the *Pipeline run analysis* on the right hand side as you cycle pipeline steps. 
 
-Click on *Expand Artifacts*. Now, you can see expanded yellow boxes. These are Vertex AI artifacts that are created as a result of the previous step.
+Click on *Expand Artifacts*. Now, you can see expanded yellow boxes. These are Agent Platform artifacts that are created as a result of the previous step.
 
 Feel free to explore the UI in more detail on your own!
 
@@ -105,7 +105,7 @@ Feel free to explore the UI in more detail on your own!
 Now that the endpoint has been deployed, we can send transactions to it to assess whether they are fraudulent or not.
 We can use `curl` to send transactions to the endpoint. 
 
-Have a look at <walkthrough-editor-open-file filePath="content/data/src/ml/predict.sh">`predict.sh`</walkthrough-editor-open-file>. In line 9 it uses `curl` to call the endpoint using a data file named  <walkthrough-editor-open-file filePath="content/data/src/ml/instances.json">`instances.json`</walkthrough-editor-open-file> containing 3 transactions.
+Have a look at <walkthrough-editor-open-file filePath="content/data/src/ml/predict.sh">`predict.sh`</walkthrough-editor-open-file>. In line 23 it uses `curl` to call the endpoint using a data file named  <walkthrough-editor-open-file filePath="content/data/src/ml/instances.json">`instances.json`</walkthrough-editor-open-file> containing 3 transactions.
 
 Let's execute it:
 
