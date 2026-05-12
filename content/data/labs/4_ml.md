@@ -59,8 +59,9 @@ The pipeline run will take around 20 minutes to complete. While waiting, please 
 
 The pipeline creates a custom training job -- let's inspect it in the Cloud Console once it has completed:
 
-1. Open [Vertex AI Console](https://console.cloud.google.com/vertex-ai)
-2. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-ai-platform-training])">Training</walkthrough-spotlight-pointer> in the navigation menu
+1. Open [Agent Platform Console](https://console.cloud.google.com/agent-platform/model-garden)
+2. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-agent-platform-training])">Training</walkthrough-spotlight-pointer>in the navigation menu
+
 3. Click <walkthrough-spotlight-pointer locator="semantic({tab 'Custom jobs'})">Custom jobs</walkthrough-spotlight-pointer>
 4. Click <walkthrough-spotlight-pointer locator="semantic({link 'bootkon-training-job'})">bootkon-training-job</walkthrough-spotlight-pointer>
 
@@ -69,10 +70,9 @@ Note the container image it uses and the arguments that are passed to the contai
 ### Model Registry
 
 Once the training job has finished, the resulting model is uploaded to the model registry. Let's have a look:
-
-1. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-ai-platform-models])">Model Registry</walkthrough-spotlight-pointer> in the nevigation menu
+1. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-agent-platform-model-registry])">Model Registry</walkthrough-spotlight-pointer> in the nevigation menu
 2. Click <walkthrough-spotlight-pointer locator="semantic({link 'bootkon-model'})">bootkon-model</walkthrough-spotlight-pointer>
-3. Click <walkthrough-spotlight-pointer locator="semantic({tab 'Version details'})">VERSION DETAILS</walkthrough-spotlight-pointer>
+3. Click <walkthrough-spotlight-pointer locator="semantic({tab 'Version details'})">Version details</walkthrough-spotlight-pointer>
 
 Here you can can see that a model in the Vertex AI Model Registry is made up from a **Container image** as well as a **Model artifact location**. When you deploy a model, Vertex AI simply starts the container and points it to the artifact location.
 
@@ -80,7 +80,7 @@ Here you can can see that a model in the Vertex AI Model Registry is made up fro
 
 The endpoint is created in a parallel branch in the pipeline you just ran. You can deploy models to an endpoint through the model registry.
 
-1. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-ai-platform-online-prediction])">Endpoints</walkthrough-spotlight-pointer> in the navigation menu
+1. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-agent-platform-endpoints])">Endpoints</walkthrough-spotlight-pointer> in the navigation menu
 2. Click <walkthrough-spotlight-pointer locator="semantic({link 'bootkon-endpoint'})">bootkon-endpoint</walkthrough-spotlight-pointer>
 
 You can see that the endpoint has one model deployed currently, and all the traffic is routed to it (traffic split is 100%). When scrolling down, you get live graphs as soon as predictions are coming in.
@@ -91,7 +91,7 @@ You can also train and deploy models on Vertex in the UI only. Let's have a more
 
 Let's have a look at the Pipeline as well.
 
-1. Click <walkthrough-spotlight-pointer locator="css(a[aria-label$=Pipelines])">Pipelines</walkthrough-spotlight-pointer> in the navigation menu
+1. Click <walkthrough-spotlight-pointer locator="css(a[id$=cfctest-section-nav-item-agent-platform-pipelines])">Pipelines</walkthrough-spotlight-pointer> in the navigation menu
 2. Click <walkthrough-spotlight-pointer locator='semantic({link "bootkon-pipeline-*"})'>bootkon-pipeline-...</walkthrough-spotlight-pointer>
 
 You can now see the individual steps in the pipeline. Please click through the individual steps of the pipeline and have a look at the *Pipeline run analysis* on the right hand side as you cycle pipeline steps. 
