@@ -8,9 +8,9 @@
 {% set PREDICT_IMAGE_URI = "{}-docker.pkg.dev/{}/bootkon/bootkon-predict:latest".format(REGION, PROJECT_ID) %}
 {% set BQ_SOURCE = "{}.ml_datasets.ulb_fraud_detection_dataproc".format(PROJECT_ID) %}
 
-In this lab, we will build a machine learning model to assess, in real-time, whether incoming transactions are fraudulent or legitimate. Using Vertex AI Pipelines (based on Kubeflow), we will streamline the end-to-end ML workflow, from data preprocessing to model deployment, ensuring scalability and efficiency in fraud detection.
+In this lab, we will build a machine learning model to assess, in real-time, whether incoming transactions are fraudulent or legitimate. Using Agent Platform Pipelines (based on Kubeflow), we will streamline the end-to-end ML workflow, from data preprocessing to model deployment, ensuring scalability and efficiency in fraud detection.
 
-In Vertex AI, custom containers allow you to define and package your own execution environment for machine learning workflows. To store custom container images, create a repository in artifact registry:
+In Agent Platform, custom containers allow you to define and package your own execution environment for machine learning workflows. To store custom container images, create a repository in artifact registry:
 
 ```bash
 gcloud artifacts repositories create bootkon --repository-format=docker --location={{ REGION }}
@@ -38,12 +38,12 @@ Let's do the same for the serving image:
 (cd content/data/src/ml/predict && gcloud builds submit --region={{ REGION }} --tag={{ PREDICT_IMAGE_URI }} --quiet)
 ```
 
-### Vertex AI Pipelines
+### Agent Platform Pipelines
 
 Now, have a look at <walkthrough-editor-open-file filePath="content/data/src/ml/pipeline.py">`pipeline.py`</walkthrough-editor-open-file>. This script uses the Kubeflow domain specific language (dsl) to orchestrate the following machine learning workflow:
 
 1. `CustomTrainingJobOp` trains the model.
-2. `ModelUploadOp` uploads the trained model to the Vertex AI model registry.
+2. `ModelUploadOp` uploads the trained model to the Agent Platform model registry.
 3. `EndpointCreateOp` creates a prediction endpoint for inference.
 4. `ModelDeployOp` deploys the model from step 2 to the endpoint from step 3.
 
@@ -53,7 +53,7 @@ Let's execute it:
 python content/data/src/ml/pipeline.py
 ```
 
-The pipeline run will take around 20 minutes to complete. While waiting, please read the introduction to [Vertex AI Pipelines](https://cloud.google.com/vertex-ai/docs/pipelines/introduction).
+The pipeline run will take around 20 minutes to complete. While waiting, please read the introduction to [Agent Platform Pipelines](https://docs.cloud.google.com/vertex-ai/docs/pipelines/introduction).
 
 ### Custom Training Job
 
