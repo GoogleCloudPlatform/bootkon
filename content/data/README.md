@@ -13,7 +13,7 @@ This event is comprised of the following code labs:
 | 45min | Data Ingestion | Ingest data using three different methods: Lakehouse for Apache Iceberg (formerly BigLake), Pub/Sub, and Managed Service for Apache Spark (formerly Dataproc) |
 | 45min | Dataform | Create version-controlled SQL workflows for BigQuery |
 | 60min | Machine Learning | Train a model on fraud detection and create an automated ML pipeline | 
-| 60min | Dataplex | Data governance at scale using Knowledge Catalog (formerly Dataplex) | 
+| 60min | Knowledge Catalog | Data governance at scale using Knowledge Catalog (formerly Dataplex) | 
 
 You can navigate this handbook using the `<` and `>` buttons on the right and left hand side, respectively. To get started, please press the `>` button on the right hand side now.
 

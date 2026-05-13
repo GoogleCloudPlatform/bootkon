@@ -10,7 +10,7 @@
 Within this lab, you will share the machine learning prediction results to the FraudFix customer while keeping the data securely within the provider's storage environment. Here, you will focus on avoiding sharing PII data. 
 
 * We have previously created the fraud detection model predictions.   
-* After running the dataplex  data discovery job , we noticed a new BigQuery dataset created called `bootkon_raw_zone` , `data_prediction` biglake table were automatically created by Dataplex discovery jobs.  
+* After running the Knowledge Catalog data discovery job , we noticed a new BigQuery dataset created called `bootkon_raw_zone` , `data_prediction` biglake table were automatically created by Knowledge Catalog discovery jobs.  
 * The goal of the **FraudFix** data scientist team  is to share the results of the data prediction with the customer.  
 * The customer will use the PCA data and perform reversed PCA in order to get the result of the predictions.  
 * The customer will also use the explainability results from the `data_prediction` data to understand why the decisions have been made to flag a given transaction as fraudulent or not.  
@@ -29,7 +29,7 @@ The Data Publisher in this case is the FraudFix technology. They are providers o
 
 
 1. Create a dataset: `ml_datasets_clean_room`  which is for the Authorized View. Authorized View is always recommended over table for enforcing the [privacy policy](https://cloud.google.com/bigquery/docs/privacy-policies). Note how one of the columns are declared as private and put a limit on the lower limit on the aggregated results.  
-   The dataset should be in the same region as `bootkon_raw_zone` dataset that Dataplex has created before.
+   The dataset should be in the same region as `bootkon_raw_zone` dataset that Knowledge Catalog has created before.
    
    ```bash
    dataset_name='ml_datasets_clean_room'
@@ -261,7 +261,7 @@ The Data Subscriber in this case is FraudFix’s customer. The customer is the o
    ```
 
 
-10. Let's map the results of the previous query with our secret metadata PCA mapping table to understand which attributes are heavily influencing the model's fraudulent decisions. Notice we already have a Biglake table created by Dataplex under the `bootkon_raw_zone` dataset called `metadata_mapping`.   
+10. Let's map the results of the previous query with our secret metadata PCA mapping table to understand which attributes are heavily influencing the model's fraudulent decisions. Notice we already have a Biglake table created by Knowledge Catalog under the `bootkon_raw_zone` dataset called `metadata_mapping`.   
    Using the previous SQL statement, you find out the most influential attributes ; for example V14.  
    This table should be accessible only by the customers of FraudFix and not by FraudFix employees because it can be used to reverse PCA and access customer private information. 
 
