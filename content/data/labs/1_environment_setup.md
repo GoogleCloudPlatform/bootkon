@@ -31,6 +31,11 @@ First, we need to enable some Google Cloud Platform (GCP) services. Enabling GCP
   aiplatform.googleapis.com,
   cloudbuild.googleapis.com,
   cloudaicompanion.googleapis.com,
+  iam.googleapis.com,
+  iap.googleapis.com,
+  iamconnectors.googleapis.com,
+  geminidataanalytics.googleapis.com,
+  cloudfunctions.googleapis.com,
   artifactregistry.googleapis.com">
 </walkthrough-enable-apis>
 

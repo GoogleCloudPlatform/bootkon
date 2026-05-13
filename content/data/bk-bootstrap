@@ -17,7 +17,7 @@ declare -a user_roles=(
     "roles/storage.admin" # Admin on Cloud Storage
     "roles/storage.objectViewer" # Can view Cloud Storage objects
     "roles/storage.objectAdmin" # Admin on Cloud Storage objects
-    "roles/iam.serviceAccountUser" # Can use service accounts
+    "roles/iam.serviceAccountAdmin" # Can use service accounts
     "roles/pubsub.admin" # Admin on Pub/Sub
     "roles/artifactregistry.admin" # Artifact Registry admin
     "roles/resourcemanager.projectIamAdmin" # Project IAM admin
@@ -74,3 +74,24 @@ declare -a vertex_cc_service_agent_roles=(
 #    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 #        --member="serviceAccount:$VERTEX_AI_CC_SERVICE_ACCOUNT" --role="$role" >>/dev/null
 #done
+
+DATAFORM_SERVICE_ACCOUNT="dataform-service-account"
+DATAFORM_SA_EMAIL="${DATAFORM_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Create the Dataform Service Account if it doesn't exist
+gcloud iam service-accounts create $DATAFORM_SERVICE_ACCOUNT --display-name="Bootkon Dataform Service Account"
+
+# Roles identified from image_e02dfa.png
+declare -a dataform_roles=(
+    "roles/bigquery.connectionUser" # BigQuery Connection User
+    "roles/bigquery.dataEditor"     # BigQuery Data Editor
+    "roles/bigquery.jobUser"        # BigQuery Job User
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
+)
+
+for role in "${dataform_roles[@]}"; do
+    echo "Assigning role $role to $DATAFORM_SA_EMAIL in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:$DATAFORM_SA_EMAIL" --role="$role" >>/dev/null
+done
