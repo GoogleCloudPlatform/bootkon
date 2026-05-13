@@ -95,3 +95,24 @@ for role in "${dataform_roles[@]}"; do
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
         --member="serviceAccount:$DATAFORM_SA_EMAIL" --role="$role" >>/dev/null
 done
+
+# Create Service Account to run Knowledge Catalog Data Quality scans, if it doesn't exist
+DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
+DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+
+declare -a dataquality_roles=(
+    "roles/bigquery.jobUser"
+    "roles/bigquery.dataViewer"
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
+)
+
+for role in "${dataquality_roles[@]}"; do
+    echo "Assigning role $role to $DQ_SCAN_SA_EMAIL in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
+done
+
+gcloud iam service-accounts add-iam-policy-binding $DQ_SCAN_SA_EMAIL --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-dataplex.iam.gserviceaccount.com" --role="roles/iam.serviceAccountTokenCreator"
