@@ -34,7 +34,7 @@ Discovery jobs can be configured to run on a schedule to discover any new tables
 
 ### Actions - Profiling, Quality, Lineage, Discovery
 
-Knowledge Catalog has the capability to profile data assets (BigQuery tables), auto detect data lineage for BigQuery transformations. You can also use it for data discovery across GCS, BigQuery, Spanner, PubSub, Dataproc metastore, Bigtable and Vertex AI models. 
+Knowledge Catalog has the capability to profile data assets (BigQuery tables), auto detect data lineage for BigQuery transformations. You can also use it for data discovery across GCS, BigQuery, Spanner, PubSub, Dataproc metastore, Bigtable and Agent Platform models. 
 
 You can automate the scanning of data, validate data against defined rules, and log alerts if your data doesn't meet quality requirements. In addition you can manage data quality rules and deployments as code, improving the integrity of data production pipelines.
 
@@ -157,7 +157,7 @@ Let's get started:
 7. <walkthrough-spotlight-pointer locator="semantic({button 'Select'})">SELECT</walkthrough-spotlight-pointer> `data_predictions` bigquery table
 8. Choose "Entire data" in the dropdown as the <walkthrough-spotlight-pointer locator="semantic({combobox 'Scope'})">Scope</walkthrough-spotlight-pointer> for the data profiling job
 9. Choose "All data" in the <walkthrough-spotlight-pointer locator="semantic({combobox 'Sampling size'})">Sampling size</walkthrough-spotlight-pointer> dropdown
-10. Select the checkbox for "Publish results to BigQuery and Knowledge Catalog UI"
+10. Select the checkbox for "Publish results to Knowledge Catalog"
 11. Choose On-demand schedule
 12. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>, leave the rest as default and click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">CREATE</walkthrough-spotlight-pointer>
 
