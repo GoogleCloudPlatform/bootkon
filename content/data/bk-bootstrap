@@ -107,6 +107,7 @@ declare -a dataquality_roles=(
     "roles/bigquery.dataViewer"
     "roles/iam.serviceAccountTokenCreator"
     "roles/iam.serviceAccountUser"
+    "roles/storage.objectViewer"
 )
 
 for role in "${dataquality_roles[@]}"; do

@@ -119,7 +119,7 @@ During this lab go to the Search section of the Knowledge Catalog and search for
 
 As a result of the data discovery (takes up to approximately 5 minutes), notice a new BigQuery dataset created called `bootkon_raw_zone` under the [BigQuery](https://console.cloud.google.com/bigquery) console section. New Lakehouse tables were automatically created by the Knowledge Catalog discovery jobs. During the next sections of the labs, we will be using the `data_predictions` Lakehouse table. 
 
----f
+---
 
 ### Data Profiling
 
@@ -158,20 +158,21 @@ Let's get started:
 8. Choose "Entire data" in the dropdown as the <walkthrough-spotlight-pointer locator="semantic({combobox 'Scope'})">Scope</walkthrough-spotlight-pointer> for the data profiling job
 9. Choose "All data" in the <walkthrough-spotlight-pointer locator="semantic({combobox 'Sampling size'})">Sampling size</walkthrough-spotlight-pointer> dropdown
 10. Select the checkbox for "Publish results to Knowledge Catalog"
-11. Choose On-demand schedule
-12. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>, leave the rest as default and click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">CREATE</walkthrough-spotlight-pointer>
+11. Choose "Service Account" for the Credential Type and select `Knowledge Catalog DQ Service Account` as the service account.
+12. Choose On-demand schedule
+13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>, leave the rest as default and click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">CREATE</walkthrough-spotlight-pointer>
 
   It will take a couple of minutes for the profiling to show up on the console.
 
-13. Click on the `bootkon-profile-fraud-prediction` profile and then click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">RUN NOW</walkthrough-spotlight-pointer> 
-14. Click on the `Job Id` and monitor the job execution 
-15. Notice what the job is doing. The job should succeed in less than 10 minutes
-16. Explore the data profiling results of the `Class` column name. We have less than 0.1% of fraudulent transactions. Also notice that `predicted_class` of type `RECORD` were not fully profiled, only the percentage of null and unique values were correctly profiled. Refer to the supported data types [here]( https://cloud.google.com/dataplex/docs/data-profiling-overview#data-profile-result)
+14. Click on the `bootkon-profile-fraud-prediction` profile and then click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">RUN NOW</walkthrough-spotlight-pointer> 
+15. Click on the `Job Id` and monitor the job execution 
+16. Notice what the job is doing. The job should succeed in less than 10 minutes
+17. Explore the data profiling results of the `Class` column name. We have less than 0.1% of fraudulent transactions. Also notice that `predicted_class` of type `RECORD` were not fully profiled, only the percentage of null and unique values were correctly profiled. Refer to the supported data types [here]( https://cloud.google.com/dataplex/docs/data-profiling-overview#data-profile-result)
 
   ![](../img/lab5/dataprofileresultgraph.png)
 
 
-17. As they train further continuously the fraud detection ML models, data professionals would like to set up an automatic check on data quality and be notified when there are huge discrepancies between `predicted_class` and `Class` values. This is where Knowledge Catalog data quality could help the team. 
+18. As they train further continuously the fraud detection ML models, data professionals would like to set up an automatic check on data quality and be notified when there are huge discrepancies between `predicted_class` and `Class` values. This is where Knowledge Catalog data quality could help the team. 
 
 ---
 
@@ -232,9 +233,11 @@ Creating and using a data quality scan consists of the following steps:
 7. <walkthrough-spotlight-pointer locator="semantic({button 'Select'})">SELECT</walkthrough-spotlight-pointer> `data_predictions` BigQuery table
 8. Choose "Entire data" as the <walkthrough-spotlight-pointer locator="semantic({combobox 'Scope'})">Scope</walkthrough-spotlight-pointer> of the data profiling job
 9. Choose "All data" for <walkthrough-spotlight-pointer locator="semantic({combobox 'Sampling size'})">Sampling size</walkthrough-spotlight-pointer> 
-10. Leave on the option "Publish results to BigQuery and Knowledge Catalog UI"
-11. Choose On-demand as the scan schedule
-12. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
+10. Leave on the option "Publish results to Knowledge Catalog"
+11. Choose "Service Account" for the Credential Type and select `Knowledge Catalog DQ Service Account` as the service account.
+
+12. Choose On-demand as the scan schedule
+13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
 
 Now let's define quality rules. Click on the <walkthrough-spotlight-pointer locator="semantic({button 'Add Rules'})">ADD RULES</walkthrough-spotlight-pointer> dropdown and choose `SQL Assertion Rule`
 
@@ -275,8 +278,8 @@ FROM (
 19. Click <walkthrough-spotlight-pointer locator="semantic({button 'Add'})">ADD</walkthrough-spotlight-pointer>
 20. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
 21. <walkthrough-spotlight-pointer locator="semantic({button 'Run scan'})">RUN SCAN</walkthrough-spotlight-pointer> (The display name may take a moment to appear on the screen)
-23. Monitor the job execution. Notice the job succeeded but the rule failed because our model accuracy percentage on the whole data predicted does not exceed the 99.99% threshold that we set
-24. You may need to choose <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">RUN NOW</walkthrough-spotlight-pointer> in order to see the results of the `bootkon-dquality-fraud-prediction` data quality scan
+22. Monitor the job execution. Notice the job succeeded but the rule failed because our model accuracy percentage on the whole data predicted does not exceed the 99.99% threshold that we set
+23. You may need to choose <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">RUN NOW</walkthrough-spotlight-pointer> in order to see the results of the `bootkon-dquality-fraud-prediction` data quality scan
 
 
 ### Success
