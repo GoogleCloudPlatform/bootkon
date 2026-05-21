@@ -1,4 +1,4 @@
-## Lab 5: Conversational Analytics in BigQuery
+## Lab 6: Conversational Analytics in BigQuery
 
 <walkthrough-tutorial-duration duration="30"></walkthrough-tutorial-duration>
 {{ author('Fabian Hirschmann', 'https://linkedin.com/in/fhirschmann') }}
