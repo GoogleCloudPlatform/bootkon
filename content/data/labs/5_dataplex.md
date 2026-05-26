@@ -153,7 +153,7 @@ Let's get started:
 3. Set Display Name to `bootkon-profile-fraud-prediction` for example 
 4. Optionally add a description. For example, "data profile scans for fraud detection predictions"
 5. Leave the “Browse within Knowledge Catalog Lakes” option turned off
-6. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Browse'})">BROWSE</walkthrough-spotlight-pointer> to select the `data_predictions` BigQuery table (Dataset: `bootkon_raw_zone`). 
+6. Click on <walkthrough-spotlight-pointer locator="semantic({button 'Browse'})">Browse</walkthrough-spotlight-pointer> to select the `data_predictions` BigQuery table (Dataset: `bootkon_raw_zone`). 
 7. <walkthrough-spotlight-pointer locator="semantic({button 'Select'})">SELECT</walkthrough-spotlight-pointer> `data_predictions` bigquery table
 8. Choose "Entire data" in the dropdown as the <walkthrough-spotlight-pointer locator="semantic({combobox 'Scope'})">Scope</walkthrough-spotlight-pointer> for the data profiling job
 9. Choose "All data" in the <walkthrough-spotlight-pointer locator="semantic({combobox 'Sampling size'})">Sampling size</walkthrough-spotlight-pointer> dropdown
