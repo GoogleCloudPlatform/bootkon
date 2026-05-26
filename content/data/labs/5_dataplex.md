@@ -79,8 +79,8 @@ The creation should take 2-3 minutes to finish.
 ### Add Zone Data Assets
 Let's map data stored in Cloud Storage buckets and BigQuery datasets as assets in your zone.
 1. Navigate to Zones and click on `bootkon-raw-zone`
-2. Click <walkthrough-spotlight-pointer locator="semantic({link 'Add assets'})">+ ADD ASSETS</walkthrough-spotlight-pointer>
-3. Click <walkthrough-spotlight-pointer locator="semantic({button 'add an asset'})">ADD AN ASSET</walkthrough-spotlight-pointer>
+2. Click <walkthrough-spotlight-pointer locator="semantic({link '+ Add assets'})">+ Add assets</walkthrough-spotlight-pointer>
+3. Click <walkthrough-spotlight-pointer locator="semantic({button 'add an asset'})">Add an asset</walkthrough-spotlight-pointer>
 4. Choose *Storage bucket* from the type dropdown
 5. Display name : `bootkon-gcs-raw-asset`
 6. Optionally add a description 
@@ -95,8 +95,8 @@ Let's map data stored in Cloud Storage buckets and BigQuery datasets as assets i
 Now let's add another data asset but for the bootkon-curated-zone:
 
 14. Click on `bootkon-curated-zone`
-15. Click on <walkthrough-spotlight-pointer locator="semantic({link 'Add assets'})">+ ADD ASSETS</walkthrough-spotlight-pointer>
-16. Click <walkthrough-spotlight-pointer locator="semantic({button 'add an asset'})">ADD AN ASSET</walkthrough-spotlight-pointer>
+15. Click on <walkthrough-spotlight-pointer locator="semantic({link 'Add assets'})">+ Add assets</walkthrough-spotlight-pointer>
+16. Click <walkthrough-spotlight-pointer locator="semantic({button 'add an asset'})">Add an asset</walkthrough-spotlight-pointer>
 17. Choose *BigQuery dataset* from the Type dropdown
 18. Display name : `bootkon-bq-curated-asset`
 19. Optionally add a description 
