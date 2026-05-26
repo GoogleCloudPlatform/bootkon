@@ -5,6 +5,16 @@ pip install -r content/data/requirements.txt
 
 [[ "$BK_INITIALIZED" != "1" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
 
+# Create Knowledge Catalog DQ Service Account first here to avoid potential timing issues during role assignment later
+DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
+DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+
+# Create Dataform Service Account first here to avoid potential timing issues during role assignment later
+DATAFORM_SERVICE_ACCOUNT="dataform-service-account"
+DATAFORM_SA_EMAIL="${DATAFORM_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts create $DATAFORM_SERVICE_ACCOUNT --display-name="Bootkon Dataform Service Account"
+
 declare -a user_roles=(
     "roles/bigquery.jobUser" # Can run BigQuery jobs
     "roles/bigquery.dataEditor" # Can edit BigQuery datasets
@@ -75,13 +85,9 @@ declare -a vertex_cc_service_agent_roles=(
 #        --member="serviceAccount:$VERTEX_AI_CC_SERVICE_ACCOUNT" --role="$role" >>/dev/null
 #done
 
-DATAFORM_SERVICE_ACCOUNT="dataform-service-account"
-DATAFORM_SA_EMAIL="${DATAFORM_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
-
-# Create the Dataform Service Account if it doesn't exist
-gcloud iam service-accounts create $DATAFORM_SERVICE_ACCOUNT --display-name="Bootkon Dataform Service Account"
-
 # Roles identified from image_e02dfa.png
+# Assign roles to Dataform SA
+
 declare -a dataform_roles=(
     "roles/bigquery.connectionUser" # BigQuery Connection User
     "roles/bigquery.dataEditor"     # BigQuery Data Editor
@@ -96,11 +102,7 @@ for role in "${dataform_roles[@]}"; do
         --member="serviceAccount:$DATAFORM_SA_EMAIL" --role="$role" >>/dev/null
 done
 
-# Create Service Account to run Knowledge Catalog Data Quality scans, if it doesn't exist
-DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
-DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
-
-gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+# Assign roles to Knowledge Catalog SA
 
 declare -a dataquality_roles=(
     "roles/bigquery.jobUser"
@@ -108,6 +110,7 @@ declare -a dataquality_roles=(
     "roles/iam.serviceAccountTokenCreator"
     "roles/iam.serviceAccountUser"
     "roles/storage.objectViewer"
+    "roles/iam.serviceAccountTokenCreator"
 )
 
 for role in "${dataquality_roles[@]}"; do
