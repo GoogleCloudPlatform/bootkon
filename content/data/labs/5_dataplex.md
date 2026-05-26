@@ -229,17 +229,17 @@ Creating and using a data quality scan consists of the following steps:
 3. Display Name: `bootkon-dquality-fraud-prediction` for example 
 4. Optionally add a description. For example, "data quality scans for fraud detection predictions"
 5. Leave the "Browse within Knowledge Catalog Lakes" option turned off 
-6. Click <walkthrough-spotlight-pointer locator="semantic({button 'Browse'})">BROWSE</walkthrough-spotlight-pointer> to filter on the `data_predictions` BigQuery table (Dataset: `bootkon_raw_zone`) 
-7. <walkthrough-spotlight-pointer locator="semantic({button 'Select'})">SELECT</walkthrough-spotlight-pointer> `data_predictions` BigQuery table
+6. Click <walkthrough-spotlight-pointer locator="semantic({button 'Browse'})">Browse</walkthrough-spotlight-pointer> to filter on the `data_predictions` BigQuery table (Dataset: `bootkon_raw_zone`) 
+7. <walkthrough-spotlight-pointer locator="semantic({button 'Select'})">Select</walkthrough-spotlight-pointer> `data_predictions` BigQuery table
 8. Choose "Entire data" as the <walkthrough-spotlight-pointer locator="semantic({combobox 'Scope'})">Scope</walkthrough-spotlight-pointer> of the data profiling job
 9. Choose "All data" for <walkthrough-spotlight-pointer locator="semantic({combobox 'Sampling size'})">Sampling size</walkthrough-spotlight-pointer> 
 10. Leave on the option "Publish results to Knowledge Catalog"
 11. Choose "Service Account" for the Credential Type and select `Knowledge Catalog DQ Service Account` as the service account.
 
 12. Choose On-demand as the scan schedule
-13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
+13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>
 
-Now let's define quality rules. Click on the <walkthrough-spotlight-pointer locator="semantic({button 'Add Rules'})">ADD RULES</walkthrough-spotlight-pointer> dropdown and choose `SQL Assertion Rule`
+Now let's define quality rules. Click on the <walkthrough-spotlight-pointer locator="semantic({button 'Add Rules'})">Add Rules</walkthrough-spotlight-pointer> dropdown and choose `SQL Assertion Rule`
 
 14. Choose `Accuracy` as dimension 
 15. Rule name: `bootkon-dquality-ml-fraud-prediction`
@@ -275,9 +275,9 @@ FROM (
    HAVING PercentageMatch <= 99.99
 ```
 
-19. Click <walkthrough-spotlight-pointer locator="semantic({button 'Add'})">ADD</walkthrough-spotlight-pointer>
-20. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
-21. <walkthrough-spotlight-pointer locator="semantic({button 'Run scan'})">RUN SCAN</walkthrough-spotlight-pointer> (The display name may take a moment to appear on the screen)
+19. Click <walkthrough-spotlight-pointer locator="semantic({button 'Add'})">Add</walkthrough-spotlight-pointer>
+20. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>
+21. <walkthrough-spotlight-pointer locator="semantic({button 'Run scan'})">Run scan</walkthrough-spotlight-pointer> (The display name may take a moment to appear on the screen)
 22. Monitor the job execution. Notice the job succeeded but the rule failed because our model accuracy percentage on the whole data predicted does not exceed the 99.99% threshold that we set
 23. You may need to choose <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer> in order to see the results of the `bootkon-dquality-fraud-prediction` data quality scan
 
