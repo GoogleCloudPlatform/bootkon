@@ -173,7 +173,7 @@ Note: If you have previously granted all required roles for the service account 
     Then click 
     <walkthrough-spotlight-pointer locator="semantic({button 'Start execution'})"> Start execution</walkthrough-spotlight-pointer>
 
-2. Click on <walkthrough-spotlight-pointer locator="semantic({link 'Details'})">DETAILS</walkthrough-spotlight-pointer>
+2. Click on <walkthrough-spotlight-pointer locator="semantic({link 'Details'})">Details</walkthrough-spotlight-pointer>
 
     Notice the Access Denied error on BigQuery for the dataform service account `dataform-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com`. If you did not receive an error, you can skip step 3-6.
 
