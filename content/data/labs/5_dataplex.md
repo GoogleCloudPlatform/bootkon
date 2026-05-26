@@ -160,7 +160,7 @@ Let's get started:
 10. Select the checkbox for "Publish results to Knowledge Catalog"
 11. Choose "Service Account" for the Credential Type and select `Knowledge Catalog DQ Service Account` as the service account.
 12. Choose On-demand schedule
-13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>, leave the rest as default and click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">CREATE</walkthrough-spotlight-pointer>
+13. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, leave the rest as default and click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>
 
   It will take a couple of minutes for the profiling to show up on the console.
 
