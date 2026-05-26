@@ -279,7 +279,7 @@ FROM (
 20. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">CONTINUE</walkthrough-spotlight-pointer>
 21. <walkthrough-spotlight-pointer locator="semantic({button 'Run scan'})">RUN SCAN</walkthrough-spotlight-pointer> (The display name may take a moment to appear on the screen)
 22. Monitor the job execution. Notice the job succeeded but the rule failed because our model accuracy percentage on the whole data predicted does not exceed the 99.99% threshold that we set
-23. You may need to choose <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">RUN NOW</walkthrough-spotlight-pointer> in order to see the results of the `bootkon-dquality-fraud-prediction` data quality scan
+23. You may need to choose <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer> in order to see the results of the `bootkon-dquality-fraud-prediction` data quality scan
 
 
 ### Success
