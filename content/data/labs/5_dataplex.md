@@ -148,7 +148,7 @@ You can filter the data to be scanned for profiling by using row filters and col
 Knowledge Catalog lets you specify a percentage of records from your data to sample for running a data profiling scan. Creating data profiling scans on a smaller sample of data can reduce the execution time and cost of querying the entire dataset.
 
 Let's get started:
-1. Go to the <walkthrough-spotlight-pointer locator="semantic({link 'Data profiling &amp; quality, 1 of 1'})">Data profiling & quality</walkthrough-spotlight-pointer> section in Knowledge Catalog.
+1. Go to the <walkthrough-spotlight-pointer locator="semantic({link 'Data profiling &amp; quality, 1 of 1'})">Data profiling & quality</walkthrough-spotlight-pointer> section in [Knowledge Catalog](https://console.cloud.google.com/dataplex).
 2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create data profile scan'})">Create data profile scan</walkthrough-spotlight-pointer>
 3. Set Display Name to `bootkon-profile-fraud-prediction` for example 
 4. Optionally add a description. For example, "data profile scans for fraud detection predictions"
