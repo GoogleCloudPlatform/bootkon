@@ -86,7 +86,7 @@ We will now set up our custom workflow.
 
 3. Make sure `defaultProject` value is ``{{ PROJECT_ID }}``
 
-4. Click on <walkthrough-spotlight-pointer locator="text('install packages')">INSTALL PACKAGES</walkthrough-spotlight-pointer> ***only once***. You should see a message at the bottom of the page:
+4. Click on <walkthrough-spotlight-pointer locator="text('install packages')">Install Packages</walkthrough-spotlight-pointer> ***only once***. You should see a message at the bottom of the page:
 
     *Package installation succeeded*
 
