@@ -58,7 +58,7 @@ Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of th
 5. Select <walkthrough-spotlight-pointer locator="semantic({button 'Grant all'})">Grant all</walkthrough-spotlight-pointer> required roles for the service-account to execute queries in Dataform
 
 
-Next, click <walkthrough-spotlight-pointer locator="text('go to repositories')">GO TO REPOSITORIES</walkthrough-spotlight-pointer>, and then choose the <walkthrough-spotlight-pointer locator="text('hackathon-repository')">hackathon-repository</walkthrough-spotlight-pointer> you just created.
+Next, click <walkthrough-spotlight-pointer locator="text('go to repositories')">Go to repositories</walkthrough-spotlight-pointer>, and then choose the <walkthrough-spotlight-pointer locator="text('hackathon-repository')">hackathon-repository</walkthrough-spotlight-pointer> you just created.
 
 
 ### Create a Dataform Workspace
