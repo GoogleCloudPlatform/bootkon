@@ -23,7 +23,7 @@ Let us create your first conversational agent.
 1. Go to the [BigQuery Console](https://console.cloud.google.com/bigquery)
 3. Expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer>
 2. Click <walkthrough-spotlight-pointer locator="css(span[id$=ProjectTreeDatasource-{{ PROJECT_ID }}-bucket-conva-agent])">Agents</walkthrough-spotlight-pointer>
-3. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create agent'})">Create Agent</walkthrough-spotlight-pointer>
+3. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create agent'})">Create agent</walkthrough-spotlight-pointer>
 4. Use ``bootkon-agent`` as name and fill out the description according to your needs.
 5. Click *Add Source*  and select ``ulb_fraud_detection_biglake``.
 6. For instructions, add the following into the text box
