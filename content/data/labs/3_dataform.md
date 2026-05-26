@@ -63,7 +63,7 @@ Next, click <walkthrough-spotlight-pointer locator="text('go to repositories')">
 
 ### Create a Dataform Workspace
 
-You should now be in the <walkthrough-spotlight-pointer locator="text('development workspaces')">Development workspaces</walkthrough-spotlight-pointer> tab of the hackathon-repository page.
+You should now be in the <walkthrough-spotlight-pointer locator="text('development workspaces')">Development Workspaces</walkthrough-spotlight-pointer> tab of the hackathon-repository page.
 
 First, click <walkthrough-spotlight-pointer locator="text('create development workspace')">Create development workspace</walkthrough-spotlight-pointer> to create a copy of your own repository.  You can create, edit, or delete content in your repository without affecting others.
 
