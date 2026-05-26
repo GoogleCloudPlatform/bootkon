@@ -63,4 +63,8 @@ You can try any of the following questions or come up with your own:
 - What was the largest transaction amount recorded for a fraudulent transaction?
 - Forecast the expected transaction volume for the next 7 days based on historical trends.
 
+🎉 Congratulations {% if MY_NAME %} {{ MY_NAME }}{% endif %}! 🚀
+
+You've successfully completed the Conversational Analytics in BigQuery lab! You've gained a solid understanding of configuring data agents and querying fraud detection datasets using natural language to drastically speed up your time-to-insight — proactive agentic data exploration!
+
 
