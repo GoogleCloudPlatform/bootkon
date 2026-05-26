@@ -42,7 +42,7 @@ First step in implementing a pipeline in Dataform is to set up a repository and 
 
 Go to [Dataform](https://console.cloud.google.com/bigquery/dataform) (part of the BigQuery console).
 
-1. Click on <walkthrough-spotlight-pointer locator="css(a[id$=create-repository])">Create Repository</walkthrough-spotlight-pointer>
+1. Click on <walkthrough-spotlight-pointer locator="css(a[id$=create-repository])">Create repository</walkthrough-spotlight-pointer>
 
 2. Use the following values when creating the repository:
 
