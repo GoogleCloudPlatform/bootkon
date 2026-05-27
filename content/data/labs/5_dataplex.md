@@ -55,6 +55,11 @@ You can automate the scanning of data, validate data against defined rules, and 
 
 ***
 
+To allow the Catalog to perform data quality scans, we need to enable access:
+```bash
+gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{{ PROJECT_ID}}.iam.gserviceaccount.com --member=serviceAccount:service-{{ PROJECT_NUMBER }}@gcp-sa-dataplex.iam.gserviceaccount.com --role=roles/iam.serviceAccountTokenCreator
+```
+
 #### Add Zones
 
 We will add two zones: one for raw data and another for curated data.
