@@ -25,7 +25,7 @@ cat ~/.ssh/id_rsa.pub
 
 Overwrite the remote URL to use the SSH protocol insead of HTTPS. Adjust the command in case you are working on your personal fork:
 ```bash
-git remote set-url origin git@github.com:fhirschmann/bootkon.git
+git remote set-url origin git@github.com:GoogleCloudPlatform/bootkon.git
 ```
 
 ## Set up git
