@@ -36,15 +36,15 @@ The Google Gemini web app (gemini.google.com) is a web-based tool designed to he
 
 Activate `Cloud Shell` by clicking on the icon to the right of the search bar.
 
-<img src="img/image_01.png" alt="image_01.png"  width="624.00" />
+<img src="../img/image_01.png" alt="image_01.png"  width="624.00" />
 
 Click "Continue":
 
-<img src="img/image_02.png" alt="image_02.png"  width="491.50" />
+<img src="../img/image_02.png" alt="image_02.png"  width="491.50" />
 
 If prompted to authorize, click "Authorize" to continue.
 
-<img src="img/image_03.png" alt="image_03.png"  width="511.00" />
+<img src="../img/image_03.png" alt="image_03.png"  width="511.00" />
 
 In the terminal, run the command to enable Agent Platform APIs.
 
@@ -61,19 +61,19 @@ cd calendar-app-lab
 
 Click "`Cloud Shell Editor`".
 
-<img src="img/image_04.png" alt="image_04.png"  width="418.50" />
+<img src="../img/image_04.png" alt="image_04.png"  width="418.50" />
 
 Open the "`calendar-app-lab`" folder.
 
-<img src="img/image_05.png" alt="image_05.png"  width="624.00" />
+<img src="../img/image_05.png" alt="image_05.png"  width="624.00" />
 
 Start a new terminal in the Cloud Shell Editor.
 
-<img src="img/image_06.png" alt="image_06.png"  width="624.00" />
+<img src="../img/image_06.png" alt="image_06.png"  width="624.00" />
 
 Your environment should look similar to the screenshot below.
 
-<img src="img/image_07.png" alt="image_07.png"  width="624.00" />
+<img src="../img/image_07.png" alt="image_07.png"  width="624.00" />
 
 ## Antigravity CLI Introduction
 
@@ -109,25 +109,25 @@ agy
 
 To sign in, select "`Use a Google Cloud project`" option:
 
-<img src="img/image_08.png" alt="image_08.png"  width="476.00" />
+<img src="../img/image_08.png" alt="image_08.png"  width="476.00" />
 
 Click "`Click here to authenticate`" or select the complete url, copy it and open it in a new browser tab, follow the steps to generate the code. Return to the terminal to paste the code and set the Google Cloud project.
 
-<img src="img/image_09.png" alt="image_09.png"  width="468.00" />
+<img src="../img/image_09.png" alt="image_09.png"  width="468.00" />
 
 Set Google Cloud Location to "`global"`.
 
 Set your favorite color scheme and click "`Next`" to continue.
 
-<img src="img/image_10.png" alt="image_10.png"  width="624.00" />
+<img src="../img/image_10.png" alt="image_10.png"  width="624.00" />
 
 Accept Terms of Service & Data Use:
 
-<img src="img/image_11.png" alt="image_11.png"  width="624.00" />
+<img src="../img/image_11.png" alt="image_11.png"  width="624.00" />
 
 Your environment should look similar to the screenshot below. The Gemini Code Assist panel has been dismissed, as it will not be required for this lab.
 
-<img src="img/image_12.png" alt="image_12.png"  width="624.00" />
+<img src="../img/image_12.png" alt="image_12.png"  width="624.00" />
 
 To verify your setup, run following command:
 
@@ -137,7 +137,7 @@ To verify your setup, run following command:
 
 Select or type "`Color Scheme`", confirm your new selection.
 
-<img src="img/image_13.png" alt="image_13.png"  width="364.50" />
+<img src="../img/image_13.png" alt="image_13.png"  width="364.50" />
 
 Run following command to verify available models:
 
@@ -157,7 +157,7 @@ Explain this codebase to me, including its overall architecture, key dependencie
 
 Review the output:
 
-<img src="img/image_14.png" alt="image_14.png"  width="624.00" />
+<img src="../img/image_14.png" alt="image_14.png"  width="624.00" />
 
 ## Start the application
 
@@ -171,17 +171,17 @@ Setup a local virtual environment and run this app locally.
 
 Confirm tool calls, when application is running click on the link to open the preview:
 
-<img src="img/image_15.png" alt="image_15.png"  width="624.00" />
+<img src="../img/image_15.png" alt="image_15.png"  width="624.00" />
 
 Select the provided link to launch the application URL within your web browser.
 
 Sample output:
 
-<img src="img/image_16.png" alt="image_16.png"  width="354.50" />
+<img src="../img/image_16.png" alt="image_16.png"  width="354.50" />
 
 Type `25` and hit Enter.
 
-<img src="img/image_17.png" alt="image_17.png"  width="359.18" />
+<img src="../img/image_17.png" alt="image_17.png"  width="359.18" />
 
 Go back to the terminal and enter the command below to check the background tasks that have been initiated:
 
@@ -231,7 +231,7 @@ Update .gitignore: add __pycache__ and .venv folders.
 
 Switch to `Source Control` view and review changes that you made so far:
 
-<img src="img/image_18.png" alt="image_18.png"  width="624.00" />
+<img src="../img/image_18.png" alt="image_18.png"  width="624.00" />
 
 The following prompt allows you to verify all modifications directly in your terminal:
 
@@ -253,7 +253,7 @@ Using the prompt below, to generate unit tests:
 
 Accept the tools invocation and review the output.
 
-<img src="img/image_19.png" alt="image_19.png"  width="624.00" />
+<img src="../img/image_19.png" alt="image_19.png"  width="624.00" />
 
 To ensure code validation and successful test results, the Antigravity CLI monitors, repairs, and executes the generated code repeatedly until all tests are passed. Navigate to the `Source Code` view to inspect the most recent updates.
 
@@ -269,7 +269,7 @@ Are there any bugs in the conversion logic? Check if negative numbers are handle
 
 Review the output.
 
-<img src="img/image_20.png" alt="image_20.png"  width="624.00" />
+<img src="../img/image_20.png" alt="image_20.png"  width="624.00" />
 
 ## Refactor UI
 
@@ -281,21 +281,21 @@ Using existing `/plan` command to plan the refactoring of the UI using the `Boot
 /plan Refactor UI to use Bootstrap library
 ```
 
-<img src="img/image_21.png" alt="image_21.png"  width="624.00" />
+<img src="../img/image_21.png" alt="image_21.png"  width="624.00" />
 
 Review implementation plan with `/artifact` command:
 
-<img src="img/image_22.png" alt="image_22.png"  width="624.00" />
+<img src="../img/image_22.png" alt="image_22.png"  width="624.00" />
 
-<img src="img/image_23.png" alt="image_23.png"  width="624.00" />
+<img src="../img/image_23.png" alt="image_23.png"  width="624.00" />
 
 Start implementation by approving the plan.
 
-<img src="img/image_24.png" alt="image_24.png"  width="404.50" />
+<img src="../img/image_24.png" alt="image_24.png"  width="404.50" />
 
 Review and accept the tools invocation:
 
-<img src="img/image_25.png" alt="image_25.png"  width="624.00" />
+<img src="../img/image_25.png" alt="image_25.png"  width="624.00" />
 
 Send a prompt to start the application.
 
@@ -305,9 +305,9 @@ Start the application
 
 Reload the page  and check the changes.
 
-<img src="img/image_26.png" alt="image_26.png"  width="368.50" />
+<img src="../img/image_26.png" alt="image_26.png"  width="368.50" />
 
-<img src="img/image_27.png" alt="image_27.png"  width="371.50" />
+<img src="../img/image_27.png" alt="image_27.png"  width="371.50" />
 
 Send a prompt to implement error handling to ensure an error page is displayed when issues arise.
 
@@ -317,13 +317,13 @@ Implement error handling to display an error page when issues occur.
 
 Sample output:
 
-<img src="img/image_28.png" alt="image_28.png"  width="624.00" />
+<img src="../img/image_28.png" alt="image_28.png"  width="624.00" />
 
 Refresh the page to view the updates.
 
 Open an endpoint (eg. `/convert1` ) to verify the error page.
 
-<img src="img/image_29.png" alt="image_29.png"  width="342.77" />
+<img src="../img/image_29.png" alt="image_29.png"  width="342.77" />
 
 ## Refactor Backend
 
@@ -337,23 +337,23 @@ Modify the backend to save conversion requests in memory.
 
 At any point you can view current context usage by sending `/context` command:
 
-<img src="img/image_30.png" alt="image_30.png"  width="624.00" />
+<img src="../img/image_30.png" alt="image_30.png"  width="624.00" />
 
 Review and accept the changes in the chat:
 
-<img src="img/image_31.png" alt="image_31.png"  width="624.00" />
+<img src="../img/image_31.png" alt="image_31.png"  width="624.00" />
 
 Review the output of implementation request:
 
-<img src="img/image_32.png" alt="image_32.png"  width="624.00" />
+<img src="../img/image_32.png" alt="image_32.png"  width="624.00" />
 
 Submit several requests to the application, then review the conversion history page.
 
-<img src="img/image_33.png" alt="image_33.png"  width="360.50" />
+<img src="../img/image_33.png" alt="image_33.png"  width="360.50" />
 
 Review conversion requests history.
 
-<img src="img/image_34.png" alt="image_34.png"  width="361.50" />
+<img src="../img/image_34.png" alt="image_34.png"  width="361.50" />
 
 ## Subagents in Antigravity CLI
 
@@ -423,7 +423,7 @@ To update the README.md file with the current codebase state, send this prompt v
 
 Review the output in the console and also open `README.md` in Markdown preview mode for verification.
 
-<img src="img/image_35.png" alt="image_35.png"  width="624.00" />
+<img src="../img/image_35.png" alt="image_35.png"  width="624.00" />
 
 ## Antigravity CLI Non-interactive Mode
 
@@ -484,7 +484,7 @@ Verify configured MCP servers:
 
 Review the output:
 
-<img src="img/image_36.png" alt="image_36.png"  width="340.50" />
+<img src="../img/image_36.png" alt="image_36.png"  width="340.50" />
 
 Send the prompt to test configured MCP server:
 
@@ -494,7 +494,7 @@ Use context7 tools to look up how to implement flex grid in react mui library
 
 Approve the tools and review the output.
 
-<img src="img/image_37.png" alt="image_37.png"  width="624.00" />
+<img src="../img/image_37.png" alt="image_37.png"  width="624.00" />
 
 ## Example MCP servers configuration for your local environment
 
