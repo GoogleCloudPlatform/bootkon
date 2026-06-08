@@ -60,6 +60,7 @@ Now, your
 If neither is `None`, press the `START` button below to get started!
 
 {% include 'devex/labs/1_devex_gemini_cli.md' %}
+{% include 'devex/labs/2_devex_agy_cli.md' %}
 
 ## The end
 
