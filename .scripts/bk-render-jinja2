@@ -28,7 +28,9 @@ def render_tutorial(content):
     environment = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath="content"))
     template = environment.from_string(content)
 
-    rendered = template.render(
+    # Pass all variables starting with BK_ to the template context
+    context = {k: v for k, v in os.environ.items() if k.startswith("BK_")}
+    context.update(
         ON_ARGOLIS=(os.getenv("GCP_USERNAME") or "").endswith("altostrat.com"),
         PROJECT_ID=os.getenv("PROJECT_ID"),
         PROJECT_NUMBER=os.getenv("PROJECT_NUMBER"),
@@ -37,6 +39,8 @@ def render_tutorial(content):
         GCP_USERNAME=os.getenv("GCP_USERNAME"),
         author=partial(render_author),
     )
+
+    rendered = template.render(**context)
 
     rendered = re.sub(
         r'!\[(.*?)\]\(../img/(.*?)\)',
