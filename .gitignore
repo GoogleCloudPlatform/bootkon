@@ -17,3 +17,5 @@ package-lock.json
 *.swp
 pipeline.json
 .df-credentials.json
+content/agenticdata/seed_data/
+seed_data/

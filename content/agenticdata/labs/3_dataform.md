@@ -35,8 +35,8 @@ The starter project ships with the repository — you work on it directly in `co
 
 ```bash
 cd ~/bootkon/content/agenticdata/src/dataform
-sed -i "s/PROJECT_ID_PLACEHOLDER/$PROJECT_ID/" workflow_settings.yaml
-echo "{\"projectId\": \"$PROJECT_ID\", \"location\": \"US\"}" > .df-credentials.json
+sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" workflow_settings.yaml
+echo "{\"projectId\": \"{{ PROJECT_ID }}\", \"location\": \"US\"}" > .df-credentials.json
 ```
 
 The credentials file tells the CLI to use your logged-in identity (Application Default Credentials) against BigQuery — no keys involved. Check that the `sed` worked by opening <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/workflow_settings.yaml">workflow_settings.yaml</walkthrough-editor-open-file> — `defaultProject` should now be `{{ PROJECT_ID }}`. Then have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/definitions/sources.js">sources.js</walkthrough-editor-open-file>: it declares the six bronze tables so every model can reference them with `${ref(...)}`, which is what builds the dependency graph — and, later, your lineage.

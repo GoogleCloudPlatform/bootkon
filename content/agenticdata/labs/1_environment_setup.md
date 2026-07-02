@@ -43,7 +43,7 @@ Execute the following script. It installs Python dependencies, grants IAM roles,
 content/agenticdata/bk-bootstrap
 ```
 
-The script appended your stream configuration (instance name, generated passwords, agent settings) to `~/.bashrc`, so **every new terminal picks it up automatically**. Load it into this already-open one:
+The script appended your generated database passwords and agent settings to `~/.bashrc`, so **every new terminal picks them up automatically**. Load them into this already-open one:
 
 ```bash
 source ~/.bashrc
@@ -59,13 +59,13 @@ gcloud compute networks create cymbal-vpc --subnet-mode=custom
 
 ```bash
 gcloud compute networks subnets create cymbal-subnet \
-    --network=cymbal-vpc --region=$REGION --range=10.10.0.0/24
+    --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
 ```
 
 Datastream connects into your VPC through a **network attachment** — the entry door for its PSC interface:
 
 ```bash
-gcloud compute network-attachments create cymbal-attachment --region=$REGION \
+gcloud compute network-attachments create cymbal-attachment --region={{ REGION }} \
     --connection-preference=ACCEPT_AUTOMATIC --subnets=cymbal-subnet
 ```
 
@@ -90,11 +90,11 @@ This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logica
 gcloud sql instances create cymbal-oltp \
     --database-version=POSTGRES_15 --edition=enterprise \
     --tier=db-custom-1-3840 --storage-size=10GB \
-    --region=$REGION \
+    --region={{ REGION }} \
     --root-password=$BK_DB_PASSWORD \
     --database-flags=cloudsql.logical_decoding=on \
     --enable-private-service-connect \
-    --allowed-psc-projects=$PROJECT_ID \
+    --allowed-psc-projects={{ PROJECT_ID }} \
     --no-assign-ip \
     --async
 ```
@@ -109,9 +109,9 @@ Learn more:
 Datastream's private connection also takes a few minutes to build, so start it now too. **This command blocks until it finishes** — leave it running and continue with the next section in a **new terminal tab** (the `+` button in the terminal panel). Remember to run `. bk` in the new terminal.
 
 ```bash
-gcloud datastream private-connections create cymbal-psc --location=$REGION \
+gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
     --display-name=cymbal-psc \
-    --network-attachment=projects/$PROJECT_ID/regions/$REGION/networkAttachments/cymbal-attachment
+    --network-attachment=projects/{{ PROJECT_ID }}/regions/{{ REGION }}/networkAttachments/cymbal-attachment
 ```
 
 ### Stage the seed data
@@ -119,38 +119,28 @@ gcloud datastream private-connections create cymbal-psc --location=$REGION \
 Cymbal's order history is generated **inside your project** — deterministic synthetic data, so every participant works with identical rows (including some deliberately broken ones you will meet again in Lab 3). Create a bucket and generate the data:
 
 ```bash
-gcloud storage buckets create gs://${PROJECT_ID}-bucket --location=$REGION
+gcloud storage buckets create gs://{{ PROJECT_ID }}-bucket --location={{ REGION }}
 ```
 
 ```bash
-python3 content/agenticdata/src/datagen/generate.py --out ~/seed_data
+python3 content/agenticdata/src/datagen/generate.py --out seed_data
 ```
 
 While it runs (about a minute), have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/generate.py">generate.py</walkthrough-editor-open-file> — note the *planted flaws* section at the top. Then upload the CSVs:
 
 ```bash
-gcloud storage cp ~/seed_data/*.csv gs://${PROJECT_ID}-bucket/seed/
+gcloud storage cp seed_data/*.csv gs://{{ PROJECT_ID }}-bucket/seed/
 ```
 
-### Install Antigravity CLI
+### Meet your co-engineer
 
-Time to meet your co-engineer. Install `agy`:
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` just pre-configured it for you: it signs in with your ambient Cloud Shell credentials and reads your project (`{{ PROJECT_ID }}`) and `global` location from the environment — so there is no login wizard to click through. Start it from the repository root (you are already there):
 
 ```bash
-curl -fsSL https://antigravity.google/cli/install.sh | bash
+agy
 ```
 
-The installer prints an `export PATH=...` line — run it (or open a fresh terminal). Then start agy from the repository root:
-
-```bash
-cd ~/bootkon && agy
-```
-
-To sign in:
-1. Select **Use a Google Cloud project**.
-2. Follow the authentication link, copy the code back into the terminal.
-3. When asked for a project, use `{{ PROJECT_ID }}` and set the location to `global`.
-4. Accept the Terms of Service and pick a color scheme you like.
+On a very first run it may ask you to accept the Terms of Service — do so if prompted; otherwise you land straight at the agy prompt.
 
 ### Let agy explain what just happened
 

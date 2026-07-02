@@ -29,7 +29,7 @@ OP=$(gcloud sql operations list --instance=cymbal-oltp --filter='status!=DONE' -
 Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state:
 
 ```bash
-gcloud datastream private-connections describe cymbal-psc --location=$REGION --format='value(state)'
+gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
 ```
 
 ### Create the Private Service Connect endpoint
@@ -38,9 +38,9 @@ Your instance exposes a **service attachment** — a private socket other networ
 
 ```bash
 SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
-gcloud compute addresses create cymbal-endpoint-ip --region=$REGION \
-    --subnet=cymbal-subnet --addresses=$BK_ENDPOINT_IP
-gcloud compute forwarding-rules create cymbal-endpoint --region=$REGION \
+gcloud compute addresses create cymbal-endpoint-ip --region={{ REGION }} \
+    --subnet=cymbal-subnet --addresses=10.10.0.5
+gcloud compute forwarding-rules create cymbal-endpoint --region={{ REGION }} \
     --address=cymbal-endpoint-ip --network=cymbal-vpc \
     --target-service-attachment=$SA_URI --allow-psc-global-access
 ```
@@ -52,7 +52,7 @@ From now on, `10.10.0.5` **is** your database — for Datastream and for the jum
 Cloud Shell lives outside your VPC and a PSC-only instance has no public IP, so you need a tiny helper: an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. You will reach the VM through an **IAP tunnel** — identity-based, no IPs exposed anywhere:
 
 ```bash
-gcloud compute instances create cymbal-jump --zone=${REGION}-a \
+gcloud compute instances create cymbal-jump --zone={{ REGION }}-a \
     --machine-type=e2-micro --subnet=cymbal-subnet --no-address --can-ip-forward \
     --metadata=startup-script='#!/bin/bash
 sysctl -w net.ipv4.ip_forward=1
@@ -74,7 +74,7 @@ Open a **second terminal tab** (`+`), initialize it, and start the tunnel. **Lea
 ```bash
 . bk
 gcloud compute start-iap-tunnel cymbal-jump 5432 \
-    --local-host-port=localhost:5432 --zone=${REGION}-a
+    --local-host-port=localhost:5432 --zone={{ REGION }}-a
 ```
 
 When you see *Listening on port [5432]*, `localhost:5432` in Cloud Shell is your production database. (If the tunnel ever drops — it disconnects after an hour of inactivity — just re-run this command.)
@@ -102,11 +102,11 @@ Now the bulk load. This is a **server-side import from Cloud Storage** — the i
 
 ```bash
 SQL_SA=$(gcloud sql instances describe cymbal-oltp --format="value(serviceAccountEmailAddress)")
-gcloud storage buckets add-iam-policy-binding gs://${PROJECT_ID}-bucket \
+gcloud storage buckets add-iam-policy-binding gs://{{ PROJECT_ID }}-bucket \
     --member=serviceAccount:$SQL_SA --role=roles/storage.objectAdmin
 for t in customers products orders order_items payments reviews; do
     echo "Importing $t ..."
-    gcloud sql import csv cymbal-oltp gs://${PROJECT_ID}-bucket/seed/${t}.csv \
+    gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv \
         --database=cymbal --table=cymbal.${t} --quiet
 done
 ```
@@ -130,15 +130,15 @@ PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
 Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
 
 ```bash
-gcloud datastream connection-profiles create cymbal-postgres-profile --location=$REGION \
+gcloud datastream connection-profiles create cymbal-postgres-profile --location={{ REGION }} \
     --type=postgresql --display-name=cymbal-postgres-profile \
-    --postgresql-hostname=$BK_ENDPOINT_IP --postgresql-port=5432 \
+    --postgresql-hostname=10.10.0.5 --postgresql-port=5432 \
     --postgresql-username=datastream_user --postgresql-password="$BK_DS_PASSWORD" \
     --postgresql-database=cymbal --private-connection=cymbal-psc
 ```
 
 ```bash
-gcloud datastream connection-profiles create cymbal-bq-profile --location=$REGION \
+gcloud datastream connection-profiles create cymbal-bq-profile --location={{ REGION }} \
     --type=bigquery --display-name=cymbal-bq-profile
 ```
 
@@ -154,7 +154,7 @@ The stream itself is defined by two JSON files that ship with the repository —
 
 ```bash
 git -C ~/bootkon restore content/agenticdata/src/datastream/
-sed -i "s/PROJECT_ID_PLACEHOLDER/$PROJECT_ID/" content/agenticdata/src/datastream/destination_config.json
+sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" content/agenticdata/src/datastream/destination_config.json
 ```
 
 ### Start the stream
@@ -162,11 +162,11 @@ sed -i "s/PROJECT_ID_PLACEHOLDER/$PROJECT_ID/" content/agenticdata/src/datastrea
 Create the bronze dataset, then the stream (with a full backfill of the seed data), then flip it to `RUNNING`:
 
 ```bash
-bq mk --location=US --dataset ${PROJECT_ID}:cymbal_bronze
+bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
 ```
 
 ```bash
-gcloud datastream streams create cymbal-cdc-stream --location=$REGION \
+gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \
     --display-name=cymbal-cdc-stream \
     --source=cymbal-postgres-profile --postgresql-source-config=content/agenticdata/src/datastream/source_config.json \
     --destination=cymbal-bq-profile --bigquery-destination-config=content/agenticdata/src/datastream/destination_config.json \
@@ -174,7 +174,7 @@ gcloud datastream streams create cymbal-cdc-stream --location=$REGION \
 ```
 
 ```bash
-gcloud datastream streams update cymbal-cdc-stream --location=$REGION \
+gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
     --state=RUNNING --update-mask=state
 ```
 
