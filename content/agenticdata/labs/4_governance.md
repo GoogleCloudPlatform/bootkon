@@ -1,0 +1,121 @@
+## Lab 4: Governance with Knowledge Catalog
+
+<walkthrough-tutorial-duration duration="35"></walkthrough-tutorial-duration>
+{{ author('Fabian Hirschmann', 'https://linkedin.com/in/fhirschmann') }}
+<walkthrough-tutorial-difficulty difficulty="2"></walkthrough-tutorial-difficulty>
+<bootkon-cloud-shell-note/>
+
+You have a working medallion — now make it *trustworthy*. In this lab you govern it with **Knowledge Catalog** (formerly Dataplex Universal Catalog): label the tiers so everyone can find the right data, measure quality automatically, lock down PII, and give business terms a home. In Lab 5 an AI agent becomes a consumer of exactly this governed layer — governance is what keeps agents grounded.
+
+This lab is console-first: you built everything with code so far; now see how the platform describes itself.
+
+### Label the medallion tiers with aspects
+
+Aspects are structured metadata attached to catalog entries. We'll create a **Data tier** aspect type and stamp bronze/silver/gold onto the datasets.
+
+1. Open [Knowledge Catalog](https://console.cloud.google.com/dataplex) and go to <walkthrough-spotlight-pointer locator="text('Aspect types')">Aspect types</walkthrough-spotlight-pointer> (under *Metadata types*).
+2. Click <walkthrough-spotlight-pointer locator="text('Create aspect type')">Create aspect type</walkthrough-spotlight-pointer> and use:
+    - Aspect type ID: `data-tier`
+    - Display name: `Data tier`
+    - Location: `us-central1`
+3. Add a field:
+    - Type: **Enum**, ID: `tier`, Display name: `Tier`
+    - Allowed values: `bronze`, `silver`, `gold`
+    - Mark it required.
+4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
+
+Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
+
+5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> and click *Add* → choose **Data tier** → set Tier to `gold` → save.
+6. Repeat for `cymbal_silver` (`silver`) and `cymbal_bronze` (`bronze`).
+
+Verify the point of the exercise: in the catalog search bar, filter by your new aspect (e.g. search for `cymbal` and use the aspect filter for `Data tier = gold`) — anyone in the company can now find the *consumable* data without asking around.
+
+### Measure quality automatically
+
+In Lab 3 your assertions tested what Dataform *built*. Knowledge Catalog's **auto data quality** watches tables *continuously* — no pipeline required. Let's point it at the flaws you know are in bronze.
+
+First, allow the Dataplex service agent to use your scan service account:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com \
+    --member=serviceAccount:service-{{ PROJECT_NUMBER }}@gcp-sa-dataplex.iam.gserviceaccount.com \
+    --role=roles/iam.serviceAccountTokenCreator
+```
+
+Now profile the customer data:
+
+1. In Knowledge Catalog, open <walkthrough-spotlight-pointer locator="text('Data profiling & quality')">Data profiling & quality</walkthrough-spotlight-pointer>.
+2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create data profile scan'})">Create data profile scan</walkthrough-spotlight-pointer>:
+    - Display name: `cymbal-profile-bronze-customers`
+    - Table: browse to `cymbal_bronze` → `cymbal_customers`
+    - Scope *Entire data*, sampling *All data*, publish results on
+    - Credential type: **Service account** → `dataquality-service-account`
+    - Schedule: On-demand
+3. Create it, open it, and click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer>.
+4. When the job finishes (a few minutes), explore the results — look at the `country` column: there's your planted ~1.5% NULL rate, and the `email` column's distinct count hints at the duplicates.
+
+Then hold bronze orders to a standard:
+
+5. Back on the same page, click <walkthrough-spotlight-pointer locator="semantic({button 'Create data quality scan'})">Create data quality scan</walkthrough-spotlight-pointer>:
+    - Display name: `cymbal-dq-bronze-orders`
+    - Table: `cymbal_bronze` → `cymbal_orders`
+    - Credential type: Service account → `dataquality-service-account`, On-demand
+6. Add two rules (rule type *Row check* / validity):
+    - `status IN ('pending','paid','shipped','delivered','cancelled','returned')` — dimension *Validity*
+    - `order_ts <= CURRENT_TIMESTAMP()` — dimension *Accuracy*
+7. Run the scan. **It fails — on purpose.** The `shiped` typo and the future-dated orders you saw in Lab 3 are now caught by governance, not just by your pipeline. Discuss with your table: the same rules would pass on `cymbal_silver.stg_orders` — why keep both layers scanned? (If you have time, clone the scan onto silver and prove it passes.)
+
+### Lock down PII
+
+`stg_customers.email` is personal data. Enforce column-level security with a policy tag:
+
+1. Open [BigQuery policy tags](https://console.cloud.google.com/bigquery/policy-tags) and click <walkthrough-spotlight-pointer locator="text('Create taxonomy')">Create taxonomy</walkthrough-spotlight-pointer>:
+    - Taxonomy name: `cymbal-governance`, location `us`
+    - Policy tag: `PII`, description: `Personal data — restricted`
+2. Create it, then toggle <walkthrough-spotlight-pointer locator="text('Enforce access control')">Enforce access control</walkthrough-spotlight-pointer> on.
+3. In [BigQuery](https://console.cloud.google.com/bigquery), open `cymbal_silver` → `stg_customers` → <walkthrough-spotlight-pointer locator="semantic({button 'Edit schema'})">Edit schema</walkthrough-spotlight-pointer>, select the `email` column, click *Add policy tag*, and pick `cymbal-governance > PII`. Save.
+
+Now prove it works — this query **must fail** with an access-denied error on the tagged column:
+
+```sql
+SELECT email FROM `{{ PROJECT_ID }}.cymbal_silver.stg_customers` LIMIT 5
+```
+
+And this one works fine:
+
+```sql
+SELECT * EXCEPT (email) FROM `{{ PROJECT_ID }}.cymbal_silver.stg_customers` LIMIT 5
+```
+
+You are the project owner and *still* can't read that column — fine-grained access is a separate grant (Fine-Grained Reader). That's exactly the guarantee you want before letting AI agents loose on the warehouse. (At scale you wouldn't tag by hand: Sensitive Data Protection discovery profiles tables and pushes its findings into the catalog as aspects.)
+
+### Give the business a vocabulary
+
+1. In Knowledge Catalog, open <walkthrough-spotlight-pointer locator="text('Glossaries')">Glossaries</walkthrough-spotlight-pointer> and create glossary `Cymbal Business Glossary` (location `us-central1`).
+2. Add a term: **Lifetime value** — *"Gross revenue of a customer's non-cancelled orders, in the order currency. Source of truth: cymbal_gold.dim_customer_360.lifetime_value."*
+3. Open the `dim_customer_360` entry via catalog Search, go to its schema, select the `lifetime_value` column and attach the term.
+
+Then try the agentic side of governance — in the catalog <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, ask in natural language:
+
+```
+Which tables contain revenue by day?
+```
+
+Gemini-powered search reads the same metadata you just curated — every aspect, term, and description you add makes both humans *and* agents smarter.
+
+### Admire the lineage
+
+One more look: open `cymbal_gold.fct_daily_revenue` in BigQuery and its <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. Bronze→silver→gold, captured automatically from the Dataform runs. (Datastream's Postgres→bronze hop publishes its metadata to the catalog in Preview, but doesn't draw lineage edges yet — watch that space.)
+
+### Challenge: publish a data product
+
+**[TASK]** Take up to 10 minutes: package `cymbal_gold` as a **data product** — the contract your data agent will consume in Lab 5.
+
+- In Knowledge Catalog, find <walkthrough-spotlight-pointer locator="text('Data products')">Data products</walkthrough-spotlight-pointer> and create one from the three gold tables.
+- Let Gemini generate the product documentation — then *edit it*: you are accountable for the contract, the model just drafts it.
+- Explore what a consumer would see before requesting access.
+
+### Success
+
+🎉 Splendid{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your platform now explains itself: tiers are labeled, quality is measured continuously (and honestly — bronze fails, as it should), PII is locked down even against project owners, business terms live next to the data, and lineage draws itself. Governance done — the agents can come. 🛡️
