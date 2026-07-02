@@ -23,9 +23,9 @@ If the labs have drifted since this diff was written:
 
     git apply --recount -C1 content/agenticdata/option1-vpc-peering-proxy.diff
 
---- a/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:05:09
-+++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:05:51
-@@ -51,7 +51,7 @@
+--- a/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:08:21
++++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:09:24
+@@ -57,7 +57,7 @@
  
  ### Create the network path
  
@@ -34,7 +34,7 @@ If the labs have drifted since this diff was written:
  
  ```bash
  gcloud compute networks create cymbal-vpc --subnet-mode=custom
-@@ -62,25 +62,27 @@
+@@ -68,25 +68,27 @@
      --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
  ```
  
@@ -71,7 +71,7 @@ If the labs have drifted since this diff was written:
  
  {% if ON_ARGOLIS %}
  ❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
-@@ -93,8 +95,7 @@
+@@ -99,8 +101,7 @@
      --region={{ REGION }} \
      --root-password=$BK_DB_PASSWORD \
      --database-flags=cloudsql.logical_decoding=on \
@@ -81,7 +81,7 @@ If the labs have drifted since this diff was written:
      --no-assign-ip \
      --async
  ```
-@@ -111,7 +112,7 @@
+@@ -117,7 +118,7 @@
  ```bash
  gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
      --display-name=cymbal-psc \
@@ -90,8 +90,8 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Stage the seed data
---- a/content/agenticdata/labs/2_replication.md	2026-07-02 21:05:09
-+++ b/content/agenticdata/labs/2_replication.md	2026-07-02 21:05:51
+--- a/content/agenticdata/labs/2_replication.md	2026-07-02 21:08:21
++++ b/content/agenticdata/labs/2_replication.md	2026-07-02 21:09:24
 @@ -32,35 +32,36 @@
  gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
  ```
@@ -141,16 +141,16 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Open the tunnel
-@@ -152,7 +153,7 @@
+@@ -146,7 +147,7 @@
  3. Fill in:
      - Connection profile name: `cymbal-postgres-profile`
      - Region: `{{ REGION }}`
 -    - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
 +    - Hostname or IP: your **reverse-proxy VM's internal IP** — run `gcloud compute instances describe cymbal-jump --zone={{ REGION }}-a --format='value(networkInterfaces[0].networkIP)'` to get it (Datastream can't reach the database directly and doesn't resolve DNS)
-     - Port: `5432`, Username: `datastream_user`, Password: *(the value you just printed)*, Database: `cymbal`
+     - Port: `5432`, Username: `datastream_user`, Password: `{{ BK_DS_PASSWORD }}`, Database: `cymbal`
  4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
  
-@@ -177,12 +178,13 @@
+@@ -171,12 +172,13 @@
  
  #### Path B — Command line (gcloud)
  
@@ -163,6 +163,6 @@ If the labs have drifted since this diff was written:
      --type=postgresql --display-name=cymbal-postgres-profile \
 -    --postgresql-hostname=10.10.0.5 --postgresql-port=5432 \
 +    --postgresql-hostname=$VM_IP --postgresql-port=5432 \
-     --postgresql-username=datastream_user --postgresql-password="$BK_DS_PASSWORD" \
+     --postgresql-username=datastream_user --postgresql-password="{{ BK_DS_PASSWORD }}" \
      --postgresql-database=cymbal --private-connection=cymbal-psc
  ```

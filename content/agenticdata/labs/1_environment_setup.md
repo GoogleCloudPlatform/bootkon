@@ -49,6 +49,12 @@ The script appended your generated database passwords and agent settings to `~/.
 source ~/.bashrc
 ```
 
+Then reload the tutorial once — this renders your freshly generated passwords directly into the commands of the next labs:
+
+```bash
+bk-start
+```
+
 ### Create the network path
 
 Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC). First, create a VPC and a subnet:

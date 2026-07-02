@@ -7,7 +7,7 @@
 
 In this lab you bring Cymbal's database to life and replicate it — continuously — into BigQuery using **Datastream** change data capture (CDC). By the end, every INSERT, UPDATE and DELETE in Postgres lands in your `cymbal_bronze` dataset within moments.
 
-(If any command below complains about an unset variable like `$BK_DB_PASSWORD`, run `source ~/.bashrc` — the bootstrap in Lab 1 put the stream configuration there.)
+(The commands below contain your generated database passwords, rendered into the tutorial. If you see empty quotes instead, run the `bk-start` reload step from the end of Lab 1.)
 
 ### About Datastream
 
@@ -87,7 +87,7 @@ gcloud sql databases create cymbal --instance=cymbal-oltp
 Apply the schema through the tunnel:
 
 ```bash
-PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
     -f content/agenticdata/src/datagen/schema.sql
 ```
 
@@ -115,8 +115,8 @@ Datastream reads Postgres' write-ahead log through a **publication** and a **rep
 Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then (once the import finished) run it:
 
 ```bash
-PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
-    -v ds_password="$BK_DS_PASSWORD" \
+PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
+    -v ds_password="{{ BK_DS_PASSWORD }}" \
     -f content/agenticdata/src/datastream/replication_setup.sql
 ```
 
@@ -135,12 +135,6 @@ Now you create two **connection profiles** (a PostgreSQL source and a BigQuery d
 - **Path A — Console**: click through the Datastream UI, guided by spotlights. Good if you like seeing the wizard and every option.
 - **Path B — Command line**: `gcloud`, with agy authoring the stream config. Faster and scriptable.
 
-You'll need the Datastream user's password for either path. Print it so you can copy it:
-
-```bash
-echo $BK_DS_PASSWORD
-```
-
 ***
 
 #### Path A — Console (UI)
@@ -153,7 +147,7 @@ echo $BK_DS_PASSWORD
     - Connection profile name: `cymbal-postgres-profile`
     - Region: `{{ REGION }}`
     - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
-    - Port: `5432`, Username: `datastream_user`, Password: *(the value you just printed)*, Database: `cymbal`
+    - Port: `5432`, Username: `datastream_user`, Password: `{{ BK_DS_PASSWORD }}`, Database: `cymbal`
 4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
 
 **Create the destination connection profile.**
@@ -183,7 +177,7 @@ Two profiles: where the data comes from, and where it goes. Note the hostname �
 gcloud datastream connection-profiles create cymbal-postgres-profile --location={{ REGION }} \
     --type=postgresql --display-name=cymbal-postgres-profile \
     --postgresql-hostname=10.10.0.5 --postgresql-port=5432 \
-    --postgresql-username=datastream_user --postgresql-password="$BK_DS_PASSWORD" \
+    --postgresql-username=datastream_user --postgresql-password="{{ BK_DS_PASSWORD }}" \
     --postgresql-database=cymbal --private-connection=cymbal-psc
 ```
 
@@ -251,7 +245,7 @@ FROM `{{ PROJECT_ID }}.cymbal_bronze.cymbal_orders`
 Watch `latest_order` climb as the simulator inserts. Then prove UPDATEs work end-to-end — back in terminal 1:
 
 ```bash
-PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
     -c "UPDATE cymbal.customers SET country = 'Iceland', updated_at = now() WHERE customer_id = 42;"
 ```
 
