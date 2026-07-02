@@ -69,12 +69,15 @@ gcloud compute network-attachments create cymbal-attachment --region=$REGION \
     --connection-preference=ACCEPT_AUTOMATIC --subnets=cymbal-subnet
 ```
 
-> [!NOTE]
-> `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
+Note: `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
 
 ### Launch your operational database
 
 This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and Private Service Connect instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
+
+{% if ON_ARGOLIS %}
+❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
+{% endif %}
 
 ```bash
 gcloud sql instances create cymbal-oltp \

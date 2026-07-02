@@ -205,7 +205,7 @@ Customer 42 just moved to Iceland — from a Postgres UPDATE to a BigQuery row, 
 
 ### Challenge: dig deeper
 
-**[TASK]** Take up to 10 minutes:
+**\[TASK\]** Take up to 10 minutes:
 
 1. DELETE an order in psql (pick a high `order_id` from the simulator's output, remove its `order_items` and `payments` rows first) and confirm it disappears from `cymbal_bronze.cymbal_orders`.
 2. Every bronze table has an extra `datastream_metadata` column — inspect it and ask agy what `source_timestamp` and `uuid` are for.

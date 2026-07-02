@@ -29,7 +29,7 @@ diff --git a/content/agenticdata/labs/1_environment_setup.md b/content/agenticda
 +Our database will have **no public IP**. Instead, Datastream will reach it through private connectivity (VPC peering) and a reverse-proxy VM. First, create a VPC and a subnet:
 
  ```bash
-@@ -63,12 +63,14 @@
+@@ -63,11 +63,13 @@
  ```
 
 -Datastream connects into your VPC through a **network attachment** — the entry door for its PSC interface:
@@ -44,15 +44,18 @@ diff --git a/content/agenticdata/labs/1_environment_setup.md b/content/agenticda
 +    --ranges=cymbal-psa --network=cymbal-vpc
  ```
 
- > [!NOTE]
--> `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
-+> VPC Network Peering is not transitive: Datastream's own peered network cannot reach the Cloud SQL services network directly. That is why this variant adds a small reverse-proxy VM in Lab 2 — Google's documented workaround.
+-Note: `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
++Note: VPC Network Peering is not transitive: Datastream's own peered network cannot reach the Cloud SQL services network directly. That is why this variant adds a small reverse-proxy VM in Lab 2 — Google's documented workaround.
 
-@@ -75,16 +77,15 @@
+@@ -75,20 +77,19 @@
  ### Launch your operational database
 
 -This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and Private Service Connect instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
 +This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and a private IP (Private Services Access) instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
+
+ {% if ON_ARGOLIS %}
+ ❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
+ {% endif %}
 
  ```bash
  gcloud sql instances create cymbal-oltp \

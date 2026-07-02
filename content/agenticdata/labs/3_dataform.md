@@ -45,11 +45,11 @@ And give it the full brief (this is one prompt — paste it whole):
 
 Watch agy work: it will create the `.sqlx` files, run `dataform compile`, read the errors, and fix its own code. Review the result with `/diff` before accepting.
 
-> [!NOTE]
-> **If agy took a wrong turn** or you want to compare with a known-good implementation, the reference lives right next door in `src/dataform_reference/` — for example <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/stg_customers.sqlx">stg_customers.sqlx</walkthrough-editor-open-file> and <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/fct_daily_revenue.sqlx">fct_daily_revenue.sqlx</walkthrough-editor-open-file>. Restore with:
-> ```
-> cp ~/bootkon/content/agenticdata/src/dataform_reference/definitions/*.sqlx ~/bootkon/content/agenticdata/src/dataform/definitions/
-> ```
+Note: **If agy took a wrong turn** or you want to compare with a known-good implementation, the reference lives right next door in `src/dataform_reference/` — for example <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/stg_customers.sqlx">stg_customers.sqlx</walkthrough-editor-open-file> and <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/fct_daily_revenue.sqlx">fct_daily_revenue.sqlx</walkthrough-editor-open-file>. Restore with:
+
+```bash
+cp ~/bootkon/content/agenticdata/src/dataform_reference/definitions/*.sqlx ~/bootkon/content/agenticdata/src/dataform/definitions/
+```
 
 ### Compile and run
 
@@ -93,11 +93,13 @@ One more thing: your simulator (terminal 3) is still writing to Postgres, and Da
 
 ### Challenge: harden the pipeline
 
-**[TASK]** Take up to 10 minutes — pick at least one:
+**\[TASK\]** Take up to 10 minutes — pick at least one:
 
 1. **Incremental gold**: ask agy to convert `fct_daily_revenue` into an incremental table that only processes new days. (Reference prompt in <walkthrough-editor-open-file filePath="content/agenticdata/src/prompts.md">prompts.md</walkthrough-editor-open-file>.)
 2. **Detect, don't just filter**: silver silently drops negative payments. Add a standalone assertion on the **bronze** payments table so the pipeline *alerts* on them — run it and watch it fail on purpose. (Reference: <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/assert_bronze_payments_non_negative.sqlx">assert_bronze_payments_non_negative.sqlx</walkthrough-editor-open-file>.)
 3. **Bonus**: ask agy to add a gold table that classifies `cymbal_reviews` sentiment with BigQuery's `AI.GENERATE` — and discuss with your table what that costs at scale.
+
+Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain.
 
 ### Success
 

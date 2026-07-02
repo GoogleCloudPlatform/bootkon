@@ -71,7 +71,7 @@ Watch what comes back: the agent shows the SQL it generated against your gold ta
 
 ### Challenge: stress-test the grounding
 
-**[TASK]** Take up to 5 minutes: try to make the agent say something wrong.
+**\[TASK\]** Take up to 5 minutes: try to make the agent say something wrong.
 
 - Ask about data it doesn't have ("What's our warehouse inventory?") — does it admit ignorance or hallucinate?
 - Ask an ambiguous question ("How are sales?") — does it apply your default groupings from the instructions?

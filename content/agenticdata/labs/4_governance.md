@@ -110,7 +110,7 @@ One more look: open `cymbal_gold.fct_daily_revenue` in BigQuery and its <walkthr
 
 ### Challenge: publish a data product
 
-**[TASK]** Take up to 10 minutes: package `cymbal_gold` as a **data product** — the contract your data agent will consume in Lab 5.
+**\[TASK\]** Take up to 10 minutes: package `cymbal_gold` as a **data product** — the contract your data agent will consume in Lab 5.
 
 - In Knowledge Catalog, find <walkthrough-spotlight-pointer locator="text('Data products')">Data products</walkthrough-spotlight-pointer> and create one from the three gold tables.
 - Let Gemini generate the product documentation — then *edit it*: you are accountable for the contract, the model just drafts it.
