@@ -26,7 +26,7 @@ OP=$(gcloud sql operations list --instance=cymbal-oltp --filter='status!=DONE' -
 [ -n "$OP" ] && gcloud sql operations wait $OP --timeout=unlimited || echo "cymbal-oltp is ready."
 ```
 
-Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state:
+Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state (it takes a few minutes — if it still shows `CREATING`, wait a moment and re-run):
 
 ```bash
 gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'

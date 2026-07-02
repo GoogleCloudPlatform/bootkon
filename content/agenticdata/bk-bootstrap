@@ -32,6 +32,15 @@ gcloud services enable \
     iam.googleapis.com \
     artifactregistry.googleapis.com
 
+# The Datastream service agent must exist and hold its service-agent role
+# BEFORE Lab 1 creates the private connection: on a fresh project the agent
+# is created lazily, and the first `private-connections create` fails with
+# PERMISSION_DENIED on the network attachment otherwise (verified live).
+gcloud beta services identity create --service=datastream.googleapis.com --project=$PROJECT_ID >/dev/null 2>&1
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
+    --role="roles/datastream.serviceAgent" --condition=None >>/dev/null
+
 # Knowledge Catalog data-quality service account: profile/quality scans in
 # Lab 4 run as this SA (custom execution identity).
 DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"

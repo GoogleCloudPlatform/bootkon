@@ -106,7 +106,7 @@ Learn more:
 
 ### Kick off Datastream private connectivity
 
-Datastream's private connection also takes a few minutes to build, so start it now too. **This command blocks until it finishes** — leave it running and continue with the next section in a **new terminal tab** (the `+` button in the terminal panel). Remember to run `. bk` in the new terminal.
+Datastream's private connection also takes a few minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 verifies it reached the `CREATED` state:
 
 ```bash
 gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
