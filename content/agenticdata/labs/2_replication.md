@@ -125,7 +125,62 @@ PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
     -f content/agenticdata/src/datastream/replication_setup.sql
 ```
 
-### Create the connection profiles
+### Create the bronze dataset
+
+Both paths below land the CDC data here, so create the destination dataset first:
+
+```bash
+bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
+```
+
+### Provision Datastream: pick your path
+
+Now you create two **connection profiles** (a PostgreSQL source and a BigQuery destination) and the **CDC stream**. There are two equivalent ways — **pick one**, then continue at *Watch it flow*:
+
+- **Path A — Console**: click through the Datastream UI, guided by spotlights. Good if you like seeing the wizard and every option.
+- **Path B — Command line**: `gcloud`, with agy authoring the stream config. Faster and scriptable.
+
+You'll need the Datastream user's password for either path. Print it so you can copy it:
+
+```bash
+echo $BK_DS_PASSWORD
+```
+
+***
+
+#### Path A — Console (UI)
+
+**Create the source connection profile.**
+
+1. Open [Datastream → Connection profiles](https://console.cloud.google.com/datastream/connection-profiles) and click <walkthrough-spotlight-pointer locator="semantic({button 'Create profile'})">Create profile</walkthrough-spotlight-pointer>.
+2. Choose the <walkthrough-spotlight-pointer locator="text('PostgreSQL')">PostgreSQL</walkthrough-spotlight-pointer> profile type.
+3. Fill in:
+    - Connection profile name: `cymbal-postgres-profile`
+    - Region: `{{ REGION }}`
+    - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
+    - Port: `5432`, Username: `datastream_user`, Password: *(the value you just printed)*, Database: `cymbal`
+4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
+
+**Create the destination connection profile.**
+
+5. Back on Connection profiles, click <walkthrough-spotlight-pointer locator="semantic({button 'Create profile'})">Create profile</walkthrough-spotlight-pointer> again and choose <walkthrough-spotlight-pointer locator="text('BigQuery')">BigQuery</walkthrough-spotlight-pointer>.
+6. Name it `cymbal-bq-profile`, region `{{ REGION }}`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
+
+**Create and start the stream.**
+
+7. Go to [Datastream → Streams](https://console.cloud.google.com/datastream/streams) and click <walkthrough-spotlight-pointer locator="semantic({button 'Create stream'})">Create stream</walkthrough-spotlight-pointer>.
+8. Stream name `cymbal-cdc-stream`; source type **PostgreSQL**, destination type **BigQuery**. Work through the wizard with <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>:
+    - **Source**: select `cymbal-postgres-profile`. Run the connectivity test.
+    - **Configure source**: include the `cymbal` schema (all tables); set **Publication** to `cymbal_pub` and **Replication slot** to `cymbal_slot`.
+    - **Destination**: select `cymbal-bq-profile`.
+    - **Configure destination**: choose *Single dataset for all schemas* → `cymbal_bronze`; set the **staleness limit** to `0` seconds.
+9. Run the validation, then click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>, and finally <walkthrough-spotlight-pointer locator="semantic({button 'Create & start'})">Create & start</walkthrough-spotlight-pointer> (or open the stream and press **Start**) with a full backfill.
+
+Skip Path B and continue at **Watch it flow**.
+
+***
+
+#### Path B — Command line (gcloud)
 
 Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
 
@@ -142,8 +197,6 @@ gcloud datastream connection-profiles create cymbal-bq-profile --location={{ REG
     --type=bigquery --display-name=cymbal-bq-profile
 ```
 
-### Let agy write the stream configuration
-
 The stream itself is defined by two JSON files that ship with the repository — you work on them directly in `content/agenticdata/src/datastream/` (the shipped destination config still contains a placeholder). Writing API-correct configuration is authoring work — agy's job. In your agy session (started from `~/bootkon`), run:
 
 ```
@@ -157,13 +210,7 @@ git -C ~/bootkon restore content/agenticdata/src/datastream/
 sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" content/agenticdata/src/datastream/destination_config.json
 ```
 
-### Start the stream
-
-Create the bronze dataset, then the stream (with a full backfill of the seed data), then flip it to `RUNNING`:
-
-```bash
-bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
-```
+Create the stream (with a full backfill of the seed data), then flip it to `RUNNING`:
 
 ```bash
 gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \
@@ -178,7 +225,9 @@ gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
     --state=RUNNING --update-mask=state
 ```
 
-Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill.
+***
+
+Whichever path you took, Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill.
 
 Two design choices in the destination config are worth understanding: the stream runs in **merge mode**, meaning every change event is upserted into the BigQuery table (via the Storage Write API's CDC support), so bronze always mirrors the *current state* of Postgres — the alternative, *append-only*, would keep every event as its own row, giving you a full change history instead. And `dataFreshness: "0s"` tells BigQuery to apply pending changes at query time rather than on a schedule — that's what makes the live demo below feel instant.
 

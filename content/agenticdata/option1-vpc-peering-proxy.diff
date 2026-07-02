@@ -9,7 +9,9 @@ workaround: Cloud SQL on a private IP via Private Services Access, a
 Datastream private connection over VPC peering (/29 subnet 10.20.0.0/29),
 and the jump VM promoted to Google's official reverse proxy (VPC peering is
 non-transitive, so Datastream cannot reach the Cloud SQL services network,
-nor PSC endpoints, directly).
+nor PSC endpoints, directly). Both the console (Path A) and gcloud (Path B)
+provisioning flows are patched to use the reverse-proxy VM's IP as the
+Datastream source hostname.
 
 Apply from the repository root:
 
@@ -19,8 +21,8 @@ If the labs have drifted since this diff was written:
 
     git apply --recount -C1 content/agenticdata/option1-vpc-peering-proxy.diff
 
---- a/content/agenticdata/labs/1_environment_setup.md	2026-07-02 14:49:36
-+++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-02 14:50:24
+--- a/content/agenticdata/labs/1_environment_setup.md	2026-07-02 15:28:02
++++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-02 15:28:44
 @@ -51,7 +51,7 @@
  
  ### Create the network path
@@ -86,8 +88,8 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Stage the seed data
---- a/content/agenticdata/labs/2_replication.md	2026-07-02 14:49:36
-+++ b/content/agenticdata/labs/2_replication.md	2026-07-02 14:51:01
+--- a/content/agenticdata/labs/2_replication.md	2026-07-02 15:28:02
++++ b/content/agenticdata/labs/2_replication.md	2026-07-02 15:28:44
 @@ -32,39 +32,41 @@
  gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
  ```
@@ -144,9 +146,18 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Open the tunnel
-@@ -127,12 +129,13 @@
+@@ -157,7 +159,7 @@
+ 3. Fill in:
+     - Connection profile name: `cymbal-postgres-profile`
+     - Region: `{{ REGION }}`
+-    - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
++    - Hostname or IP: your **reverse-proxy VM's internal IP** — run `gcloud compute instances describe cymbal-jump --zone={{ REGION }}-a --format='value(networkInterfaces[0].networkIP)'` to get it (Datastream can't reach the database directly and doesn't resolve DNS)
+     - Port: `5432`, Username: `datastream_user`, Password: *(the value you just printed)*, Database: `cymbal`
+ 4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
  
- ### Create the connection profiles
+@@ -182,12 +184,13 @@
+ 
+ #### Path B — Command line (gcloud)
  
 -Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
 +Two profiles: where the data comes from, and where it goes. Note the hostname — the **reverse-proxy VM's internal IP**, because Datastream cannot reach the database directly and does not resolve DNS in private connections:
