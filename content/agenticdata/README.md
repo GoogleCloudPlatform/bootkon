@@ -29,6 +29,66 @@ Your role: you are a data platform engineer at **Cymbal**, a commerce company wh
 3. **Governance before agents.** Knowledge Catalog labels the tiers, scans quality continuously, locks down PII with enforced column-level security, and gives business terms a home — the grounding layer that makes AI answers trustworthy.
 4. **Agents on top.** A BigQuery conversational data agent over the gold layer, then an ADK multi-agent system: a concierge agent that answers live operational questions straight from Postgres and delegates analytical questions to the data agent over the **A2A protocol**.
 
+## Architecture
+
+<table align="center">
+  <tr>
+    <td align="center" width="130">
+      <img src="https://icon.icepanel.io/GCP/svg/Cloud-SQL.svg" width="48" alt="Cloud SQL"/><br>
+      <b>Cloud SQL</b><br>
+      <sub>PostgreSQL, PSC-only<br>Cymbal's live order DB</sub>
+    </td>
+    <td align="center"><b>— CDC ▶</b></td>
+    <td align="center" width="130">
+      <img src="https://icon.icepanel.io/GCP/svg/Datastream.svg" width="48" alt="Datastream"/><br>
+      <b>Datastream</b><br>
+      <sub>backfill + streaming<br>merge mode</sub>
+    </td>
+    <td align="center"><b>—▶</b></td>
+    <td align="center" width="180">
+      <img src="https://icon.icepanel.io/GCP/svg/BigQuery.svg" width="48" alt="BigQuery"/><br>
+      <b>BigQuery</b><br>
+      <sub>bronze → silver → gold<br>Dataform SQLX, authored by agy</sub>
+    </td>
+    <td align="center"><b>—▶</b></td>
+    <td align="center" width="150">
+      <img src="https://icon.icepanel.io/GCP/svg/AI-Platform.svg" width="48" alt="BigQuery data agent"/><br>
+      <b>Data agent</b><br>
+      <sub>conversational analytics<br>grounded on gold</sub>
+    </td>
+  </tr>
+  <tr>
+    <td></td><td></td><td></td><td></td>
+    <td align="center">
+      <b>▲</b><br>
+      <img src="https://icon.icepanel.io/GCP/svg/Dataplex.svg" width="40" alt="Knowledge Catalog"/><br>
+      <b>Knowledge Catalog</b><br>
+      <sub>tier aspects · data quality<br>PII policy tags · glossary · lineage</sub>
+    </td>
+    <td></td>
+    <td align="center"><b>▲</b><br><b>A2A</b></td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>▲</b><br>
+      <sub>live order<br>lookups</sub>
+    </td>
+    <td colspan="5" align="center"><b>◀————————————————</b></td>
+    <td align="center">
+      <img src="https://icon.icepanel.io/GCP/svg/Vertex-AI.svg" width="48" alt="ADK concierge agent"/><br>
+      <b>cymbal_concierge</b><br>
+      <sub>ADK agent, adk web</sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="7" align="center">
+      <img src="https://icon.icepanel.io/GCP/svg/Cloud-Shell.svg" width="40" alt="Cloud Shell"/><br>
+      <b>Cloud Shell + Antigravity CLI (agy)</b><br>
+      <sub>you operate the shell · agy authors the code · the console verifies</sub>
+    </td>
+  </tr>
+</table>
+
 ## About the data set
 
 There is no download: the **Cymbal orders** dataset is fully synthetic and generated *inside your own project* by a seeded generator — every participant gets identical data. It models a generic commerce platform (customers, products, orders, order items, payments, reviews; ~2.3M rows, well under 2 GB) and includes deliberately planted data-quality flaws — duplicate customers, invalid emails, a `shiped` status typo, mixed-case currencies, orphaned line items, negative payments, future timestamps — plus PII columns (names, emails, phones, addresses) for the governance lab. A simulator keeps inserting and updating rows during the event, so the change-data-capture pipeline always has something to show.
