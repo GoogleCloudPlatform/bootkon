@@ -31,7 +31,7 @@ Install the CLI (takes about a minute):
 npm install -g @dataform/cli@3
 ```
 
-The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). Point it at your project and set up credentials:
+The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). **This folder is your home for the rest of this lab** — change into it once, point the project at yours, and set up credentials:
 
 ```bash
 cd ~/bootkon/content/agenticdata/src/dataform
@@ -43,17 +43,18 @@ The credentials file tells the CLI to use your logged-in identity (Application D
 
 ### Brief your co-engineer
 
-Start agy inside the project:
+The full specification of what to build — source schemas, the known data problems, the target silver/gold tables, and the assertion rules — lives in <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/AGENTS.md">AGENTS.md</walkthrough-editor-open-file>, right inside the project. Read it: it's the brief you are about to hand your co-engineer, and keeping it in a file (instead of a giant prompt) makes agy's work reproducible.
+
+Start agy (you are already in the project folder):
 
 ```bash
-cd ~/bootkon/content/agenticdata/src/dataform
 agy
 ```
 
-And give it the full brief (this is one prompt — paste it whole):
+And hand over the brief:
 
 ```
-/goal This is a Dataform Core 3 project. definitions/sources.js declares the bronze tables (a Datastream CDC replica of the Postgres schema "cymbal"; tables cymbal_customers, cymbal_products, cymbal_orders, cymbal_order_items, cymbal_payments, cymbal_reviews in dataset cymbal_bronze). Create a silver layer (dataset cymbal_silver, tag "silver") that fixes these known data problems, one table per source table (stg_customers, stg_products, stg_orders, stg_order_items, stg_payments): customers: normalize emails to lowercase, drop rows whose email is not a valid address, collapse duplicate emails keeping the most recently updated row, convert empty-string countries to NULL; orders: lowercase statuses and fix the typo 'shiped' -> 'shipped', uppercase currency codes, drop orders with a future order_ts; order_items: drop rows whose order_id has no matching order and rows with qty <= 0; payments: drop negative amounts and payments without a matching order. Create a gold layer (dataset cymbal_gold, tag "gold"): fct_daily_revenue (date, currency, distinct orders, units, gross revenue = SUM(qty * unit_price), excluding cancelled orders), dim_customer_360 (one row per customer with lifetime_orders, lifetime_value, avg_order_value, first/last order date), fct_product_performance (units, gross revenue and gross margin (unit_price - cost) per product, excluding cancelled and returned orders). Every silver table needs Dataform assertions: uniqueKey on its primary key, nonNull on required columns, and rowConditions that assert the cleaning worked (allowed status values, currency matches ^[A-Z]{3}$, qty > 0, amount >= 0, order_ts not in the future). Use ${ref(...)} for all dependencies. Run `dataform compile` yourself and fix any compilation errors until the project compiles.
+/goal Read AGENTS.md and build the complete silver and gold layers it specifies. Run `dataform compile` yourself and fix any errors until the project compiles cleanly.
 ```
 
 Watch agy work: it will create the `.sqlx` files, run `dataform compile`, read the errors, and fix its own code. Review the result with `/diff` before accepting.
@@ -66,10 +67,9 @@ cp ~/bootkon/content/agenticdata/src/dataform_reference/definitions/*.sqlx ~/boo
 
 ### Compile and run
 
-Exit agy (or use a new terminal) and verify the compilation yourself — trust, but verify:
+Exit agy and verify the compilation yourself — trust, but verify:
 
 ```bash
-cd ~/bootkon/content/agenticdata/src/dataform
 dataform compile
 ```
 

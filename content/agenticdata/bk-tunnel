@@ -1,0 +1,11 @@
+#!/bin/bash
+# Keeps the IAP tunnel to the cymbal-jump VM alive. IAP tunnels disconnect
+# after ~1 hour of inactivity; this wrapper simply reconnects so the tunnel
+# terminal can be left open for the whole event.
+# REGION is fixed to us-central1 for this stream (see vars.sh).
+while true; do
+    gcloud compute start-iap-tunnel cymbal-jump 5432 \
+        --local-host-port=localhost:5432 --zone=us-central1-a
+    echo "Tunnel disconnected -- reconnecting in 3 seconds (Ctrl+C to stop) ..."
+    sleep 3
+done

@@ -32,42 +32,14 @@ Fallback: `git restore content/agenticdata/src/datastream/` then replace
 
 ## Lab 3 — the medallion pipeline (the centerpiece)
 
-Run inside `~/bootkon/content/agenticdata/src/dataform` (participants work
-directly on the starter project in the repo):
+Run inside `~/bootkon/content/agenticdata/src/dataform`. The full
+specification lives in that folder's `AGENTS.md` — the prompt only hands
+over the brief:
 
 ```
-/goal This is a Dataform Core 3 project. definitions/sources.js declares the
-bronze tables (a Datastream CDC replica of the Postgres schema "cymbal";
-tables cymbal_customers, cymbal_products, cymbal_orders, cymbal_order_items,
-cymbal_payments, cymbal_reviews in dataset cymbal_bronze).
-
-Create a silver layer (dataset cymbal_silver, tag "silver") that fixes these
-known data problems, one table per source table (stg_customers, stg_products,
-stg_orders, stg_order_items, stg_payments):
-- customers: normalize emails to lowercase, drop rows whose email is not a
-  valid address, collapse duplicate emails keeping the most recently updated
-  row, convert empty-string countries to NULL
-- orders: lowercase statuses and fix the typo 'shiped' -> 'shipped',
-  uppercase currency codes, drop orders with a future order_ts
-- order_items: drop rows whose order_id has no matching order and rows with
-  qty <= 0
-- payments: drop negative amounts and payments without a matching order
-
-Create a gold layer (dataset cymbal_gold, tag "gold"):
-- fct_daily_revenue: date, currency, distinct orders, units,
-  gross revenue = SUM(qty * unit_price), excluding cancelled orders
-- dim_customer_360: one row per customer with lifetime_orders,
-  lifetime_value, avg_order_value, first/last order date
-- fct_product_performance: units, gross revenue and gross margin
-  (unit_price - cost) per product, excluding cancelled and returned orders
-
-Every silver table needs Dataform assertions: uniqueKey on its primary key,
-nonNull on required columns, and rowConditions that assert the cleaning
-worked (allowed status values, currency matches ^[A-Z]{3}$, qty > 0,
-amount >= 0, order_ts not in the future).
-
-Use ${ref(...)} for all dependencies. Run `dataform compile` yourself and fix
-any compilation errors until the project compiles.
+/goal Read AGENTS.md and build the complete silver and gold layers it
+specifies. Run `dataform compile` yourself and fix any errors until the
+project compiles cleanly.
 ```
 
 Fallback: `cp content/agenticdata/src/dataform_reference/definitions/*.sqlx content/agenticdata/src/dataform/definitions/`
@@ -89,24 +61,12 @@ agy -p "Read the table schemas: bq show --schema <PROJECT_ID>:cymbal_gold.fct_da
 ## Lab 6 — build the analyst agent
 
 Run inside `content/agenticdata/src/adk` (participants
-`rm -rf cymbal_analyst` first so agy builds it from scratch):
+`rm -rf cymbal_analyst` first so agy builds it from scratch). The full
+specification lives in that folder's `AGENTS.md`:
 
 ```
-/goal Create a Python package cymbal_analyst implementing an ADK agent
-(google-adk 2.x is installed):
-- agent.py defines root_agent = Agent(name="cymbal_analyst",
-  model=env BK_CYMBAL_MODEL default "gemini-2.5-flash") with ONE function tool
-  that sends a question to a published BigQuery data agent via the
-  google-cloud-geminidataanalytics DataChatServiceClient (stateless chat with
-  DataAgentContext pointing at
-  projects/$GOOGLE_CLOUD_PROJECT/locations/global/dataAgents/$BK_DATA_AGENT_ID)
-  and returns the streamed text parts joined together.
-- a2a_server.py exposes it via
-  google.adk.a2a.utils.agent_to_a2a.to_a2a(root_agent, port=8001)
-  as module attribute a2a_app for uvicorn.
-- Read all configuration (GOOGLE_CLOUD_PROJECT, BK_DATA_AGENT_ID, BK_CYMBAL_MODEL)
-  from environment variables; do not create any config files.
-- __init__.py must do: from . import agent
+/goal Read AGENTS.md and implement the cymbal_analyst package exactly as it
+describes.
 ```
 
 Fallback: `git restore content/agenticdata/src/adk/cymbal_analyst/`

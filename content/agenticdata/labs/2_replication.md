@@ -65,14 +65,13 @@ gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
 
 ### Open the tunnel
 
-Open a **second terminal tab** (`+`) and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it:
+Open a **second terminal tab** (`+`) and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it. The helper wraps `gcloud compute start-iap-tunnel` and reconnects automatically if the tunnel ever drops:
 
 ```bash
-gcloud compute start-iap-tunnel cymbal-jump 5432 \
-    --local-host-port=localhost:5432 --zone={{ REGION }}-a
+~/bootkon/content/agenticdata/bk-tunnel
 ```
 
-When you see *Listening on port [5432]*, `localhost:5432` in Cloud Shell is your production database. (If the tunnel ever drops — it disconnects after an hour of inactivity — just re-run this command.)
+When you see *Listening on port [5432]*, `localhost:5432` in Cloud Shell is your production database.
 
 **Identity-Aware Proxy (IAP)** TCP forwarding is what makes this safe: the tunnel is authorized by your Google identity and an IAM role (`iap.tunnelResourceAccessor`), not by network position — no VPN, no bastion with a public IP, and every connection is auditable. ([IAP TCP forwarding](https://docs.cloud.google.com/iap/docs/using-tcp-forwarding))
 
@@ -132,7 +131,7 @@ bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
 
 Now you create two **connection profiles** (a PostgreSQL source and a BigQuery destination) and the **CDC stream**. There are two equivalent ways — **pick one**, then continue at *Watch it flow*:
 
-- **Path A — Console**: click through the Datastream UI, guided by spotlights. Good if you like seeing the wizard and every option.
+- **Path A — Console**: click through the Datastream UI, guided by spotlights. Good if you like seeing the wizard and every option. **Unsure? Take this one.**
 - **Path B — Command line**: `gcloud`, with agy authoring the stream config. Faster and scriptable.
 
 ***
