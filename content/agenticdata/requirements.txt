@@ -4,4 +4,7 @@
 faker==37.4.0
 psycopg[binary]==3.2.13
 google-adk[a2a]==2.3.0
+# google-adk[a2a] does NOT pull the http-server extras that to_a2a() needs
+# at runtime (starlette/sse-starlette) -- verified live in the smoke test.
+a2a-sdk[http-server]==0.3.26
 google-cloud-geminidataanalytics==0.13.1
