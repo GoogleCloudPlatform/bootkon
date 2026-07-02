@@ -9,6 +9,18 @@ You have a working medallion — now make it *trustworthy*. In this lab you gove
 
 This lab is console-first: you built everything with code so far; now see how the platform describes itself.
 
+### About Knowledge Catalog
+
+Knowledge Catalog (formerly Dataplex Universal Catalog) is Google Cloud's metadata and governance layer. Every dataset, table and column is an **entry** in the catalog; you enrich entries with **aspects** (structured, typed metadata — like the data tiers you are about to define), attach **business glossary** terms, and let **data profiling** and **auto data quality** scans measure the actual content on a schedule or on demand. Because BigQuery reports **lineage** automatically, the catalog also knows where every table came from. All of this metadata is searchable — by humans and, increasingly, by Gemini and agents. That is the deeper point of this lab: a well-curated catalog is the grounding layer that keeps AI answers trustworthy.
+
+Learn more:
+- [Knowledge Catalog overview](https://docs.cloud.google.com/dataplex/docs/introduction)
+- [Aspects and aspect types](https://docs.cloud.google.com/dataplex/docs/enrich-entries-metadata)
+- [Auto data quality](https://docs.cloud.google.com/dataplex/docs/auto-data-quality-overview) and [data profiling](https://docs.cloud.google.com/dataplex/docs/data-profiling-overview)
+- [Column-level security with policy tags](https://docs.cloud.google.com/bigquery/docs/column-level-security-intro)
+- [Business glossary](https://docs.cloud.google.com/dataplex/docs/manage-glossaries)
+- [Data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage)
+
 ### Label the medallion tiers with aspects
 
 Aspects are structured metadata attached to catalog entries. We'll create a **Data tier** aspect type and stamp bronze/silver/gold onto the datasets.
@@ -88,7 +100,7 @@ And this one works fine:
 SELECT * EXCEPT (email) FROM `{{ PROJECT_ID }}.cymbal_silver.stg_customers` LIMIT 5
 ```
 
-You are the project owner and *still* can't read that column — fine-grained access is a separate grant (Fine-Grained Reader). That's exactly the guarantee you want before letting AI agents loose on the warehouse. (At scale you wouldn't tag by hand: Sensitive Data Protection discovery profiles tables and pushes its findings into the catalog as aspects.)
+You are the project owner and *still* can't read that column — fine-grained access is a separate grant (Fine-Grained Reader). That's exactly the guarantee you want before letting AI agents loose on the warehouse. (At scale you wouldn't tag by hand: [Sensitive Data Protection discovery](https://docs.cloud.google.com/sensitive-data-protection/docs/data-profiles) profiles your tables continuously and pushes its findings into the catalog as aspects.)
 
 ### Give the business a vocabulary
 

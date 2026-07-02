@@ -9,6 +9,14 @@ In this lab you bring Cymbal's database to life and replicate it — continuousl
 
 (If any command below complains about an unset variable like `$BK_DB_PASSWORD`, run `source ~/.bashrc` — the bootstrap in Lab 1 put the stream configuration there.)
 
+### About Datastream
+
+Datastream is Google Cloud's serverless **change data capture (CDC)** service: instead of periodically re-exporting tables, it taps the source database's transaction log and replicates every INSERT, UPDATE and DELETE as it happens. For PostgreSQL that log is the **write-ahead log (WAL)**: Postgres emits every committed change in *logical* form, and Datastream consumes that feed through a replication slot. A stream has two phases that run in parallel — a one-time **backfill** (snapshot of the existing rows) and continuous **CDC streaming** — and the destination side writes into BigQuery for you: no pipeline code, no cluster to manage.
+
+Learn more:
+- [Datastream overview](https://docs.cloud.google.com/datastream/docs/overview)
+- [PostgreSQL as a source](https://docs.cloud.google.com/datastream/docs/sources-postgresql)
+
 ### Wait for the database
 
 If the Lab 1 build already finished, this returns instantly:
@@ -71,6 +79,8 @@ gcloud compute start-iap-tunnel cymbal-jump 5432 \
 
 When you see *Listening on port [5432]*, `localhost:5432` in Cloud Shell is your production database. (If the tunnel ever drops — it disconnects after an hour of inactivity — just re-run this command.)
 
+**Identity-Aware Proxy (IAP)** TCP forwarding is what makes this safe: the tunnel is authorized by your Google identity and an IAM role (`iap.tunnelResourceAccessor`), not by network position — no VPN, no bastion with a public IP, and every connection is auditable. ([IAP TCP forwarding](https://docs.cloud.google.com/iap/docs/using-tcp-forwarding))
+
 ### Create the schema and load the data
 
 Back in your **first terminal**. Create the database (control-plane, no tunnel needed):
@@ -105,7 +115,9 @@ This takes a few minutes. While it runs, read the next section — but don't exe
 
 ### Prepare logical replication
 
-Datastream reads Postgres' write-ahead log through a **publication** and a **replication slot**, as a dedicated replication user. Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then (once the import finished) run it:
+Datastream reads Postgres' write-ahead log through a **publication** and a **replication slot**, as a dedicated replication user. The publication defines *which* tables' changes are exposed (`FOR ALL TABLES` here — the safe default), and the slot tracks *how far* a consumer has read: Postgres retains WAL until the slot has consumed it, which is why Datastream never misses a change, even across restarts. (Details: [Configure a Cloud SQL for PostgreSQL source](https://docs.cloud.google.com/datastream/docs/configure-cloudsql-psql).)
+
+Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then (once the import finished) run it:
 
 ```bash
 PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
@@ -167,6 +179,12 @@ gcloud datastream streams update cymbal-cdc-stream --location=$REGION \
 ```
 
 Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill.
+
+Two design choices in the destination config are worth understanding: the stream runs in **merge mode**, meaning every change event is upserted into the BigQuery table (via the Storage Write API's CDC support), so bronze always mirrors the *current state* of Postgres — the alternative, *append-only*, would keep every event as its own row, giving you a full change history instead. And `dataFreshness: "0s"` tells BigQuery to apply pending changes at query time rather than on a schedule — that's what makes the live demo below feel instant.
+
+Learn more:
+- [BigQuery as a destination (merge vs. append-only)](https://docs.cloud.google.com/datastream/docs/destination-bigquery)
+- [BigQuery change data capture](https://docs.cloud.google.com/bigquery/docs/change-data-capture)
 
 ### Watch it flow
 

@@ -11,6 +11,18 @@ The twist: **agy writes all of the SQL**. You direct, review, run, and verify. T
 
 We use the open-source **Dataform CLI** — code-first, version-controllable, and a perfect fit for an agentic workflow (compile errors go straight back into agy). In production you would run the same project on a schedule in managed Dataform.
 
+### About Dataform and the medallion pattern
+
+Dataform manages SQL transformations as *code*: each table is a **SQLX** file (SQL plus a small config header), dependencies are declared with `${ref(...)}` instead of hardcoded table names, and from those references Dataform compiles a dependency graph and executes it in the right order against BigQuery. **Assertions** are data tests that run with every execution — uniqueness, non-null, arbitrary row conditions — and fail the run when the data breaks a promise; **tags** let you execute just a slice of the graph (you will run `silver` and `gold` separately).
+
+The **medallion pattern** you are about to build is the standard way to organize such a warehouse: *bronze* holds raw, untouched source data (your CDC replica), *silver* is cleaned and tested, and *gold* holds the business-level marts that people — and, from Lab 5 on, agents — actually consume. Each layer has one job, and problems are fixed at the earliest layer that can see them.
+
+Learn more:
+- [Dataform overview](https://docs.cloud.google.com/dataform/docs/overview)
+- [Dataform core concepts](https://docs.cloud.google.com/dataform/docs/dataform-core)
+- [The Dataform CLI](https://docs.cloud.google.com/dataform/docs/use-dataform-cli)
+- [Assertions](https://docs.cloud.google.com/dataform/docs/assertions)
+
 ### Set up the project
 
 Install the CLI:
@@ -87,7 +99,7 @@ SELECT 'silver', COUNT(*)
 FROM `{{ PROJECT_ID }}.cymbal_silver.stg_orders` WHERE status = 'shiped'
 ```
 
-4. The payoff: open `fct_daily_revenue` and click the <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. The bronze→silver→gold graph you see was **not configured by anyone** — BigQuery derived it from the jobs the Dataform CLI just ran, based on the `${ref(...)}` dependencies agy wrote.
+4. The payoff: open `fct_daily_revenue` and click the <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. The bronze→silver→gold graph you see was **not configured by anyone** — BigQuery reports [data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage) automatically from the jobs the Dataform CLI just ran, following the `${ref(...)}` dependencies agy wrote.
 
 One more thing: your simulator (terminal 3) is still writing to Postgres, and Datastream keeps updating bronze. Re-run `dataform run` at any time and the whole medallion refreshes with the latest data.
 

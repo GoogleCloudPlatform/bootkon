@@ -71,6 +71,13 @@ gcloud compute network-attachments create cymbal-attachment --region=$REGION \
 
 Note: `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
 
+So what did you just build? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** you created is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
+
+Learn more:
+- [Private Service Connect](https://docs.cloud.google.com/vpc/docs/private-service-connect)
+- [Network attachments](https://docs.cloud.google.com/vpc/docs/about-network-attachments)
+- [Cloud SQL and Private Service Connect](https://docs.cloud.google.com/sql/docs/postgres/about-private-service-connect)
+
 ### Launch your operational database
 
 This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and Private Service Connect instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
@@ -91,6 +98,11 @@ gcloud sql instances create cymbal-oltp \
     --no-assign-ip \
     --async
 ```
+
+A word on the flags: `cloudsql.logical_decoding=on` switches Postgres' write-ahead log to *logical* decoding — the prerequisite for change data capture — set at creation time so the instance boots with it and never needs a flag-change restart. `--no-assign-ip` means there is no public address at all; the remaining flags wire the instance to the private path you prepared above. And `db-custom-1-3840` is a deliberately small machine: CDC reads the log, it does not stress the database.
+
+Learn more:
+- [Set up logical replication on Cloud SQL](https://docs.cloud.google.com/sql/docs/postgres/replication/configure-logical-replication)
 
 ### Kick off Datastream private connectivity
 

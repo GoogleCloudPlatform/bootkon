@@ -9,6 +9,14 @@ Time for the first agent. **Conversational analytics data agents** live inside B
 
 Note the payoff of your work so far: the agent will only ever see the **gold** layer — cleaned by your silver models, quality-scanned, PII-tagged, and documented. Grounded agents start with governed data.
 
+### About data agents
+
+A conversational analytics **data agent** bundles three things: the *knowledge sources* it may query (your gold tables), *context* that teaches it your business language (the system instructions you are about to write), and *verified queries* — blessed question/SQL pairs it prefers over improvising. When a user asks a question, Gemini translates it into SQL against exactly those sources, runs it as a regular BigQuery job — so IAM and your column-level security from Lab 4 fully apply — and summarizes the result, showing its SQL as it goes. And because the underlying **Conversational Analytics API** is GA, a *published* agent is not just a console toy: it is a callable resource with its own IAM — which is precisely what Lab 6 exploits.
+
+Learn more:
+- [Create and use data agents in BigQuery](https://docs.cloud.google.com/bigquery/docs/create-data-agents)
+- [Conversational Analytics API](https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/overview)
+
 ### Draft the instructions with agy
 
 A data agent is only as good as its context. That context is derived from your schemas — authoring work, so it goes to agy. Run this in a terminal (non-interactive mode; the prompt is also in <walkthrough-editor-open-file filePath="content/agenticdata/src/prompts.md">prompts.md</walkthrough-editor-open-file>):
