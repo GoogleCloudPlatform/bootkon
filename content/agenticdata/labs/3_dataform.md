@@ -46,7 +46,8 @@ The credentials file tells the CLI to use your logged-in identity (Application D
 Start agy inside the project:
 
 ```bash
-cd ~/bootkon/content/agenticdata/src/dataform && agy
+cd ~/bootkon/content/agenticdata/src/dataform
+agy
 ```
 
 And give it the full brief (this is one prompt — paste it whole):
@@ -65,10 +66,11 @@ cp ~/bootkon/content/agenticdata/src/dataform_reference/definitions/*.sqlx ~/boo
 
 ### Compile and run
 
-Exit agy (or use a new terminal, remembering `. bk`) and verify the compilation yourself — trust, but verify:
+Exit agy (or use a new terminal) and verify the compilation yourself — trust, but verify:
 
 ```bash
-cd ~/bootkon/content/agenticdata/src/dataform && dataform compile
+cd ~/bootkon/content/agenticdata/src/dataform
+dataform compile
 ```
 
 You should see the models, their dependencies, and the assertions. Now build silver, then gold — each run finishes in well under a minute on the seed data:

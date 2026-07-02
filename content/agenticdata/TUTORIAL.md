@@ -26,7 +26,7 @@ Please make sure you are using the terminal of the IDE.
 Let's try:
 
 ```bash
-echo "I'm ready to build Cymbal's data platform."
+echo "Let's go, Cymbal!"
 ```
 
 Execute by pressing the return key in the terminal that has been opened in the lower part of your screen.

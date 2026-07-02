@@ -7,9 +7,9 @@
 
 Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over the A2A protocol.
 
-In this lab you will enable services, kick off the two slow infrastructure builds (they run in the background while you work), stage the seed data, and install **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
+In this lab you will enable services, kick off the two slow infrastructure builds (they run in the background while you work), stage the seed data, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 
-> One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
+One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
 ### Enable services
 

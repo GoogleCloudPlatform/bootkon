@@ -19,11 +19,11 @@ Learn more:
 
 ### Wait for the database
 
-If the Lab 1 build already finished, this returns instantly:
+If the Lab 1 build already finished, this returns instantly — otherwise it waits for the create operation to complete:
 
 ```bash
-OP=$(gcloud sql operations list --instance=cymbal-oltp --filter='status!=DONE' --format='value(name)')
-[ -n "$OP" ] && gcloud sql operations wait $OP --timeout=unlimited || echo "cymbal-oltp is ready."
+gcloud sql operations wait --timeout=unlimited \
+    $(gcloud sql operations list --instance=cymbal-oltp --format='value(name)' --limit=1)
 ```
 
 Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state (it takes around 5–10 minutes from when you kicked it off — if it still shows `CREATING`, wait a moment and re-run):
@@ -69,10 +69,9 @@ gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
 
 ### Open the tunnel
 
-Open a **second terminal tab** (`+`), initialize it, and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it:
+Open a **second terminal tab** (`+`) and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it:
 
 ```bash
-. bk
 gcloud compute start-iap-tunnel cymbal-jump 5432 \
     --local-host-port=localhost:5432 --zone={{ REGION }}-a
 ```
@@ -242,7 +241,7 @@ Open [Datastream](https://console.cloud.google.com/datastream/streams) and click
 Now make it *live*. Open a **third terminal tab**, and start the activity simulator — Cymbal's customers waking up:
 
 ```bash
-. bk
+cd ~/bootkon
 python3 content/agenticdata/src/datagen/simulate.py
 ```
 
