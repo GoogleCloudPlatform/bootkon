@@ -1,0 +1,8 @@
+# Pinned for reproducibility across ~100 identical sandbox environments.
+# Re-verify every pin during the smoke test (CONCEPT.md, section 12) --
+# google-adk and google-cloud-geminidataanalytics move fast.
+faker==37.4.0
+psycopg[binary]==3.2.9
+python-dotenv==1.1.0
+google-adk[a2a]==2.3.0
+google-cloud-geminidataanalytics==0.13.1

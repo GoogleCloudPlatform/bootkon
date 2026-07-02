@@ -1,0 +1,100 @@
+#!/bin/bash
+# Bootstraps the Agentic Data Bootkon stream: Python deps, APIs, IAM,
+# service accounts, and the secrets used across the labs.
+#
+# It deliberately does NOT create the Cloud SQL instance or any networking:
+# those commands live inline in the labs, so the connectivity variant can be
+# swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
+
+pip install -r content/agenticdata/requirements.txt
+
+[[ "$BK_INITIALIZED" != "1" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
+
+echo "Enabling APIs (idempotent; the tutorial enables these too) ..."
+gcloud services enable \
+    sqladmin.googleapis.com \
+    datastream.googleapis.com \
+    compute.googleapis.com \
+    servicenetworking.googleapis.com \
+    iap.googleapis.com \
+    bigquery.googleapis.com \
+    bigqueryconnection.googleapis.com \
+    dataplex.googleapis.com \
+    datacatalog.googleapis.com \
+    datalineage.googleapis.com \
+    dlp.googleapis.com \
+    geminidataanalytics.googleapis.com \
+    cloudaicompanion.googleapis.com \
+    aiplatform.googleapis.com \
+    storage-component.googleapis.com \
+    serviceusage.googleapis.com \
+    cloudresourcemanager.googleapis.com \
+    iam.googleapis.com \
+    artifactregistry.googleapis.com
+
+# Knowledge Catalog data-quality service account: profile/quality scans in
+# Lab 4 run as this SA (custom execution identity).
+DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
+DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+
+# Roles for the participant. Sandbox users are typically project owners
+# already; the explicit list keeps the stream portable to other setups.
+declare -a user_roles=(
+    "roles/cloudsql.admin"                      # create/manage the Cymbal instance
+    "roles/datastream.admin"                    # profiles, private connection, stream
+    "roles/compute.admin"                       # VPC, jump VM, firewall, PSC endpoint
+    "roles/iap.tunnelResourceAccessor"          # IAP TCP tunnel to the jump VM
+    "roles/bigquery.admin"                      # datasets, jobs, connections
+    "roles/dataplex.admin"                      # Knowledge Catalog: aspects, scans, glossary
+    "roles/datalineage.admin"                   # lineage graph
+    "roles/aiplatform.user"                     # Gemini calls from ADK agents
+    "roles/geminidataanalytics.dataAgentCreator" # create + chat with data agents
+    "roles/cloudaicompanion.user"               # conversational analytics chat
+    "roles/storage.admin"                       # seed bucket
+    "roles/iam.serviceAccountAdmin"             # create service accounts
+    "roles/iam.serviceAccountUser"              # act as service accounts
+)
+
+for role in "${user_roles[@]}"; do
+    echo "Assigning role $role to $GCP_USERNAME in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="user:$GCP_USERNAME" --role="$role" >>/dev/null
+done
+
+# Roles for the data-quality service account.
+declare -a dataquality_roles=(
+    "roles/bigquery.jobUser"
+    "roles/bigquery.dataViewer"
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
+    "roles/storage.objectViewer"
+)
+
+for role in "${dataquality_roles[@]}"; do
+    echo "Assigning role $role to $DQ_SCAN_SA_EMAIL in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
+done
+
+# Per-participant secrets and shared state, sourced by later labs.
+STATE_FILE=~/.agenticdata.env
+if [ ! -f "$STATE_FILE" ]; then
+    echo "Generating database passwords and writing $STATE_FILE ..."
+    cat > "$STATE_FILE" <<EOF
+# Agentic Data Bootkon state -- source this in every new terminal:
+#   source ~/.agenticdata.env
+export DB_INSTANCE=cymbal-oltp
+export DB_NAME=cymbal
+export DB_PASSWORD=$(openssl rand -hex 16)
+export DS_PASSWORD=$(openssl rand -hex 16)
+export ENDPOINT_IP=10.10.0.5
+EOF
+    chmod 600 "$STATE_FILE"
+else
+    echo "$STATE_FILE already exists; keeping existing passwords."
+fi
+
+echo
+echo "Bootstrap complete. Load the stream state into this terminal with:"
+echo "  source ~/.agenticdata.env"
