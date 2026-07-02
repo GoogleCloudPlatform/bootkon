@@ -1,7 +1,7 @@
 config {
   type: "assertion",
-  tags: ["silver"],
-  description: "CHALLENGE reference: detects the planted negative payment amounts in BRONZE instead of silently filtering them in silver. This assertion is EXPECTED TO FAIL on the seed data -- that is the point: silver quarantines, assertions alert."
+  tags: ["challenge"],
+  description: "CHALLENGE reference: detects the planted negative payment amounts in BRONZE instead of silently filtering them in silver. This assertion is EXPECTED TO FAIL on the seed data -- that is the point: silver quarantines, assertions alert. Deliberately tagged 'challenge' (not 'silver') so the regular silver run stays green; run it with `dataform run --tags challenge`."
 }
 
 SELECT
