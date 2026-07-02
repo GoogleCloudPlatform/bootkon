@@ -49,16 +49,12 @@ From now on, `10.10.0.5` **is** your database — for Datastream and for the jum
 
 ### Create the jump VM
 
-Cloud Shell lives outside your VPC and a PSC-only instance has no public IP, so you need a tiny helper: an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. You will reach the VM through an **IAP tunnel** — identity-based, no IPs exposed anywhere:
+Cloud Shell lives outside your VPC and a PSC-only instance has no public IP, so you need a tiny helper: an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. Its <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file> is four lines of iptables. You will reach the VM through an **IAP tunnel** — identity-based, no IPs exposed anywhere:
 
 ```bash
 gcloud compute instances create cymbal-jump --zone={{ REGION }}-a \
     --machine-type=e2-micro --subnet=cymbal-subnet --no-address --can-ip-forward \
-    --metadata=startup-script='#!/bin/bash
-sysctl -w net.ipv4.ip_forward=1
-iptables -t nat -F
-iptables -t nat -A PREROUTING -p tcp --dport 5432 -j DNAT --to-destination 10.10.0.5
-iptables -t nat -A POSTROUTING -p tcp --dport 5432 -j MASQUERADE'
+    --metadata-from-file=startup-script=content/agenticdata/src/jumpvm-startup.sh
 ```
 
 ```bash
