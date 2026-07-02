@@ -95,16 +95,16 @@ Run inside `content/agenticdata/src/adk` (participants
 /goal Create a Python package cymbal_analyst implementing an ADK agent
 (google-adk 2.x is installed):
 - agent.py defines root_agent = Agent(name="cymbal_analyst",
-  model=env CYMBAL_MODEL default "gemini-2.5-flash") with ONE function tool
+  model=env BK_CYMBAL_MODEL default "gemini-2.5-flash") with ONE function tool
   that sends a question to a published BigQuery data agent via the
   google-cloud-geminidataanalytics DataChatServiceClient (stateless chat with
   DataAgentContext pointing at
-  projects/$GOOGLE_CLOUD_PROJECT/locations/global/dataAgents/$DATA_AGENT_ID)
+  projects/$GOOGLE_CLOUD_PROJECT/locations/global/dataAgents/$BK_DATA_AGENT_ID)
   and returns the streamed text parts joined together.
 - a2a_server.py exposes it via
   google.adk.a2a.utils.agent_to_a2a.to_a2a(root_agent, port=8001)
   as module attribute a2a_app for uvicorn.
-- Read all configuration (GOOGLE_CLOUD_PROJECT, DATA_AGENT_ID, CYMBAL_MODEL)
+- Read all configuration (GOOGLE_CLOUD_PROJECT, BK_DATA_AGENT_ID, BK_CYMBAL_MODEL)
   from environment variables; do not create any config files.
 - __init__.py must do: from . import agent
 ```

@@ -59,7 +59,7 @@ diff --git a/content/agenticdata/labs/1_environment_setup.md b/content/agenticda
      --database-version=POSTGRES_15 --edition=enterprise \
      --tier=db-custom-1-3840 --storage-size=10GB \
      --region=$REGION \
-     --root-password=$DB_PASSWORD \
+     --root-password=$BK_DB_PASSWORD \
      --database-flags=cloudsql.logical_decoding=on \
 -    --enable-private-service-connect \
 -    --allowed-psc-projects=$PROJECT_ID \
@@ -89,7 +89,7 @@ diff --git a/content/agenticdata/labs/2_replication.md b/content/agenticdata/lab
 -```bash
 -SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
 -gcloud compute addresses create cymbal-endpoint-ip --region=$REGION \
--    --subnet=cymbal-subnet --addresses=$ENDPOINT_IP
+-    --subnet=cymbal-subnet --addresses=$BK_ENDPOINT_IP
 -gcloud compute forwarding-rules create cymbal-endpoint --region=$REGION \
 -    --address=cymbal-endpoint-ip --network=cymbal-vpc \
 -    --target-service-attachment=$SA_URI --allow-psc-global-access
@@ -121,9 +121,9 @@ diff --git a/content/agenticdata/labs/2_replication.md b/content/agenticdata/lab
 +Your instance lives at a private IP inside the Google-managed services network peered with your VPC. Look it up and store it:
 +
 +```bash
-+DB_PRIVATE_IP=$(gcloud sql instances describe cymbal-oltp --format="value(ipAddresses[0].ipAddress)")
-+echo "export DB_PRIVATE_IP=$DB_PRIVATE_IP" >> ~/.bashrc
-+echo "Cymbal database private IP: $DB_PRIVATE_IP"
++BK_DB_PRIVATE_IP=$(gcloud sql instances describe cymbal-oltp --format="value(ipAddresses[0].ipAddress)")
++echo "export BK_DB_PRIVATE_IP=$BK_DB_PRIVATE_IP" >> ~/.bashrc
++echo "Cymbal database private IP: $BK_DB_PRIVATE_IP"
 +```
 +
 +From now on, the **reverse-proxy VM below** is how both Datastream and you reach the database — VPC peering is not transitive, so nothing outside your VPC can reach that IP directly.
@@ -138,11 +138,11 @@ diff --git a/content/agenticdata/labs/2_replication.md b/content/agenticdata/lab
 +    --metadata=startup-script="#!/bin/bash
 +sysctl -w net.ipv4.ip_forward=1
 +iptables -t nat -F
-+iptables -t nat -A PREROUTING -p tcp --dport 5432 -j DNAT --to-destination ${DB_PRIVATE_IP}
++iptables -t nat -A PREROUTING -p tcp --dport 5432 -j DNAT --to-destination ${BK_DB_PRIVATE_IP}
 +iptables -t nat -A POSTROUTING -p tcp --dport 5432 -j MASQUERADE"
 +```
 +
-+Note the double quotes around the startup script: the shell substitutes your `$DB_PRIVATE_IP` into the DNAT rule.
++Note the double quotes around the startup script: the shell substitutes your `$BK_DB_PRIVATE_IP` into the DNAT rule.
 +
 +```bash
 +gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
@@ -164,8 +164,8 @@ diff --git a/content/agenticdata/labs/2_replication.md b/content/agenticdata/lab
 +VM_IP=$(gcloud compute instances describe cymbal-jump --zone=${REGION}-a --format='value(networkInterfaces[0].networkIP)')
  gcloud datastream connection-profiles create cymbal-postgres-profile --location=$REGION \
      --type=postgresql --display-name=cymbal-postgres-profile \
--    --postgresql-hostname=$ENDPOINT_IP --postgresql-port=5432 \
+-    --postgresql-hostname=$BK_ENDPOINT_IP --postgresql-port=5432 \
 +    --postgresql-hostname=$VM_IP --postgresql-port=5432 \
-     --postgresql-username=datastream_user --postgresql-password="$DS_PASSWORD" \
+     --postgresql-username=datastream_user --postgresql-password="$BK_DS_PASSWORD" \
      --postgresql-database=cymbal --private-connection=cymbal-psc
  ```

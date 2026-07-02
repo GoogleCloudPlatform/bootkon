@@ -84,18 +84,18 @@ if ! grep -q '# agenticdata-bootkon' ~/.bashrc; then
     cat >> ~/.bashrc <<EOF
 
 # agenticdata-bootkon (added by bk-bootstrap)
-export DB_INSTANCE=cymbal-oltp
-export DB_NAME=cymbal
-export DB_PASSWORD=$(openssl rand -hex 16)
-export DS_PASSWORD=$(openssl rand -hex 16)
-export ENDPOINT_IP=10.10.0.5
+export BK_DB_INSTANCE=cymbal-oltp
+export BK_DB_NAME=cymbal
+export BK_DB_PASSWORD=$(openssl rand -hex 16)
+export BK_DS_PASSWORD=$(openssl rand -hex 16)
+export BK_ENDPOINT_IP=10.10.0.5
 export GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 export GOOGLE_GENAI_USE_VERTEXAI=TRUE
 export GOOGLE_CLOUD_LOCATION=global
-export CYMBAL_MODEL=gemini-2.5-flash
-export DATA_AGENT_ID=cymbal-data-agent
-export CYMBAL_DB_HOST=localhost
-export CYMBAL_DB_PORT=5432
+export BK_CYMBAL_MODEL=gemini-2.5-flash
+export BK_DATA_AGENT_ID=cymbal-data-agent
+export BK_CYMBAL_DB_HOST=localhost
+export BK_CYMBAL_DB_PORT=5432
 EOF
 else
     echo "Stream exports already in ~/.bashrc; keeping existing passwords."

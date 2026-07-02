@@ -1,8 +1,8 @@
 -- Datastream logical-replication setup for the Cymbal database.
 -- Run through the IAP tunnel with the password passed as a psql variable:
 --
---   PGPASSWORD="$DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
---       -v ds_password="$DS_PASSWORD" \
+--   PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+--       -v ds_password="$BK_DS_PASSWORD" \
 --       -f content/agenticdata/src/datastream/replication_setup.sql
 --
 -- Notes:

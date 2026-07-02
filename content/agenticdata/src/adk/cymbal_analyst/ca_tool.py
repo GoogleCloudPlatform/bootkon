@@ -25,7 +25,7 @@ def ask_cymbal_data_agent(question: str) -> str:
         behind the scenes).
     """
     project = os.environ["GOOGLE_CLOUD_PROJECT"]
-    agent_id = os.environ.get("DATA_AGENT_ID", "cymbal-data-agent")
+    agent_id = os.environ.get("BK_DATA_AGENT_ID", "cymbal-data-agent")
 
     client = geminidataanalytics.DataChatServiceClient()
 

@@ -46,11 +46,11 @@ def check_order_status(order_id: int) -> dict:
         exist (it may have been abandoned and deleted).
     """
     conn = psycopg.connect(
-        host=os.environ.get("CYMBAL_DB_HOST", "localhost"),
-        port=int(os.environ.get("CYMBAL_DB_PORT", "5432")),
+        host=os.environ.get("BK_CYMBAL_DB_HOST", "localhost"),
+        port=int(os.environ.get("BK_CYMBAL_DB_PORT", "5432")),
         dbname="cymbal",
         user="postgres",
-        password=os.environ["DB_PASSWORD"],
+        password=os.environ["BK_DB_PASSWORD"],
         connect_timeout=10,
     )
     try:
@@ -96,7 +96,7 @@ def check_order_status(order_id: int) -> dict:
 
 root_agent = Agent(
     name="cymbal_concierge",
-    model=os.environ.get("CYMBAL_MODEL", "gemini-2.5-flash"),
+    model=os.environ.get("BK_CYMBAL_MODEL", "gemini-2.5-flash"),
     description="Cymbal's front-desk agent: live order lookups plus delegated analytics.",
     instruction=(
         "You are the Cymbal concierge.\n"

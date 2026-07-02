@@ -10,8 +10,8 @@ It connects through the IAP tunnel, so the tunnel terminal must stay open:
 
     python3 content/agenticdata/src/datagen/simulate.py
 
-Environment: DB_PASSWORD (required), CYMBAL_DB_HOST (default localhost),
-CYMBAL_DB_PORT (default 5432).
+Environment: BK_DB_PASSWORD (required), BK_CYMBAL_DB_HOST (default localhost),
+BK_CYMBAL_DB_PORT (default 5432).
 """
 
 import os
@@ -37,11 +37,11 @@ def log(action, detail):
 
 
 def main():
-    password = os.environ.get("DB_PASSWORD")
+    password = os.environ.get("BK_DB_PASSWORD")
     if not password:
-        sys.exit("DB_PASSWORD is not set. Run:  source ~/.bashrc  (set by bk-bootstrap)")
-    host = os.environ.get("CYMBAL_DB_HOST", "localhost")
-    port = int(os.environ.get("CYMBAL_DB_PORT", "5432"))
+        sys.exit("BK_DB_PASSWORD is not set. Run:  source ~/.bashrc  (set by bk-bootstrap)")
+    host = os.environ.get("BK_CYMBAL_DB_HOST", "localhost")
+    port = int(os.environ.get("BK_CYMBAL_DB_PORT", "5432"))
 
     conn = psycopg.connect(host=host, port=port, dbname="cymbal", user="postgres",
                            password=password, connect_timeout=10, autocommit=True)

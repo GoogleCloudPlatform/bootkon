@@ -5,7 +5,7 @@ agent (Conversational Analytics) and is exposed to other agents over the A2A
 protocol by a2a_server.py.
 
 All configuration (GOOGLE_CLOUD_PROJECT, GOOGLE_GENAI_USE_VERTEXAI,
-CYMBAL_MODEL, DATA_AGENT_ID) comes from environment variables exported to
+BK_CYMBAL_MODEL, BK_DATA_AGENT_ID) comes from environment variables exported to
 ~/.bashrc by bk-bootstrap in Lab 1.
 """
 
@@ -17,7 +17,7 @@ from .ca_tool import ask_cymbal_data_agent
 
 root_agent = Agent(
     name="cymbal_analyst",
-    model=os.environ.get("CYMBAL_MODEL", "gemini-2.5-flash"),
+    model=os.environ.get("BK_CYMBAL_MODEL", "gemini-2.5-flash"),
     description=(
         "Analytics specialist for Cymbal's governed data warehouse. Answers "
         "aggregate business questions (revenue, trends, customer lifetime "

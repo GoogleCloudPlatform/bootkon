@@ -81,7 +81,7 @@ gcloud sql instances create cymbal-oltp \
     --database-version=POSTGRES_15 --edition=enterprise \
     --tier=db-custom-1-3840 --storage-size=10GB \
     --region=$REGION \
-    --root-password=$DB_PASSWORD \
+    --root-password=$BK_DB_PASSWORD \
     --database-flags=cloudsql.logical_decoding=on \
     --enable-private-service-connect \
     --allowed-psc-projects=$PROJECT_ID \

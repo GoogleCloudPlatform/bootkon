@@ -7,7 +7,7 @@
 
 In this lab you bring Cymbal's database to life and replicate it — continuously — into BigQuery using **Datastream** change data capture (CDC). By the end, every INSERT, UPDATE and DELETE in Postgres lands in your `cymbal_bronze` dataset within moments.
 
-(If any command below complains about an unset variable like `$DB_PASSWORD`, run `source ~/.bashrc` — the bootstrap in Lab 1 put the stream configuration there.)
+(If any command below complains about an unset variable like `$BK_DB_PASSWORD`, run `source ~/.bashrc` — the bootstrap in Lab 1 put the stream configuration there.)
 
 ### Wait for the database
 
@@ -31,7 +31,7 @@ Your instance exposes a **service attachment** — a private socket other networ
 ```bash
 SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
 gcloud compute addresses create cymbal-endpoint-ip --region=$REGION \
-    --subnet=cymbal-subnet --addresses=$ENDPOINT_IP
+    --subnet=cymbal-subnet --addresses=$BK_ENDPOINT_IP
 gcloud compute forwarding-rules create cymbal-endpoint --region=$REGION \
     --address=cymbal-endpoint-ip --network=cymbal-vpc \
     --target-service-attachment=$SA_URI --allow-psc-global-access
@@ -82,7 +82,7 @@ gcloud sql databases create cymbal --instance=cymbal-oltp
 Apply the schema through the tunnel:
 
 ```bash
-PGPASSWORD="$DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
     -f content/agenticdata/src/datagen/schema.sql
 ```
 
@@ -108,8 +108,8 @@ This takes a few minutes. While it runs, read the next section — but don't exe
 Datastream reads Postgres' write-ahead log through a **publication** and a **replication slot**, as a dedicated replication user. Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then (once the import finished) run it:
 
 ```bash
-PGPASSWORD="$DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
-    -v ds_password="$DS_PASSWORD" \
+PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+    -v ds_password="$BK_DS_PASSWORD" \
     -f content/agenticdata/src/datastream/replication_setup.sql
 ```
 
@@ -120,8 +120,8 @@ Two profiles: where the data comes from, and where it goes. Note the hostname �
 ```bash
 gcloud datastream connection-profiles create cymbal-postgres-profile --location=$REGION \
     --type=postgresql --display-name=cymbal-postgres-profile \
-    --postgresql-hostname=$ENDPOINT_IP --postgresql-port=5432 \
-    --postgresql-username=datastream_user --postgresql-password="$DS_PASSWORD" \
+    --postgresql-hostname=$BK_ENDPOINT_IP --postgresql-port=5432 \
+    --postgresql-username=datastream_user --postgresql-password="$BK_DS_PASSWORD" \
     --postgresql-database=cymbal --private-connection=cymbal-psc
 ```
 
@@ -189,7 +189,7 @@ FROM `{{ PROJECT_ID }}.cymbal_bronze.cymbal_orders`
 Watch `latest_order` climb as the simulator inserts. Then prove UPDATEs work end-to-end — back in terminal 1:
 
 ```bash
-PGPASSWORD="$DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
+PGPASSWORD="$BK_DB_PASSWORD" psql -h localhost -p 5432 -U postgres -d cymbal \
     -c "UPDATE cymbal.customers SET country = 'Iceland', updated_at = now() WHERE customer_id = 42;"
 ```
 
