@@ -110,6 +110,13 @@ AGY_DIR=~/.gemini/antigravity-cli
 if [ ! -f "$AGY_DIR/settings.json" ]; then
     echo "Pre-configuring Antigravity CLI (agy) ..."
     mkdir -p "$AGY_DIR"
+    # permissions.allow auto-approves the read/write file tools so agy can
+    # author the Dataform models and agents without a prompt on every file.
+    # Shell execution is deliberately NOT in the allow list: agy still asks
+    # before running any command (e.g. `dataform compile`, and especially any
+    # gcloud/bq/rm) -- so the review-what-the-agent-does habit stays intact.
+    # (Tool names follow the Gemini CLI schema agy inherits; verify them via
+    # /permissions in a smoke test and adjust if a name differs.)
     cat > "$AGY_DIR/settings.json" <<JSON
 {
   "colorScheme": "dark",
@@ -119,7 +126,18 @@ if [ ! -f "$AGY_DIR/settings.json" ]; then
     "$HOME/bootkon",
     "$HOME/bootkon/content/agenticdata/src/dataform",
     "$HOME/bootkon/content/agenticdata/src/adk"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "read_file",
+      "read_many_files",
+      "list_directory",
+      "glob",
+      "search_file_content",
+      "write_file",
+      "replace"
+    ]
+  }
 }
 JSON
 else

@@ -142,6 +142,8 @@ agy
 
 On a very first run it may ask you to accept the Terms of Service — do so if prompted; otherwise you land straight at the agy prompt.
 
+`bk-bootstrap` also tuned agy's permissions for you: it **auto-approves file edits** in the workshop folders (so authoring flows without a prompt on every file), but still **asks before running any command** — so you stay in control of anything that touches your cloud resources. Reviewing what agy did (with `/diff`) stays your job.
+
 ### Let agy explain what just happened
 
 Your first prompt. Paste this into agy:
