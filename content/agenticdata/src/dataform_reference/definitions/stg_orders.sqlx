@@ -1,0 +1,28 @@
+config {
+  type: "table",
+  schema: "cymbal_silver",
+  tags: ["silver"],
+  description: "Orders with normalized statuses (fixes the planted 'shiped' typo), uppercased ISO currency codes, and future-dated rows filtered out.",
+  assertions: {
+    uniqueKey: ["order_id"],
+    nonNull: ["order_id", "customer_id", "status", "currency"],
+    rowConditions: [
+      "status IN ('pending', 'paid', 'shipped', 'delivered', 'cancelled', 'returned')",
+      "REGEXP_CONTAINS(currency, r'^[A-Z]{3}$')",
+      "order_ts <= CURRENT_TIMESTAMP()"
+    ]
+  }
+}
+
+SELECT
+  order_id,
+  customer_id,
+  CASE LOWER(TRIM(status))
+    WHEN 'shiped' THEN 'shipped'
+    ELSE LOWER(TRIM(status))
+  END AS status,
+  UPPER(TRIM(currency)) AS currency,
+  order_ts,
+  updated_at
+FROM ${ref("cymbal_orders")}
+WHERE order_ts <= CURRENT_TIMESTAMP()

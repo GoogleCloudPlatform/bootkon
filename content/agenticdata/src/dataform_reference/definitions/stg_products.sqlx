@@ -1,0 +1,23 @@
+config {
+  type: "table",
+  schema: "cymbal_silver",
+  tags: ["silver"],
+  description: "Products with numeric types normalized and a sanity margin check.",
+  assertions: {
+    uniqueKey: ["product_id"],
+    nonNull: ["product_id", "sku", "name", "category"],
+    rowConditions: [
+      "price > 0",
+      "cost > 0"
+    ]
+  }
+}
+
+SELECT
+  product_id,
+  sku,
+  name,
+  category,
+  CAST(price AS NUMERIC) AS price,
+  CAST(cost AS NUMERIC) AS cost
+FROM ${ref("cymbal_products")}

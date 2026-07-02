@@ -1,0 +1,12 @@
+config {
+  type: "assertion",
+  tags: ["silver"],
+  description: "CHALLENGE reference: detects the planted negative payment amounts in BRONZE instead of silently filtering them in silver. This assertion is EXPECTED TO FAIL on the seed data -- that is the point: silver quarantines, assertions alert."
+}
+
+SELECT
+  payment_id,
+  order_id,
+  amount
+FROM ${ref("cymbal_payments")}
+WHERE amount < 0

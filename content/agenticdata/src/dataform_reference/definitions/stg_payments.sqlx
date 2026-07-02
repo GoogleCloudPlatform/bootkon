@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  schema: "cymbal_silver",
+  tags: ["silver"],
+  description: "Payments joined to valid orders; planted negative amounts are filtered out (see the challenge: an assertion on the BRONZE table detects them instead of silently dropping them).",
+  assertions: {
+    uniqueKey: ["payment_id"],
+    nonNull: ["payment_id", "order_id", "method", "status"],
+    rowConditions: [
+      "amount >= 0"
+    ]
+  }
+}
+
+SELECT
+  p.payment_id,
+  p.order_id,
+  p.method,
+  CAST(p.amount AS NUMERIC) AS amount,
+  p.status,
+  p.paid_at
+FROM ${ref("cymbal_payments")} AS p
+INNER JOIN ${ref("stg_orders")} AS o
+  USING (order_id)
+WHERE p.amount >= 0
