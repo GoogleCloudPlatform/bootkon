@@ -13,6 +13,11 @@
 --  * Names are case-sensitive when referenced at stream creation
 --    (cymbal_pub / cymbal_slot -- keep lowercase everywhere).
 
+-- On Cloud SQL, the default postgres user is cloudsqlsuperuser but does NOT
+-- carry the REPLICATION attribute -- without this line, the slot creation
+-- below fails with "must be superuser or replication role" (verified live).
+ALTER USER postgres WITH REPLICATION;
+
 CREATE USER datastream_user WITH REPLICATION IN ROLE cloudsqlsuperuser LOGIN PASSWORD :'ds_password';
 
 GRANT USAGE ON SCHEMA cymbal TO datastream_user;
