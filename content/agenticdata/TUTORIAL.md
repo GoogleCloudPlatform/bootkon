@@ -83,3 +83,5 @@ You've made it! Congratulations and thank you for participating in this event.
 
 The authors of Agentic Data Bootkon are:
 - [Fabian Hirschmann](https://www.linkedin.com/in/fhirschmann/) (main author)
+- [Florian Baumert](https://www.linkedin.com/in/florian-baumert/)
+- [Cary Edwards](https://www.linkedin.com/in/cary-edwards-a3a557a6/)
