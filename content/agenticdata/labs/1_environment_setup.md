@@ -37,7 +37,7 @@ In this lab you will enable services, kick off the two slow infrastructure build
 
 ### Assign permissions
 
-Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, and generates the database passwords for your project. You can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it runs:
+Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, and generates the database passwords for your project. It runs for about two minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
@@ -106,7 +106,7 @@ Learn more:
 
 ### Kick off Datastream private connectivity
 
-Datastream's private connection also takes a few minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 verifies it reached the `CREATED` state:
+Datastream's private connection takes around 5–10 minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 verifies it reached the `CREATED` state:
 
 ```bash
 gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \

@@ -26,7 +26,7 @@ OP=$(gcloud sql operations list --instance=cymbal-oltp --filter='status!=DONE' -
 [ -n "$OP" ] && gcloud sql operations wait $OP --timeout=unlimited || echo "cymbal-oltp is ready."
 ```
 
-Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state (it takes a few minutes — if it still shows `CREATING`, wait a moment and re-run):
+Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state (it takes around 5–10 minutes from when you kicked it off — if it still shows `CREATING`, wait a moment and re-run):
 
 ```bash
 gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
@@ -111,7 +111,7 @@ for t in customers products orders order_items payments reviews; do
 done
 ```
 
-This takes a few minutes. While it runs, read the next section — but don't execute it yet.
+This takes about two to three minutes for all six tables. While it runs, read the next section — but don't execute it yet.
 
 ### Prepare logical replication
 
@@ -227,7 +227,7 @@ gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
 
 ***
 
-Whichever path you took, Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill.
+Whichever path you took, Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill. The stream reaches **Running** after about two minutes, and the seed data lands in BigQuery roughly a minute later.
 
 Two design choices in the destination config are worth understanding: the stream runs in **merge mode**, meaning every change event is upserted into the BigQuery table (via the Storage Write API's CDC support), so bronze always mirrors the *current state* of Postgres — the alternative, *append-only*, would keep every event as its own row, giving you a full change history instead. And `dataFreshness: "0s"` tells BigQuery to apply pending changes at query time rather than on a schedule — that's what makes the live demo below feel instant.
 

@@ -25,7 +25,7 @@ Learn more:
 
 ### Set up the project
 
-Install the CLI:
+Install the CLI (takes about a minute):
 
 ```bash
 npm install -g @dataform/cli@3
@@ -71,7 +71,7 @@ Exit agy (or use a new terminal, remembering `. bk`) and verify the compilation 
 cd ~/bootkon/content/agenticdata/src/dataform && dataform compile
 ```
 
-You should see the models, their dependencies, and the assertions. Now build silver, then gold:
+You should see the models, their dependencies, and the assertions. Now build silver, then gold — each run finishes in well under a minute on the seed data:
 
 ```bash
 dataform run --tags silver
