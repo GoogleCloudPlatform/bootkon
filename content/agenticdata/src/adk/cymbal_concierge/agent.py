@@ -5,21 +5,19 @@ It spans two planes:
     (which consults the BigQuery data agent on the governed gold layer);
   * operational: looks up individual live orders directly in Cloud SQL
     Postgres through the IAP tunnel (localhost:5432).
+
+All configuration (model, database password, hosts) comes from environment
+variables exported to ~/.bashrc by bk-bootstrap in Lab 1.
 """
 
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+import psycopg
 from google.adk.agents import Agent
 from google.adk.agents.remote_a2a_agent import (
     AGENT_CARD_WELL_KNOWN_PATH,
     RemoteA2aAgent,
 )
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
-
-import psycopg  # noqa: E402
 
 cymbal_analyst = RemoteA2aAgent(
     name="cymbal_analyst",

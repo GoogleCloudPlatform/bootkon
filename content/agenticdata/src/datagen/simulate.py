@@ -8,7 +8,6 @@ own terminal and leave it running for the rest of the event.
 
 It connects through the IAP tunnel, so the tunnel terminal must stay open:
 
-    source ~/.agenticdata.env
     python3 content/agenticdata/src/datagen/simulate.py
 
 Environment: DB_PASSWORD (required), CYMBAL_DB_HOST (default localhost),
@@ -40,7 +39,7 @@ def log(action, detail):
 def main():
     password = os.environ.get("DB_PASSWORD")
     if not password:
-        sys.exit("DB_PASSWORD is not set. Run:  source ~/.agenticdata.env")
+        sys.exit("DB_PASSWORD is not set. Run:  source ~/.bashrc  (set by bk-bootstrap)")
     host = os.environ.get("CYMBAL_DB_HOST", "localhost")
     port = int(os.environ.get("CYMBAL_DB_PORT", "5432"))
 

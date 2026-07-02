@@ -7,11 +7,7 @@
 
 In this lab you bring Cymbal's database to life and replicate it — continuously — into BigQuery using **Datastream** change data capture (CDC). By the end, every INSERT, UPDATE and DELETE in Postgres lands in your `cymbal_bronze` dataset within moments.
 
-Make sure your terminal has the stream state loaded:
-
-```bash
-source ~/.agenticdata.env
-```
+(If any command below complains about an unset variable like `$DB_PASSWORD`, run `source ~/.bashrc` — the bootstrap in Lab 1 put the stream configuration there.)
 
 ### Wait for the database
 
@@ -68,7 +64,7 @@ gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
 Open a **second terminal tab** (`+`), initialize it, and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it:
 
 ```bash
-. bk && source ~/.agenticdata.env
+. bk
 gcloud compute start-iap-tunnel cymbal-jump 5432 \
     --local-host-port=localhost:5432 --zone=${REGION}-a
 ```
@@ -179,7 +175,7 @@ Open [Datastream](https://console.cloud.google.com/datastream/streams) and click
 Now make it *live*. Open a **third terminal tab**, and start the activity simulator — Cymbal's customers waking up:
 
 ```bash
-. bk && source ~/.agenticdata.env
+. bk
 python3 content/agenticdata/src/datagen/simulate.py
 ```
 

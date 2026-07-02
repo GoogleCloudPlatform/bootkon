@@ -77,24 +77,31 @@ for role in "${dataquality_roles[@]}"; do
         --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
 done
 
-# Per-participant secrets and shared state, sourced by later labs.
-STATE_FILE=~/.agenticdata.env
-if [ ! -f "$STATE_FILE" ]; then
-    echo "Generating database passwords and writing $STATE_FILE ..."
-    cat > "$STATE_FILE" <<EOF
-# Agentic Data Bootkon state -- source this in every new terminal:
-#   source ~/.agenticdata.env
+# Per-participant configuration, appended to ~/.bashrc so every new terminal
+# picks it up automatically (same pattern .scripts/bk uses for BK_* vars).
+if ! grep -q '# agenticdata-bootkon' ~/.bashrc; then
+    echo "Generating database passwords and adding stream exports to ~/.bashrc ..."
+    cat >> ~/.bashrc <<EOF
+
+# agenticdata-bootkon (added by bk-bootstrap)
 export DB_INSTANCE=cymbal-oltp
 export DB_NAME=cymbal
 export DB_PASSWORD=$(openssl rand -hex 16)
 export DS_PASSWORD=$(openssl rand -hex 16)
 export ENDPOINT_IP=10.10.0.5
+export GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+export GOOGLE_GENAI_USE_VERTEXAI=TRUE
+export GOOGLE_CLOUD_LOCATION=global
+export CYMBAL_MODEL=gemini-2.5-flash
+export DATA_AGENT_ID=cymbal-data-agent
+export CYMBAL_DB_HOST=localhost
+export CYMBAL_DB_PORT=5432
 EOF
-    chmod 600 "$STATE_FILE"
 else
-    echo "$STATE_FILE already exists; keeping existing passwords."
+    echo "Stream exports already in ~/.bashrc; keeping existing passwords."
 fi
 
 echo
-echo "Bootstrap complete. Load the stream state into this terminal with:"
-echo "  source ~/.agenticdata.env"
+echo "Bootstrap complete. Load the configuration into this terminal with:"
+echo "  source ~/.bashrc"
+echo "(New terminals pick it up automatically.)"

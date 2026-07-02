@@ -104,7 +104,8 @@ Run inside `content/agenticdata/src/adk` (participants
 - a2a_server.py exposes it via
   google.adk.a2a.utils.agent_to_a2a.to_a2a(root_agent, port=8001)
   as module attribute a2a_app for uvicorn.
-- Load ../.env with python-dotenv before creating clients.
+- Read all configuration (GOOGLE_CLOUD_PROJECT, DATA_AGENT_ID, CYMBAL_MODEL)
+  from environment variables; do not create any config files.
 - __init__.py must do: from . import agent
 ```
 

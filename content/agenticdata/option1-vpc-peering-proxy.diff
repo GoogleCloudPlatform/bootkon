@@ -122,7 +122,7 @@ diff --git a/content/agenticdata/labs/2_replication.md b/content/agenticdata/lab
 +
 +```bash
 +DB_PRIVATE_IP=$(gcloud sql instances describe cymbal-oltp --format="value(ipAddresses[0].ipAddress)")
-+echo "export DB_PRIVATE_IP=$DB_PRIVATE_IP" >> ~/.agenticdata.env
++echo "export DB_PRIVATE_IP=$DB_PRIVATE_IP" >> ~/.bashrc
 +echo "Cymbal database private IP: $DB_PRIVATE_IP"
 +```
 +

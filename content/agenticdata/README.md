@@ -156,7 +156,7 @@ bk-start
 ```
 
 > [!NOTE]
-> This stream uses several terminal tabs at once (an IAP tunnel and a data simulator keep running in the background). Whenever you open a new terminal tab, run `. bk` followed by `source ~/.agenticdata.env` first.
+> This stream uses several terminal tabs at once (an IAP tunnel and a data simulator keep running in the background). Whenever you open a new terminal tab, run `. bk` first.
 
 ## Start the lab
 

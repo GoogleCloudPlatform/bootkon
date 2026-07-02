@@ -43,10 +43,10 @@ Execute the following script. It installs Python dependencies, grants IAM roles,
 content/agenticdata/bk-bootstrap
 ```
 
-Now load the generated state (instance name, passwords) into your terminal. **Do this in every new terminal you open today:**
+The script appended your stream configuration (instance name, generated passwords, agent settings) to `~/.bashrc`, so **every new terminal picks it up automatically**. Load it into this already-open one:
 
 ```bash
-source ~/.agenticdata.env
+source ~/.bashrc
 ```
 
 ### Create the network path
@@ -91,7 +91,7 @@ gcloud sql instances create cymbal-oltp \
 
 ### Kick off Datastream private connectivity
 
-Datastream's private connection also takes a few minutes to build, so start it now too. **This command blocks until it finishes** — leave it running and continue with the next section in a **new terminal tab** (the `+` button in the terminal panel). Remember to run `. bk` and `source ~/.agenticdata.env` in the new terminal.
+Datastream's private connection also takes a few minutes to build, so start it now too. **This command blocks until it finishes** — leave it running and continue with the next section in a **new terminal tab** (the `+` button in the terminal panel). Remember to run `. bk` in the new terminal.
 
 ```bash
 gcloud datastream private-connections create cymbal-psc --location=$REGION \

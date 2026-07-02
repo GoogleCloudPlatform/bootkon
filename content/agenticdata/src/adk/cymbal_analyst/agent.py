@@ -3,17 +3,17 @@
 It answers business questions by consulting Cymbal's published BigQuery data
 agent (Conversational Analytics) and is exposed to other agents over the A2A
 protocol by a2a_server.py.
+
+All configuration (GOOGLE_CLOUD_PROJECT, GOOGLE_GENAI_USE_VERTEXAI,
+CYMBAL_MODEL, DATA_AGENT_ID) comes from environment variables exported to
+~/.bashrc by bk-bootstrap in Lab 1.
 """
 
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
 from google.adk.agents import Agent
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
-
-from .ca_tool import ask_cymbal_data_agent  # noqa: E402  (needs env loaded first)
+from .ca_tool import ask_cymbal_data_agent
 
 root_agent = Agent(
     name="cymbal_analyst",
