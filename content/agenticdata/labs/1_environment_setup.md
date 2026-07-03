@@ -5,7 +5,7 @@
 <walkthrough-tutorial-difficulty difficulty="1"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>
 
-Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over the A2A protocol.
+Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over **A2A** — the open *agent-to-agent* protocol that lets AI agents call each other the way HTTP lets services do it. Don't worry if that's new to you: the finale lab explains and builds it step by step.
 
 In this lab you will enable services, kick off the two slow infrastructure builds (they run in the background while you work), stage the seed data, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 

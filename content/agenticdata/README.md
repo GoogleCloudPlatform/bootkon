@@ -27,7 +27,7 @@ Your role: you are a data platform engineer at **Cymbal**, a commerce company wh
 1. **A live replica instead of exports.** Datastream captures every insert, update, and delete from Cloud SQL for PostgreSQL and merges it into BigQuery within moments — over Private Service Connect, with no public IPs anywhere.
 2. **Numbers people can trust.** A medallion architecture (bronze → silver → gold) built with Dataform, where the SQL is authored by the Antigravity CLI under your direction, complete with data tests. The raw data contains real-world-style flaws (duplicates, typos, orphaned records) — cleaning them is the point.
 3. **Governance before agents.** Knowledge Catalog labels the tiers, scans quality continuously, locks down PII with enforced column-level security, and gives business terms a home — the grounding layer that makes AI answers trustworthy.
-4. **Agents on top.** A BigQuery conversational data agent over the gold layer, then an ADK multi-agent system: a concierge agent that answers live operational questions straight from Postgres and delegates analytical questions to the data agent over the **A2A protocol**.
+4. **Agents on top.** A BigQuery conversational data agent over the gold layer, then an ADK multi-agent system: a concierge agent that answers live operational questions straight from Postgres and delegates analytical questions to the data agent over the **A2A protocol** — *agent-to-agent*, the open standard (governed by the Linux Foundation) that lets AI agents from any framework or vendor discover and call each other, the way HTTP lets services talk to each other.
 
 ## Architecture
 
