@@ -32,7 +32,9 @@ source table except reviews, fixing the problems above:
   row, convert empty-string countries to NULL.
 - `stg_products`: cast price/cost to NUMERIC.
 - `stg_orders`: lowercase statuses and fix `shiped` -> `shipped`, uppercase
-  currency codes, drop orders with a future `order_ts`.
+  currency codes, drop orders with a future `order_ts`. The complete set of
+  valid statuses after cleaning is exactly: `pending`, `paid`, `shipped`,
+  `delivered`, `cancelled`, `returned`.
 - `stg_order_items`: drop orphans (inner join to `stg_orders`) and rows with
   `qty <= 0`.
 - `stg_payments`: drop negative amounts and payments without a matching order.

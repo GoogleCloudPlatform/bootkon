@@ -65,7 +65,8 @@ Run inside `content/agenticdata/src/adk` (participants
 specification lives in that folder's `AGENTS.md`:
 
 ```
-/goal Read AGENTS.md and implement the cymbal_analyst package exactly as it
+/goal Read AGENTS.md, then create the files of the cymbal_analyst package
+(cymbal_analyst/__init__.py, agent.py, a2a_server.py) exactly as it
 describes.
 ```
 
