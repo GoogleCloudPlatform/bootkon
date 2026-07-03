@@ -1,6 +1,6 @@
 ## Lab 5: The BigQuery Data Agent
 
-<walkthrough-tutorial-duration duration="25"></walkthrough-tutorial-duration>
+<walkthrough-tutorial-duration duration="20"></walkthrough-tutorial-duration>
 {{ author('Fabian Hirschmann', 'https://linkedin.com/in/fhirschmann') }}
 <walkthrough-tutorial-difficulty difficulty="2"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>

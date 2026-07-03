@@ -1,6 +1,6 @@
 ## Lab 3: The Medallion — Dataform, Authored by agy
 
-<walkthrough-tutorial-duration duration="45"></walkthrough-tutorial-duration>
+<walkthrough-tutorial-duration duration="40"></walkthrough-tutorial-duration>
 {{ author('Fabian Hirschmann', 'https://linkedin.com/in/fhirschmann') }}
 <walkthrough-tutorial-difficulty difficulty="3"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>
