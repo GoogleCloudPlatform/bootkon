@@ -23,8 +23,8 @@ If the labs have drifted since this diff was written:
 
     git apply --recount -C1 content/agenticdata/option1-vpc-peering-proxy.diff
 
---- a/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:08:21
-+++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-02 21:09:24
+--- a/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
++++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
 @@ -57,7 +57,7 @@
  
  ### Create the network path
@@ -90,11 +90,11 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Stage the seed data
---- a/content/agenticdata/labs/2_replication.md	2026-07-02 21:08:21
-+++ b/content/agenticdata/labs/2_replication.md	2026-07-02 21:09:24
-@@ -32,35 +32,36 @@
- gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
- ```
+--- a/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
++++ b/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
+@@ -34,35 +34,36 @@
+ 
+ ❗ If this prints `NOT_FOUND` or `FAILED`, the creation lost a race against IAM propagation for the freshly created Datastream service agent. No harm done — just re-run the `gcloud datastream private-connections create` command from Lab 1 (delete the failed one first if `FAILED`), and it will go through.
  
 -### Create the Private Service Connect endpoint
 +### Look up the database's private IP
@@ -141,7 +141,7 @@ If the labs have drifted since this diff was written:
  ```
  
  ### Open the tunnel
-@@ -146,7 +147,7 @@
+@@ -147,7 +148,7 @@
  3. Fill in:
      - Connection profile name: `cymbal-postgres-profile`
      - Region: `{{ REGION }}`
@@ -150,7 +150,7 @@ If the labs have drifted since this diff was written:
      - Port: `5432`, Username: `datastream_user`, Password: `{{ BK_DS_PASSWORD }}`, Database: `cymbal`
  4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
  
-@@ -171,12 +172,13 @@
+@@ -172,12 +173,13 @@
  
  #### Path B — Command line (gcloud)
  

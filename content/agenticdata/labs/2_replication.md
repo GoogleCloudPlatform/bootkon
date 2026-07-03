@@ -32,6 +32,8 @@ Also confirm the Datastream private connection from Lab 1 reached the `CREATED` 
 gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
 ```
 
+❗ If this prints `NOT_FOUND` or `FAILED`, the creation lost a race against IAM propagation for the freshly created Datastream service agent. No harm done — just re-run the `gcloud datastream private-connections create` command from Lab 1 (delete the failed one first if `FAILED`), and it will go through.
+
 ### Create the Private Service Connect endpoint
 
 Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at the reserved IP `10.10.0.5`:
