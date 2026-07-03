@@ -49,6 +49,12 @@ gcloud services enable \
 DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
 DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+# A freshly created SA can take a few seconds to become visible to IAM;
+# granting against it too early fails with "does not exist".
+for i in $(seq 1 15); do
+    gcloud iam service-accounts describe "$DQ_SCAN_SA_EMAIL" >/dev/null 2>&1 && break
+    sleep 2
+done
 
 # Roles for the participant. Sandbox users are typically project owners
 # already; the explicit list keeps the stream portable to other setups.

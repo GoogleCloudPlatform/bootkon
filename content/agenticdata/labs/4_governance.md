@@ -29,16 +29,16 @@ Aspects are structured metadata attached to catalog entries. We'll create a **Da
 2. Click <walkthrough-spotlight-pointer locator="text('Create aspect type')">Create aspect type</walkthrough-spotlight-pointer> and use:
     - Aspect type ID: `data-tier`
     - Display name: `Data tier`
-    - Location: `us-central1`
-3. Add a field:
+    - Location: `global` — this matters: an aspect type can only be attached to entries in the same location or in `global`, and your BigQuery datasets live in the multi-region `us`. A regional aspect type (e.g. `us-central1`) will *not* show up when you try to attach it below.
+3. Add a field (under *Template*, click **Add Field**):
     - Type: **Enum**, ID: `tier`, Display name: `Tier`
-    - Allowed values: `bronze`, `silver`, `gold`
-    - Mark it required.
+    - Enum values (**Add an Enum Value** three times): `bronze`, `silver`, `gold`
+    - Mark it **required**.
 4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
 
 Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
 
-5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> and click *Add* → choose **Data tier** → set Tier to `gold` → save.
+5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> → under *Optional aspects* click *Add*, filter for **Data tier**, set Tier to `gold` → save.
 6. Repeat for `cymbal_silver` (`silver`) and `cymbal_bronze` (`bronze`).
 
 Verify the point of the exercise: in the catalog search bar, filter by your new aspect (e.g. search for `cymbal` and use the aspect filter for `Data tier = gold`) — anyone in the company can now find the *consumable* data without asking around.
