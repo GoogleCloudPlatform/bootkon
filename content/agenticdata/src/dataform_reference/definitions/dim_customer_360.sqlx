@@ -1,0 +1,42 @@
+config {
+  type: "table",
+  schema: "cymbal_gold",
+  tags: ["gold"],
+  description: "One row per (deduplicated) customer with lifetime metrics. 'Lifetime value' here means gross revenue of non-cancelled orders.",
+  assertions: {
+    uniqueKey: ["customer_id"]
+  },
+  columns: {
+    lifetime_orders: "Count of non-cancelled orders",
+    lifetime_value: "Gross revenue across all non-cancelled orders",
+    avg_order_value: "lifetime_value / lifetime_orders"
+  }
+}
+
+WITH order_totals AS (
+  SELECT
+    o.order_id,
+    o.customer_id,
+    o.order_ts,
+    SUM(i.qty * i.unit_price) AS order_total
+  FROM ${ref("stg_orders")} AS o
+  INNER JOIN ${ref("stg_order_items")} AS i
+    USING (order_id)
+  WHERE o.status != 'cancelled'
+  GROUP BY o.order_id, o.customer_id, o.order_ts
+)
+
+SELECT
+  c.customer_id,
+  c.full_name,
+  c.email,
+  c.country,
+  COUNT(t.order_id) AS lifetime_orders,
+  ROUND(COALESCE(SUM(t.order_total), 0), 2) AS lifetime_value,
+  ROUND(COALESCE(SUM(t.order_total), 0) / NULLIF(COUNT(t.order_id), 0), 2) AS avg_order_value,
+  MIN(DATE(t.order_ts)) AS first_order_date,
+  MAX(DATE(t.order_ts)) AS last_order_date
+FROM ${ref("stg_customers")} AS c
+LEFT JOIN order_totals AS t
+  USING (customer_id)
+GROUP BY c.customer_id, c.full_name, c.email, c.country

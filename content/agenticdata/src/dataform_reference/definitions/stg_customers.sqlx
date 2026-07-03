@@ -1,0 +1,40 @@
+config {
+  type: "table",
+  schema: "cymbal_silver",
+  tags: ["silver"],
+  description: "Cleaned, deduplicated customers. Invalid emails are dropped (quarantine-by-filter), emails are normalized to lowercase, and duplicates (same email in different letter case) are collapsed to the most recently updated record.",
+  assertions: {
+    uniqueKey: ["customer_id"],
+    nonNull: ["customer_id", "full_name", "email"]
+  }
+}
+
+WITH cleaned AS (
+  SELECT
+    customer_id,
+    full_name,
+    LOWER(TRIM(email)) AS email,
+    phone,
+    address,
+    NULLIF(TRIM(country), '') AS country,
+    created_at,
+    updated_at
+  FROM ${ref("cymbal_customers")}
+  WHERE REGEXP_CONTAINS(TRIM(email), r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+),
+
+deduped AS (
+  SELECT * EXCEPT (rn)
+  FROM (
+    SELECT
+      *,
+      ROW_NUMBER() OVER (
+        PARTITION BY email
+        ORDER BY updated_at DESC, customer_id
+      ) AS rn
+    FROM cleaned
+  )
+  WHERE rn = 1
+)
+
+SELECT * FROM deduped

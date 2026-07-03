@@ -1,0 +1,11 @@
+{
+  "publication": "cymbal_pub",
+  "replicationSlot": "cymbal_slot",
+  "includeObjects": {
+    "postgresqlSchemas": [
+      {
+        "schema": "cymbal"
+      }
+    ]
+  }
+}

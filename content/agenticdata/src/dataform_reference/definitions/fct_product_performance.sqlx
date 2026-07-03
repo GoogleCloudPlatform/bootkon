@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  schema: "cymbal_gold",
+  tags: ["gold"],
+  description: "Units, revenue and gross margin per product, excluding cancelled and returned orders.",
+  assertions: {
+    uniqueKey: ["product_id"]
+  }
+}
+
+SELECT
+  p.product_id,
+  p.sku,
+  p.name,
+  p.category,
+  SUM(i.qty) AS units_sold,
+  ROUND(SUM(i.qty * i.unit_price), 2) AS gross_revenue,
+  ROUND(SUM(i.qty * (i.unit_price - p.cost)), 2) AS gross_margin
+FROM ${ref("stg_order_items")} AS i
+INNER JOIN ${ref("stg_products")} AS p
+  USING (product_id)
+INNER JOIN ${ref("stg_orders")} AS o
+  USING (order_id)
+WHERE o.status NOT IN ('cancelled', 'returned')
+GROUP BY p.product_id, p.sku, p.name, p.category

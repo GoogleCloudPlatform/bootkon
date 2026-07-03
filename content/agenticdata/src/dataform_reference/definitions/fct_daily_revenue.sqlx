@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  schema: "cymbal_gold",
+  tags: ["gold"],
+  description: "Daily gross revenue and volume per currency, excluding cancelled orders. Primary mart for the Cymbal data agent.",
+  columns: {
+    order_date: "Calendar date of the order (UTC)",
+    currency: "ISO 4217 currency code, normalized in silver",
+    orders: "Distinct orders placed that day",
+    units: "Total units sold",
+    gross_revenue: "SUM(qty * unit_price) before refunds and costs"
+  }
+}
+
+SELECT
+  DATE(o.order_ts) AS order_date,
+  o.currency,
+  COUNT(DISTINCT o.order_id) AS orders,
+  SUM(i.qty) AS units,
+  ROUND(SUM(i.qty * i.unit_price), 2) AS gross_revenue
+FROM ${ref("stg_orders")} AS o
+INNER JOIN ${ref("stg_order_items")} AS i
+  USING (order_id)
+WHERE o.status != 'cancelled'
+GROUP BY order_date, currency

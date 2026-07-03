@@ -1,0 +1,168 @@
+#!/bin/bash
+# Bootstraps the Agentic Data Bootkon stream: Python deps, APIs, IAM,
+# service accounts, and the secrets used across the labs.
+#
+# It deliberately does NOT create the Cloud SQL instance or any networking:
+# those commands live inline in the labs, so the connectivity variant can be
+# swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
+
+[[ "$BK_INITIALIZED" != "1" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
+
+# The Datastream service agent must exist and hold its service-agent role
+# BEFORE Lab 1 creates the private connection: on a fresh project the agent
+# is created lazily, and `private-connections create` then fails with
+# PERMISSION_DENIED on the network attachment (verified live). The IAM grant
+# also needs a few minutes to propagate -- doing this FIRST, before the
+# pip install and the role loop below, buys that time for free.
+gcloud services enable datastream.googleapis.com >/dev/null 2>&1
+gcloud beta services identity create --service=datastream.googleapis.com --project=$PROJECT_ID >/dev/null 2>&1
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
+    --role="roles/datastream.serviceAgent" --condition=None >>/dev/null
+
+pip install -r content/agenticdata/requirements.txt
+
+echo "Enabling APIs (idempotent; the tutorial enables these too) ..."
+gcloud services enable \
+    sqladmin.googleapis.com \
+    datastream.googleapis.com \
+    compute.googleapis.com \
+    servicenetworking.googleapis.com \
+    iap.googleapis.com \
+    bigquery.googleapis.com \
+    bigqueryconnection.googleapis.com \
+    dataplex.googleapis.com \
+    datacatalog.googleapis.com \
+    datalineage.googleapis.com \
+    dlp.googleapis.com \
+    geminidataanalytics.googleapis.com \
+    cloudaicompanion.googleapis.com \
+    aiplatform.googleapis.com \
+    storage-component.googleapis.com \
+    serviceusage.googleapis.com \
+    cloudresourcemanager.googleapis.com \
+    iam.googleapis.com \
+    artifactregistry.googleapis.com
+
+# Knowledge Catalog data-quality service account: profile/quality scans in
+# Lab 4 run as this SA (custom execution identity).
+DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
+DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+# A freshly created SA can take a few seconds to become visible to IAM;
+# granting against it too early fails with "does not exist".
+for i in $(seq 1 15); do
+    gcloud iam service-accounts describe "$DQ_SCAN_SA_EMAIL" >/dev/null 2>&1 && break
+    sleep 2
+done
+
+# Roles for the participant. Sandbox users are typically project owners
+# already; the explicit list keeps the stream portable to other setups.
+declare -a user_roles=(
+    "roles/cloudsql.admin"                      # create/manage the Cymbal instance
+    "roles/datastream.admin"                    # profiles, private connection, stream
+    "roles/compute.admin"                       # VPC, jump VM, firewall, PSC endpoint
+    "roles/iap.tunnelResourceAccessor"          # IAP TCP tunnel to the jump VM
+    "roles/bigquery.admin"                      # datasets, jobs, connections
+    "roles/dataplex.admin"                      # Knowledge Catalog: aspects, scans, glossary
+    "roles/datalineage.admin"                   # lineage graph
+    "roles/aiplatform.user"                     # Gemini calls from ADK agents
+    "roles/geminidataanalytics.dataAgentCreator" # create + chat with data agents
+    "roles/cloudaicompanion.user"               # conversational analytics chat
+    "roles/storage.admin"                       # seed bucket
+    "roles/iam.serviceAccountAdmin"             # create service accounts
+    "roles/iam.serviceAccountUser"              # act as service accounts
+)
+
+for role in "${user_roles[@]}"; do
+    echo "Assigning role $role to $GCP_USERNAME in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="user:$GCP_USERNAME" --role="$role" >>/dev/null
+done
+
+# Roles for the data-quality service account.
+declare -a dataquality_roles=(
+    "roles/bigquery.jobUser"
+    "roles/bigquery.dataViewer"
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
+    "roles/storage.objectViewer"
+)
+
+for role in "${dataquality_roles[@]}"; do
+    echo "Assigning role $role to $DQ_SCAN_SA_EMAIL in project $PROJECT_ID..."
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
+done
+
+# Per-participant configuration, appended to ~/.bashrc so every new terminal
+# picks it up automatically (same pattern .scripts/bk uses for BK_* vars).
+if ! grep -q '# agenticdata-bootkon' ~/.bashrc; then
+    echo "Generating database passwords and adding stream exports to ~/.bashrc ..."
+    cat >> ~/.bashrc <<EOF
+
+# agenticdata-bootkon (added by bk-bootstrap)
+# Secrets and Python/ADK runtime config only. Static values (project, region,
+# the reserved endpoint IP, instance/db names) are rendered directly into the
+# lab commands via Jinja2 or as literals, so they are NOT duplicated here.
+export BK_DB_PASSWORD=$(openssl rand -hex 16)
+export BK_DS_PASSWORD=$(openssl rand -hex 16)
+export GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+export GOOGLE_GENAI_USE_VERTEXAI=TRUE
+export GOOGLE_CLOUD_LOCATION=global
+export BK_CYMBAL_MODEL=gemini-2.5-flash
+export BK_DATA_AGENT_ID=cymbal-data-agent
+export BK_CYMBAL_DB_HOST=localhost
+export BK_CYMBAL_DB_PORT=5432
+EOF
+else
+    echo "Stream exports already in ~/.bashrc; keeping existing passwords."
+fi
+
+# Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell
+# and authenticates with the ambient Cloud Shell credentials (ADC); it reads
+# the project and location from GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION
+# (exported above). Seeding settings.json suppresses the first-run wizard's
+# auth, theme and workspace-trust prompts so the labs start clean.
+AGY_DIR=~/.gemini/antigravity-cli
+if [ ! -f "$AGY_DIR/settings.json" ]; then
+    echo "Pre-configuring Antigravity CLI (agy) ..."
+    mkdir -p "$AGY_DIR"
+    # permissions.allow auto-approves the read/write file tools so agy can
+    # author the Dataform models and agents without a prompt on every file.
+    # Shell execution is deliberately NOT in the allow list: agy still asks
+    # before running any command (e.g. `dataform compile`, and especially any
+    # gcloud/bq/rm) -- so the review-what-the-agent-does habit stays intact.
+    # (Tool names follow the Gemini CLI schema agy inherits; verify them via
+    # /permissions in a smoke test and adjust if a name differs.)
+    cat > "$AGY_DIR/settings.json" <<JSON
+{
+  "colorScheme": "dark",
+  "security": { "auth": { "selectedType": "cloud-shell" } },
+  "selectedAuthType": "cloud-shell",
+  "trustedWorkspaces": [
+    "$HOME/bootkon",
+    "$HOME/bootkon/content/agenticdata/src/dataform",
+    "$HOME/bootkon/content/agenticdata/src/adk"
+  ],
+  "permissions": {
+    "allow": [
+      "read_file",
+      "read_many_files",
+      "list_directory",
+      "glob",
+      "search_file_content",
+      "write_file",
+      "replace"
+    ]
+  }
+}
+JSON
+else
+    echo "agy settings.json already exists; leaving it untouched."
+fi
+
+echo
+echo "Bootstrap complete. Load the configuration into this terminal with:"
+echo "  source ~/.bashrc"
+echo "(New terminals pick it up automatically.)"

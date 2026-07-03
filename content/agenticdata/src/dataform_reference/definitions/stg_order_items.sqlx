@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  schema: "cymbal_silver",
+  tags: ["silver"],
+  description: "Order items with orphans dropped (inner join to stg_orders removes the planted referential drift) and non-positive quantities filtered out.",
+  assertions: {
+    uniqueKey: ["order_item_id"],
+    nonNull: ["order_item_id", "order_id", "product_id"],
+    rowConditions: [
+      "qty > 0",
+      "unit_price > 0"
+    ]
+  }
+}
+
+SELECT
+  i.order_item_id,
+  i.order_id,
+  i.product_id,
+  i.qty,
+  CAST(i.unit_price AS NUMERIC) AS unit_price
+FROM ${ref("cymbal_order_items")} AS i
+INNER JOIN ${ref("stg_orders")} AS o
+  USING (order_id)
+WHERE i.qty > 0

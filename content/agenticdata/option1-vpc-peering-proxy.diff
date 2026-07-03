@@ -1,0 +1,168 @@
+Option 1 fallback: VPC-peering private connectivity + reverse-proxy VM
+=======================================================================
+
+Apply this patch ONLY if the PSC path fails on the target environment (e.g.
+the sandbox blocks PSC-enabled Cloud SQL instances or Datastream PSC
+interfaces).
+
+It switches Labs 1 and 2 from "PSC end-to-end" to the classic documented
+workaround: Cloud SQL on a private IP via Private Services Access, a
+Datastream private connection over VPC peering (/29 subnet 10.20.0.0/29),
+and the jump VM promoted to Google's official reverse proxy (VPC peering is
+non-transitive, so Datastream cannot reach the Cloud SQL services network,
+nor PSC endpoints, directly). Both the console (Path A) and gcloud (Path B)
+provisioning flows are patched; the shared jump-VM startup script
+(src/jumpvm-startup.sh) is re-targeted at the database's private IP via sed
+into /tmp before VM creation.
+
+Apply from the repository root:
+
+    git apply content/agenticdata/option1-vpc-peering-proxy.diff
+
+If the labs have drifted since this diff was written:
+
+    git apply --recount -C1 content/agenticdata/option1-vpc-peering-proxy.diff
+
+--- a/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
++++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
+@@ -57,7 +57,7 @@
+ 
+ ### Create the network path
+ 
+-Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC). First, create a VPC and a subnet:
++Our database will have **no public IP**. Instead, Datastream will reach it through private connectivity (VPC peering) and a reverse-proxy VM. First, create a VPC and a subnet:
+ 
+ ```bash
+ gcloud compute networks create cymbal-vpc --subnet-mode=custom
+@@ -68,25 +68,27 @@
+     --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
+ ```
+ 
+-Datastream connects into your VPC through a **network attachment** — the entry door for its PSC interface:
++The database will live at a private IP inside a Google-managed services network, connected to your VPC via **Private Services Access** (VPC peering). Allocate a range and connect it:
+ 
+ ```bash
+-gcloud compute network-attachments create cymbal-attachment --region={{ REGION }} \
+-    --connection-preference=ACCEPT_AUTOMATIC --subnets=cymbal-subnet
++gcloud compute addresses create cymbal-psa --global --purpose=VPC_PEERING \
++    --prefix-length=16 --network=cymbal-vpc
++gcloud services vpc-peerings connect --service=servicenetworking.googleapis.com \
++    --ranges=cymbal-psa --network=cymbal-vpc
+ ```
+ 
+-Note: `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
++Note: VPC Network Peering is not transitive: Datastream's own peered network cannot reach the Cloud SQL services network directly. That is why this variant adds a small reverse-proxy VM in Lab 2 — Google's documented workaround.
+ 
+-So what did you just build? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** you created is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
++So what did you just build? **Private Services Access** connects your VPC to a Google-managed services network over VPC peering — your database will get a private IP inside that peered network. Because peering is not transitive, nothing outside your VPC (including Datastream) can reach that IP directly; Lab 2 adds Google's documented reverse-proxy VM as the bridge.
+ 
+ Learn more:
+-- [Private Service Connect](https://docs.cloud.google.com/vpc/docs/private-service-connect)
+-- [Network attachments](https://docs.cloud.google.com/vpc/docs/about-network-attachments)
+-- [Cloud SQL and Private Service Connect](https://docs.cloud.google.com/sql/docs/postgres/about-private-service-connect)
++- [Private Services Access](https://docs.cloud.google.com/vpc/docs/private-services-access)
++- [Cloud SQL private IP](https://docs.cloud.google.com/sql/docs/postgres/private-ip)
++- [Datastream private connectivity](https://docs.cloud.google.com/datastream/docs/private-connectivity)
+ 
+ ### Launch your operational database
+ 
+-This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and Private Service Connect instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
++This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and a private IP (Private Services Access) instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
+ 
+ {% if ON_ARGOLIS %}
+ ❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
+@@ -99,8 +101,7 @@
+     --region={{ REGION }} \
+     --root-password=$BK_DB_PASSWORD \
+     --database-flags=cloudsql.logical_decoding=on \
+-    --enable-private-service-connect \
+-    --allowed-psc-projects={{ PROJECT_ID }} \
++    --network=projects/{{ PROJECT_ID }}/global/networks/cymbal-vpc \
+     --no-assign-ip \
+     --async
+ ```
+@@ -117,7 +118,7 @@
+ ```bash
+ gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
+     --display-name=cymbal-psc \
+-    --network-attachment=projects/{{ PROJECT_ID }}/regions/{{ REGION }}/networkAttachments/cymbal-attachment
++    --vpc=cymbal-vpc --subnet=10.20.0.0/29
+ ```
+ 
+ ### Stage the seed data
+--- a/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
++++ b/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
+@@ -34,35 +34,36 @@
+ 
+ ❗ If this prints `NOT_FOUND` or `FAILED`, the creation lost a race against IAM propagation for the freshly created Datastream service agent. No harm done — just re-run the `gcloud datastream private-connections create` command from Lab 1 (delete the failed one first if `FAILED`), and it will go through.
+ 
+-### Create the Private Service Connect endpoint
++### Look up the database's private IP
+ 
+-Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at the reserved IP `10.10.0.5`:
++Your instance lives at a private IP inside the Google-managed services network peered with your VPC. Look it up and store it:
+ 
+ ```bash
+-SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
+-gcloud compute addresses create cymbal-endpoint-ip --region={{ REGION }} \
+-    --subnet=cymbal-subnet --addresses=10.10.0.5
+-gcloud compute forwarding-rules create cymbal-endpoint --region={{ REGION }} \
+-    --address=cymbal-endpoint-ip --network=cymbal-vpc \
+-    --target-service-attachment=$SA_URI --allow-psc-global-access
++DB_PRIVATE_IP=$(gcloud sql instances describe cymbal-oltp --format="value(ipAddresses[0].ipAddress)")
++echo "export DB_PRIVATE_IP=$DB_PRIVATE_IP" >> ~/.bashrc
++echo "Cymbal database private IP: $DB_PRIVATE_IP"
+ ```
+ 
+-From now on, `10.10.0.5` **is** your database — for Datastream and for the jump VM below.
++From now on, the **reverse-proxy VM below** is how both Datastream and you reach the database — VPC peering is not transitive, so nothing outside your VPC can reach that IP directly.
+ 
+-### Create the jump VM
++### Create the reverse-proxy VM
+ 
+-Cloud Shell lives outside your VPC and a PSC-only instance has no public IP, so you need a tiny helper: an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. Its <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file> is four lines of iptables. You will reach the VM through an **IAP tunnel** — identity-based, no IPs exposed anywhere:
++Cloud Shell lives outside your VPC, and Datastream's peered network cannot reach the database's services network either. One tiny VM solves both: an e2-micro reverse proxy (no external IP!) forwarding port 5432 to the database's private IP — Google's documented pattern for Datastream with Cloud SQL private IP. Substitute your database IP into the <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file>, then create the VM:
+ 
+ ```bash
++sed "s/10.10.0.5/$DB_PRIVATE_IP/" content/agenticdata/src/jumpvm-startup.sh > /tmp/jumpvm-startup.sh
+ gcloud compute instances create cymbal-jump --zone={{ REGION }}-a \
+     --machine-type=e2-micro --subnet=cymbal-subnet --no-address --can-ip-forward \
+-    --metadata-from-file=startup-script=content/agenticdata/src/jumpvm-startup.sh
++    --metadata-from-file=startup-script=/tmp/jumpvm-startup.sh
+ ```
+ 
+ ```bash
+ gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
+     --direction=INGRESS --action=allow --rules=tcp:22,tcp:5432 \
+     --source-ranges=35.235.240.0/20
++gcloud compute firewall-rules create allow-datastream-ingress --network=cymbal-vpc \
++    --direction=INGRESS --action=allow --rules=tcp:5432 \
++    --source-ranges=10.20.0.0/29
+ ```
+ 
+ ### Open the tunnel
+@@ -147,7 +148,7 @@
+ 3. Fill in:
+     - Connection profile name: `cymbal-postgres-profile`
+     - Region: `{{ REGION }}`
+-    - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
++    - Hostname or IP: your **reverse-proxy VM's internal IP** — run `gcloud compute instances describe cymbal-jump --zone={{ REGION }}-a --format='value(networkInterfaces[0].networkIP)'` to get it (Datastream can't reach the database directly and doesn't resolve DNS)
+     - Port: `5432`, Username: `datastream_user`, Password: `{{ BK_DS_PASSWORD }}`, Database: `cymbal`
+ 4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
+ 
+@@ -172,12 +173,13 @@
+ 
+ #### Path B — Command line (gcloud)
+ 
+-Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
++Two profiles: where the data comes from, and where it goes. Note the hostname — the **reverse-proxy VM's internal IP**, because Datastream cannot reach the database directly and does not resolve DNS in private connections:
+ 
+ ```bash
++VM_IP=$(gcloud compute instances describe cymbal-jump --zone={{ REGION }}-a --format='value(networkInterfaces[0].networkIP)')
+ gcloud datastream connection-profiles create cymbal-postgres-profile --location={{ REGION }} \
+     --type=postgresql --display-name=cymbal-postgres-profile \
+-    --postgresql-hostname=10.10.0.5 --postgresql-port=5432 \
++    --postgresql-hostname=$VM_IP --postgresql-port=5432 \
+     --postgresql-username=datastream_user --postgresql-password="{{ BK_DS_PASSWORD }}" \
+     --postgresql-database=cymbal --private-connection=cymbal-psc
+ ```
