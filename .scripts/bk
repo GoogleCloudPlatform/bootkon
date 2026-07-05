@@ -58,6 +58,8 @@ fi
 
 if [ -z $BK_STREAM ]; then
     err 'Variable BK_STREAM is not set. Please set it to the stream you want to start'
+    err 'Example: BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon . bk'
+    return 1
 fi
 
 export BK_GITHUB_USERNAME=$(echo $BK_REPO | cut -d/ -f1) # first part of GoogleCloudPlatform/bootkon
@@ -83,6 +85,12 @@ else
 fi
 
 cd $BK_GITHUB_REPOSITORY
+
+if [ ! -d "content/${BK_STREAM}" ]; then
+    err "Stream '${BK_STREAM}' does not exist (no content/${BK_STREAM} directory)."
+    err "Available streams: $(ls content | grep -vx common | tr '\n' ' ')"
+    return 1
+fi
 
 NEW_PATH=~/${BK_GITHUB_REPOSITORY}/.scripts
 PATH_EXPORT_LINE="export PATH=\${HOME}/${BK_GITHUB_REPOSITORY}/.scripts:\$PATH"
@@ -173,6 +181,51 @@ if grep -q '^export BK_BRANCH=' ~/.bashrc; then
 else
     echo "Adding BK_BRANCH=$BK_BRANCH to .bashrc"
     echo "$line" >> ~/.bashrc
+fi
+
+## Persist the environment in ~/.bashrc so that new terminals
+## work without re-running `. bk`.
+line="export BK_DIR=\${HOME}/${BK_GITHUB_REPOSITORY}"
+if grep -q '^export BK_DIR=' ~/.bashrc; then
+    if ! grep -Fxq "$line" ~/.bashrc; then
+        sed -i "s|^export BK_DIR=.*|$line|" ~/.bashrc
+        echo "Updated the existing BK_DIR line in ~/.bashrc."
+    fi
+else
+    echo "Adding BK_DIR to .bashrc"
+    echo "$line" >> ~/.bashrc
+fi
+
+for line in \
+    'if [ -f ${BK_DIR}/vars.sh ]; then source ${BK_DIR}/vars.sh; fi' \
+    'if [ -f ${BK_DIR}/vars.local.sh ]; then source ${BK_DIR}/vars.local.sh; fi'
+do
+    if ! grep -Fxq "$line" ~/.bashrc; then
+        echo "Adding to .bashrc: $line"
+        echo "$line" >> ~/.bashrc
+    fi
+done
+
+## Only mark the environment as initialized in ~/.bashrc once a valid
+## PROJECT_ID is configured: the stream bootstrap scripts guard on
+## BK_INITIALIZED and rely on PROJECT_NUMBER.
+if [ ! -z "$PROJECT_ID" ]; then
+    line="export PROJECT_NUMBER=${PROJECT_NUMBER}"
+    if grep -q '^export PROJECT_NUMBER=' ~/.bashrc; then
+        if ! grep -Fxq "$line" ~/.bashrc; then
+            sed -i "s|^export PROJECT_NUMBER=.*|$line|" ~/.bashrc
+            echo "Updated the existing PROJECT_NUMBER line in ~/.bashrc."
+        fi
+    else
+        echo "Adding PROJECT_NUMBER to .bashrc"
+        echo "$line" >> ~/.bashrc
+    fi
+
+    line='export BK_INITIALIZED=1'
+    if ! grep -Fxq "$line" ~/.bashrc; then
+        echo "Adding BK_INITIALIZED to .bashrc"
+        echo "$line" >> ~/.bashrc
+    fi
 fi
 
 unset line
