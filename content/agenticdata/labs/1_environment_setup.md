@@ -11,6 +11,8 @@ In this lab you will enable services, kick off the two slow infrastructure build
 
 One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
+Along the way you will spot **Prefer the console?** notes: optional UI routes for when you'd rather click than type — the one licensed exception to the rule above. Each replaces the command right above it, so take one route or the other; both roads lead to Cymbal.
+
 ### Enable services
 
 <walkthrough-enable-apis apis=
@@ -119,6 +121,8 @@ gcloud datastream private-connections create cymbal-psc --location={{ REGION }} 
     --display-name=cymbal-psc \
     --network-attachment=projects/{{ PROJECT_ID }}/regions/{{ REGION }}/networkAttachments/cymbal-attachment
 ```
+
+**Prefer the console?** The same thing, clickable: open [Datastream → Private connectivity configurations](https://console.cloud.google.com/datastream/private-connections) → **Create configuration**: name `cymbal-psc`, region `{{ REGION }}`, private connectivity method **PSC interfaces**, project left on `{{ PROJECT_ID }}`, network attachment `cymbal-attachment`. If the wizard offers an **Update allowlist** step, click it (a formality with our auto-accept attachment), then **Create**. And if the wizard balks at anything, the gcloud command above is the sure path.
 
 ### Stage the seed data
 

@@ -94,6 +94,8 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
 
 Open <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/schema.sql">schema.sql</walkthrough-editor-open-file> — notice every table has a primary key (Datastream's merge mode needs them) and there are deliberately no foreign keys.
 
+**Prefer the console?** The SQL steps of this lab also work in **Cloud SQL Studio**, the query editor built into the console — as a replacement for the psql commands, not on top of them (running the same DDL twice just earns you an *already exists* error). Open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio), sign in to database `cymbal` as user `postgres` with password `{{ BK_DB_PASSWORD }}`, paste the contents of `schema.sql` into the editor and hit **Run**. Studio replaces your keyboard, not your tunnel — keep terminal 2 open either way: the simulator below and the Lab 6 concierge go through it. (And if Studio refuses to connect to your PSC-only instance, no drama — the psql path works everywhere.)
+
 Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel:
 
 ```bash
@@ -121,6 +123,23 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
     -f content/agenticdata/src/datastream/replication_setup.sql
 ```
 
+**Prefer the console?** If you took the Cloud SQL Studio route, run the same statements there **instead of** the psql command above (it's `replication_setup.sql` with the psql variable replaced by your generated Datastream password) — first this batch:
+
+```sql
+ALTER USER postgres WITH REPLICATION;
+CREATE USER datastream_user WITH REPLICATION IN ROLE cloudsqlsuperuser LOGIN PASSWORD '{{ BK_DS_PASSWORD }}';
+GRANT USAGE ON SCHEMA cymbal TO datastream_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA cymbal TO datastream_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA cymbal GRANT SELECT ON TABLES TO datastream_user;
+CREATE PUBLICATION cymbal_pub FOR ALL TABLES;
+```
+
+Then — still in Studio, and only if you skipped the psql command — create the replication slot as its **own** run (slot creation refuses to share a transaction with writes, and being a `SELECT`, it returns a row: your visible confirmation):
+
+```sql
+SELECT PG_CREATE_LOGICAL_REPLICATION_SLOT('cymbal_slot', 'pgoutput');
+```
+
 ### Create the bronze dataset
 
 Both paths below land the CDC data here, so create the destination dataset first:
@@ -128,6 +147,8 @@ Both paths below land the CDC data here, so create the destination dataset first
 ```bash
 bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
 ```
+
+**Prefer the console?** In [BigQuery](https://console.cloud.google.com/bigquery), click the three-dot menu next to your project → **Create dataset**: ID `cymbal_bronze`, location type **Multi-region** → `US`. Same thing — `bq` is just the keyboard-shaped door into BigQuery.
 
 ### Provision Datastream: pick your path
 
@@ -249,6 +270,8 @@ Watch `latest_order` climb as the simulator inserts. Then prove UPDATEs work end
 PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
     -c "UPDATE cymbal.customers SET country = 'Iceland', updated_at = now() WHERE customer_id = 42;"
 ```
+
+(Cloud SQL Studio works for this `UPDATE` too, if that's been your route.)
 
 And in BigQuery (give it a minute or two):
 
