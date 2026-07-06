@@ -490,7 +490,7 @@ Review the output:
 Send the prompt to test configured MCP server:
 
 ```bash
-Use context7 tools to look up how to implement flex grid in react mui library
+deploy the application from source to cloud run in project {{ PROJECT_ID }} in region europe-west3
 ```
 
 Approve the tools and review the output.
