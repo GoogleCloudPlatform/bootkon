@@ -451,7 +451,7 @@ Review the output.
 
 ## Antigravity CLI MCP support
 
-Antigravity CLI, through the Model Context Protocol (MCP), can integrate with third-party systems like Jira, Confluence or GitHub. This is achieved via MCP server custom tool integrations, allowing Antigravity CLI to create or update JIRA tickets, fetch information from Confluence pages, create pull requests, etc.
+Antigravity CLI, through the Model Context Protocol (MCP), can integrate with Google Cloud services like Cloud run or third-party systems like Jira, Confluence or GitHub. The following configuration can be used to deploy the generated application to Cloud Run:
 
 Global and workspace server configs:
 
@@ -463,9 +463,10 @@ Run this command in the new terminal to create the configuration file or use she
 ```bash
 echo '{
     "mcpServers": {
-        "context7": {
-            "serverURL": "https://mcp.context7.com/mcp"
-        }
+        "cloud-run": {
+            "command": "npx",
+            "args": ["-y", "@google-cloud/cloud-run-mcp"]
+          }
     }
 }' > ~/.gemini/antigravity-cli/mcp_config.json
 ```
