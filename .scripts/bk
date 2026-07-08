@@ -1,24 +1,35 @@
 #!/bin/bash
-# This script initializes the Data & AI Bootkon environment in Cloud Shell.
-# It clones the Bootkon repository (or uses an existing one), sets up necessary
-# environment variables, installs required packages, renders the tutorial markdown file,
-# and finally opens the tutorial in Cloud Shell. It also adds helpful aliases and
-# configurations to the .bashrc file for easier future access and customization.
+# This script initializes the Bootkon environment in Cloud Shell.
+# It clones the Bootkon repository (or uses an existing one), sets up the
+# environment variables, installs required packages, renders the tutorial
+# markdown file, and finally opens the tutorial in Cloud Shell.
+#
+# All per-participant state lives in a single git-ignored file,
+# $BK_DIR/vars.local.sh (created from vars.sh on first run). A minimal guarded
+# block in ~/.bashrc sources that file so every new terminal picks up the
+# environment automatically -- no need to re-run this script per terminal.
+#
+# `. bk` has two modes:
+#   * First run (not yet initialized): clone, create vars.local.sh, autodetect
+#     PROJECT_ID/GCP_USERNAME, render and open the tutorial.
+#   * Re-run (already initialized): a fast reload -- re-source vars.local.sh,
+#     fill still-empty config from the environment, refresh PROJECT_NUMBER and
+#     the active gcloud project. Handy after editing vars.local.sh.
 #
 # Author: Fabian Hirschmann
 #
 # Usage:
 #   From GitHub (replace <username/repo>):
-#     BK_REPO=<username/repo>; . <(wget -qO- https://raw.githubusercontent.com/<username/repo>/main/.scripts/bk)
+#     BK_STREAM=<stream> BK_REPO=<username/repo>; . <(wget -qO- https://raw.githubusercontent.com/<username/repo>/main/.scripts/bk)
 #   Locally:
-#     BK_REPO=<username/repo> . bk
+#     BK_STREAM=<stream> BK_REPO=<username/repo> . bk
 #   Defaults, repo as argument:
-#     . bk <username/repo>
-#
-#   Skip workspace opening (add to ~/.bashrc above bk):
+#     BK_STREAM=<stream> . bk <username/repo>
 #
 # Environment variables:
-#   BK_REPO: GitHub repository (<username/repo>).
+#   BK_REPO:   GitHub repository (<username/repo>).
+#   BK_STREAM: stream to start (a directory under content/).
+#   BK_DIR:    checkout location (defaults to ~/bootkon).
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -34,57 +45,62 @@ err() {
 
 echo -e "${YELLOW}Running bootkon init script $(readlink -f ${BASH_SOURCE[0]})...${NC}"
 
-if [ -z $CLOUD_SHELL ]; then
+if [ -z "$CLOUD_SHELL" ]; then
     err 'Please run this script in Cloud Shell.'
     return 1
 fi
 
 if [ "${BASH_SOURCE[0]}" == "$0" ]; then
     err 'Script is not sourced. Please source it.'
-    err 'Example: BK_REPO=GoogleCloudPlatform/bootkon . bk'
+    err 'Example: BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon . bk'
     exit 1
 fi
 
-if [ -z "$1" ]; then
-    if [ -z $BK_REPO ]; then
-        err 'Variable BK_REPO is not set. Please set it to a GitHub username and repository'
-        err 'Example: BK_REPO=GoogleCloudPlatform/bootkon . bk'
-        return 1
-    fi
-else
-    export BK_REPO=$1
+if [ -n "$1" ]; then
+    export BK_REPO="$1"
     echo -e "Setting BK_REPO to $BK_REPO based on first argument to this script."
 fi
 
-if [ -z $BK_STREAM ]; then
+if [ -z "$BK_REPO" ]; then
+    err 'Variable BK_REPO is not set. Please set it to a GitHub username and repository'
+    err 'Example: BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon . bk'
+    return 1
+fi
+
+if [ -z "$BK_STREAM" ]; then
     err 'Variable BK_STREAM is not set. Please set it to the stream you want to start'
     err 'Example: BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon . bk'
     return 1
 fi
 
-export BK_GITHUB_USERNAME=$(echo $BK_REPO | cut -d/ -f1) # first part of GoogleCloudPlatform/bootkon
-export BK_GITHUB_REPOSITORY=$(echo $BK_REPO | cut -d/ -f2) # second part of GoogleCloudPlatform/bootkon
-export BK_REPO_URL="https://github.com/${BK_REPO}.git"
-export BK_STREAM="${BK_STREAM}"
-export BK_DIR=~/${BK_GITHUB_REPOSITORY}
-export BK_INITIALIZED=1
+# Remember whether this is a first run or a reload (before we set the flag), and
+# the explicitly requested repo/stream (env or argument) so they can win over a
+# stale persisted value further below.
+BK_WAS_INITIALIZED="${BK_INITIALIZED:-}"
+BK_REQ_REPO="$BK_REPO"
+BK_REQ_STREAM="$BK_STREAM"
 
-cd ~/
+export BK_REPO="$BK_REPO"
+export BK_STREAM="$BK_STREAM"
+export BK_REPO_URL="https://github.com/${BK_REPO}.git"
+# Always clone to a fixed location so the ~/.bashrc block is static. Override
+# BK_DIR (e.g. contributors juggling several checkouts) is honored.
+export BK_DIR="${BK_DIR:-$HOME/bootkon}"
 
 if ! command -v git &> /dev/null; then
     sudo apt update
     sudo apt install -y git
 fi
 
-if [ -d $BK_GITHUB_REPOSITORY ]; then
-    echo -e "${GREEN}Not cloning $BK_REPO_URL because folder ~/$BK_GITHUB_REPOSITORY already exists.${NC}"
+if [ -d "$BK_DIR/.git" ]; then
+    echo -e "${GREEN}Not cloning $BK_REPO_URL because $BK_DIR already exists.${NC}"
 else
     BK_BRANCH="${BK_BRANCH:-main}" # defaults to main; can be overwritten
-    echo -e "Cloning branch $BK_BRANCH from $BK_REPO_URL into $BK_GITHUB_REPOSITORY..."
-    git clone --branch "$BK_BRANCH" https://github.com/${BK_REPO}.git
+    echo -e "Cloning branch $BK_BRANCH from $BK_REPO_URL into $BK_DIR..."
+    git clone --branch "$BK_BRANCH" "$BK_REPO_URL" "$BK_DIR"
 fi
 
-cd $BK_GITHUB_REPOSITORY
+cd "$BK_DIR"
 
 if [ ! -d "content/${BK_STREAM}" ]; then
     err "Stream '${BK_STREAM}' does not exist (no content/${BK_STREAM} directory)."
@@ -92,157 +108,159 @@ if [ ! -d "content/${BK_STREAM}" ]; then
     return 1
 fi
 
-NEW_PATH=~/${BK_GITHUB_REPOSITORY}/.scripts
-PATH_EXPORT_LINE="export PATH=\${HOME}/${BK_GITHUB_REPOSITORY}/.scripts:\$PATH"
+# Add the scripts directory to the current session's PATH (idempotent). The
+# permanent export lives in the ~/.bashrc block written further below.
+BK_SCRIPTS="$BK_DIR/.scripts"
+case ":$PATH:" in
+    *":$BK_SCRIPTS:"*) ;;
+    *) echo -e "${MAGENTA}Adding $BK_SCRIPTS to your current session's PATH${NC}"
+       export PATH="$BK_SCRIPTS:$PATH" ;;
+esac
 
-# 1. Add to current session's PATH if missing
-if [[ ":$PATH:" != *":$NEW_PATH:"* ]]; then
-    echo -e "${MAGENTA}Adding $NEW_PATH to your current session's PATH${NC}"
-    export PATH=${NEW_PATH}:$PATH
+LOCAL="$BK_DIR/vars.local.sh"
+BK_SET_VAR="$BK_SCRIPTS/bk-set-var"
+BK_REMOVE_BLOCK="$BK_SCRIPTS/bk-remove-block"
+
+# vars.local.sh is the single per-participant config + state file. Seed it from
+# the checked-in template on first run; it is git-ignored, never pushed, and
+# holds generated secrets, so keep it private.
+if [ ! -f "$LOCAL" ]; then
+    echo -e "Creating $(readlink -f "$LOCAL") from vars.sh"
+    cp "$BK_DIR/vars.sh" "$LOCAL"
+    chmod 600 "$LOCAL"
+fi
+
+echo -e "Sourcing $(readlink -f "$BK_DIR/vars.sh")"
+source "$BK_DIR/vars.sh"
+echo -e "Sourcing $(readlink -f "$LOCAL")"
+source "$LOCAL"
+
+# Autodetect PROJECT_ID / GCP_USERNAME from the Cloud Shell environment, but
+# only fill values that are still empty -- the just-sourced value is the source
+# of truth, so a manual edit in vars.local.sh always wins.
+detected_project="${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}"
+detected_account="$(gcloud config get-value account 2>/dev/null || true)"
+[ "$detected_project" = "(unset)" ] && detected_project=""
+[ "$detected_account" = "(unset)" ] && detected_account=""
+if [ -z "$PROJECT_ID" ] && [ -n "$detected_project" ]; then
+    "$BK_SET_VAR" "$LOCAL" PROJECT_ID "$detected_project"
+fi
+if [ -z "$GCP_USERNAME" ] && [ -n "$detected_account" ]; then
+    "$BK_SET_VAR" "$LOCAL" GCP_USERNAME "$detected_account"
+fi
+# Reload so this shell sees any freshly detected values.
+source "$LOCAL"
+
+# Derive the repo identity AFTER the last source (so the persisted values can't
+# clobber it) and from the checkout's own origin remote, so BK_REPO and the
+# rendered image links always match the files actually on disk -- even if
+# vars.local.sh is stale or a fork was requested against an existing checkout.
+_origin="$(git -C "$BK_DIR" remote get-url origin 2>/dev/null || true)"
+_actual="$(printf '%s' "$_origin" | sed -E 's#^git@github\.com:##; s#^https?://github\.com/##; s#\.git$##')"
+if [ -n "$_actual" ]; then
+    if [ "$_actual" != "$BK_REQ_REPO" ]; then
+        echo -e "${YELLOW}Note: $BK_DIR is a checkout of $_actual, not $BK_REQ_REPO.${NC}"
+        echo -e "${YELLOW}Using $_actual; set BK_DIR to another path (or remove $BK_DIR) to use $BK_REQ_REPO.${NC}"
+    fi
+    BK_REPO="$_actual"
 else
-    echo -e "${GREEN}Your current session's PATH already contains $NEW_PATH. Not adding it again.${NC}"
+    BK_REPO="$BK_REQ_REPO"
 fi
+export BK_REPO
+export BK_GITHUB_USERNAME="$(echo "$BK_REPO" | cut -d/ -f1)"
+export BK_GITHUB_REPOSITORY="$(echo "$BK_REPO" | cut -d/ -f2)"
+export BK_REPO_URL="https://github.com/${BK_REPO}.git"
+# The explicitly requested stream wins over any persisted value (stream switch).
+export BK_STREAM="$BK_REQ_STREAM"
 
-# 2. Persist the PATH setting in ~/.bashrc if not already there
-if ! grep -qF "$PATH_EXPORT_LINE" ~/.bashrc ; then
-    echo -e "${MAGENTA}Adding $NEW_PATH to ~/.bashrc for future sessions.${NC}"
-    # Use '>>' to append the line to the file
-    echo "$PATH_EXPORT_LINE" >> ~/.bashrc
-else
-    echo -e "${GREEN}The permanent PATH export for $NEW_PATH is already in ~/.bashrc. Skipping.${NC}"
+# BK_BRANCH is derived from the checkout. Fall back cleanly for a detached HEAD
+# ('HEAD') or a non-git directory (empty), which are not valid clone targets.
+_branch="$(git -C "$BK_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+if [ -z "$_branch" ] || [ "$_branch" = "HEAD" ]; then
+    _branch="${BK_BRANCH:-main}"
 fi
+export BK_BRANCH="$_branch"
 
-unset NEW_PATH
-unset PATH_EXPORT_LINE
+echo -e "Config: PROJECT_ID=${YELLOW}$PROJECT_ID${NC} GCP_USERNAME=${YELLOW}$GCP_USERNAME${NC} REGION=${YELLOW}$REGION${NC}"
 
-echo -e "Sourcing $(readlink -f $BK_DIR/vars.sh)"
-source $BK_DIR/vars.sh
+# Persist the managed variables and install the ~/.bashrc block BEFORE the
+# project is validated below: even if validation fails (expired auth, wrong
+# project) a freshly opened terminal must still have PATH and the seed vars.
+"$BK_SET_VAR" "$LOCAL" BK_STREAM "$BK_STREAM"
+"$BK_SET_VAR" "$LOCAL" BK_REPO "$BK_REPO"
+"$BK_SET_VAR" "$LOCAL" BK_BRANCH "$BK_BRANCH"
+"$BK_SET_VAR" "$LOCAL" BK_GITHUB_USERNAME "$BK_GITHUB_USERNAME"
+"$BK_SET_VAR" "$LOCAL" BK_GITHUB_REPOSITORY "$BK_GITHUB_REPOSITORY"
+"$BK_SET_VAR" "$LOCAL" BK_REPO_URL "$BK_REPO_URL"
 
-if [ -f $BK_DIR/vars.local.sh ]; then
-    echo -e "Sourcing $(readlink -f $BK_DIR/vars.local.sh)"
-    source $BK_DIR/vars.local.sh
-fi
+# Install/refresh a single guarded block in ~/.bashrc so every new terminal
+# loads the environment by sourcing vars.local.sh. bk-remove-block strips any
+# existing block robustly; then we append a fresh one.
+BASHRC=~/.bashrc
+"$BK_REMOVE_BLOCK" "$BASHRC" 2>/dev/null || true
+cat >> "$BASHRC" <<EOF
 
-echo -e "Variables from $BK_DIR/vars.sh: PROJECT_ID=${YELLOW}$PROJECT_ID${NC} GCP_USERNAME=${YELLOW}$GCP_USERNAME${NC} REGION=${YELLOW}$REGION${NC}"
+# >>> bootkon >>>
+# Managed by bk (.scripts/bk). Loads the bootkon environment in every new
+# terminal. Edit values in \$BK_DIR/vars.local.sh, not here.
+export BK_DIR="$BK_DIR"
+case ":\$PATH:" in *":\$BK_DIR/.scripts:"*) ;; *) export PATH="\$BK_DIR/.scripts:\$PATH" ;; esac
+[ -f "\$BK_DIR/vars.local.sh" ] && source "\$BK_DIR/vars.local.sh"
+# <<< bootkon <<<
+EOF
 
+# Mark the environment initialized in this shell so bk-start opens the tutorial
+# even before a project is set (the tutorial is what guides the user to set it).
+export BK_INITIALIZED=1
 
-if [ -z $PROJECT_ID ]; then
+if [ -z "$PROJECT_ID" ]; then
     echo -e "The variable PROJECT_ID is empty. Not setting the default Google Cloud project."
 else
-    gcloud projects get-iam-policy $PROJECT_ID --quiet 2>>/dev/null 1>>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -en "${RED}ERROR: Unable to get iam policy for project $PROJECT_ID. "
-        echo -e "Are you sure you set your PROJECT_ID in vars.sh correctly?${NC}"
+    if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
+        echo -e "${RED}ERROR: Unable to access project $PROJECT_ID.${NC}"
+        echo -e "${RED}Two common causes:${NC}"
+        echo -e "${RED}  1. Your session needs re-authentication (typical after a break) —${NC}"
+        echo -e "${RED}     re-authorize Cloud Shell when prompted, or run 'gcloud auth login', then '. bk' again.${NC}"
+        echo -e "${RED}  2. PROJECT_ID in vars.local.sh is wrong.${NC}"
         return 1
     fi
 
-    gcloud config set project $PROJECT_ID --quiet 2>>/dev/null
+    gcloud config set project "$PROJECT_ID" --quiet 2>/dev/null
 
-    export PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+    export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
     echo -e "Project for gcloud CLI has been set: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW}${PROJECT_NUMBER}${NC}."
+
+    # Persist project-derived state only once it is valid: the stream bootstrap
+    # scripts guard on BK_INITIALIZED and rely on PROJECT_NUMBER.
+    if [ -n "$PROJECT_NUMBER" ]; then
+        "$BK_SET_VAR" "$LOCAL" PROJECT_NUMBER "$PROJECT_NUMBER"
+        "$BK_SET_VAR" "$LOCAL" BK_INITIALIZED 1
+    fi
 fi
 
-## Set or update $BK_REPO in ~/.bashrc
-line="export BK_REPO=${BK_REPO}"
-if grep -q '^export BK_REPO=' ~/.bashrc; then
-    # If the line exists but differs, update it
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        sed -i "s|^export BK_REPO=.*|$line|" ~/.bashrc
-        echo "Updated the existing BK_REPO line in ~/.bashrc."
-    fi
+unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
+unset detected_project detected_account _origin _actual _branch
+unset BK_REQ_REPO BK_REQ_STREAM
+
+if [ -z "$BK_WAS_INITIALIZED" ]; then
+    echo
+    echo -e "         __                 ---------------------------------------"
+    echo -e " _(\    |${RED}@@${NC}|                |                                     |"
+    echo -e "(__/\__ \--/ __             |          \e[34mW\e[31me\e[33ml\e[32mc\e[34mo\e[31mm\e[33me \e[32mt\e[34mo \e[32mB\e[34mo\e[31mo\e[33mt\e[32mk\e[34mo\e[31mn\e[0m!        |"
+    echo -e "   \___|----|  |   __       |                                     |"
+    echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
+    echo -e "       /\__/\ \__O (__"
+    echo -e "      (--/\--)    \__/      To start ${BK_STREAM} Bootkon, type ${GREEN}\e[1mbk-start\e[0m${NC}."
+    echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
+    echo -e '      `---''---`'
+    echo
 else
-    echo "Adding BK_REPO to .bashrc"
-    echo "$line" >> ~/.bashrc
+    echo -e "${GREEN}Reloaded bootkon environment${NC} (BK_STREAM=${YELLOW}$BK_STREAM${NC} BK_BRANCH=${YELLOW}$BK_BRANCH${NC})."
 fi
 
-## Set or update $BK_STREAM in ~/.bashrc
-line="export BK_STREAM=${BK_STREAM}"
-if grep -q '^export BK_STREAM=' ~/.bashrc; then
-    # If the line exists but differs, update it
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        sed -i "s|^export BK_STREAM=.*|$line|" ~/.bashrc
-        echo "Updated the existing BK_STREAM line in ~/.bashrc."
-    fi
-else
-    echo "Adding BK_STREAM=$BK_STREAM to .bashrc"
-    echo "$line" >> ~/.bashrc
-fi
-
-
-## Set or update $BK_BRANCH in ~/.bashrc
-export BK_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-line="export BK_BRANCH=${BK_BRANCH}"
-if grep -q '^export BK_BRANCH=' ~/.bashrc; then
-    # If the line exists but differs, update it
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        sed -i "s|^export BK_BRANCH=.*|$line|" ~/.bashrc
-        echo "Updated the existing BK_BRANCH line in ~/.bashrc."
-    fi
-else
-    echo "Adding BK_BRANCH=$BK_BRANCH to .bashrc"
-    echo "$line" >> ~/.bashrc
-fi
-
-## Persist the environment in ~/.bashrc so that new terminals
-## work without re-running `. bk`.
-line="export BK_DIR=\${HOME}/${BK_GITHUB_REPOSITORY}"
-if grep -q '^export BK_DIR=' ~/.bashrc; then
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        sed -i "s|^export BK_DIR=.*|$line|" ~/.bashrc
-        echo "Updated the existing BK_DIR line in ~/.bashrc."
-    fi
-else
-    echo "Adding BK_DIR to .bashrc"
-    echo "$line" >> ~/.bashrc
-fi
-
-for line in \
-    'if [ -f ${BK_DIR}/vars.sh ]; then source ${BK_DIR}/vars.sh; fi' \
-    'if [ -f ${BK_DIR}/vars.local.sh ]; then source ${BK_DIR}/vars.local.sh; fi'
-do
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        echo "Adding to .bashrc: $line"
-        echo "$line" >> ~/.bashrc
-    fi
-done
-
-## Only mark the environment as initialized in ~/.bashrc once a valid
-## PROJECT_ID is configured: the stream bootstrap scripts guard on
-## BK_INITIALIZED and rely on PROJECT_NUMBER.
-if [ ! -z "$PROJECT_ID" ]; then
-    line="export PROJECT_NUMBER=${PROJECT_NUMBER}"
-    if grep -q '^export PROJECT_NUMBER=' ~/.bashrc; then
-        if ! grep -Fxq "$line" ~/.bashrc; then
-            sed -i "s|^export PROJECT_NUMBER=.*|$line|" ~/.bashrc
-            echo "Updated the existing PROJECT_NUMBER line in ~/.bashrc."
-        fi
-    else
-        echo "Adding PROJECT_NUMBER to .bashrc"
-        echo "$line" >> ~/.bashrc
-    fi
-
-    line='export BK_INITIALIZED=1'
-    if ! grep -Fxq "$line" ~/.bashrc; then
-        echo "Adding BK_INITIALIZED to .bashrc"
-        echo "$line" >> ~/.bashrc
-    fi
-fi
-
-unset line
-
-echo
-echo -e "         __                 ---------------------------------------"
-echo -e " _(\    |${RED}@@${NC}|                |                                     |"
-echo -e "(__/\__ \--/ __             |          \e[34mW\e[31me\e[33ml\e[32mc\e[34mo\e[31mm\e[33me \e[32mt\e[34mo \e[32mB\e[34mo\e[31mo\e[33mt\e[32mk\e[34mo\e[31mn\e[0m!        |"
-echo -e "   \___|----|  |   __       |                                     |"
-echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
-echo -e "       /\__/\ \__O (__"
-echo -e "      (--/\--)    \__/      To start ${BK_STREAM} Bootkon, type ${GREEN}\e[1mbk-start\e[0m${NC}."
-echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
-echo -e '      `---''---`'
-echo
+unset BK_WAS_INITIALIZED
 
 if [ "$(basename ${BASH_SOURCE[0]})" != "bk" ]; then
     # This script is run the first time from GitHub
     bk-start
-fi  
+fi

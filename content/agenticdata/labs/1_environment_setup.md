@@ -43,7 +43,7 @@ Execute the following script. It installs Python dependencies, grants IAM roles,
 content/agenticdata/bk-bootstrap
 ```
 
-The script appended your generated database passwords and agent settings to `~/.bashrc`, so **every new terminal picks them up automatically**. Load them into this already-open one:
+The script wrote your generated database passwords and agent settings to `vars.local.sh`, so **every new terminal picks them up automatically**. Load them into this already-open one:
 
 ```bash
 source ~/.bashrc

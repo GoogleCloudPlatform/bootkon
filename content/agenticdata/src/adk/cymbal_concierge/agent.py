@@ -7,7 +7,7 @@ It spans two planes:
     Postgres through the IAP tunnel (localhost:5432).
 
 All configuration (model, database password, hosts) comes from environment
-variables exported to ~/.bashrc by bk-bootstrap in Lab 1.
+variables written to vars.local.sh by bk-bootstrap in Lab 1.
 """
 
 import os

@@ -30,25 +30,24 @@ echo "I'm ready to get started."
 
 Execute by pressing the return key in the terminal that has been opened in the lower part of your screen.
 
-### Setting environment variables
-You can open files directly from this tutorial.
-Open `vars.sh` <walkthrough-editor-open-file filePath="vars.sh">by clicking here</walkthrough-editor-open-file>
-and set `GCP_USERNAME`, `PROJECT_ID` according to the information you received. Also let us know your (first?) name in `MY_NAME`. Don't forget to save it.
+### Set up your environment
 
-❗ Please do not include any whitespaces when setting these variablers.
-
-Please reload bootkon and make sure there are no errors printed:
+Initialize bootkon. This sets your environment variables and auto-detects your
+Google Cloud project and account from Cloud Shell:
 
 ```bash
 . bk
 ```
 
-
-And restart the tutorial using the next command. You can also use the next command to continue bootkon in case you accidentally close the tutorial or the editor:
+Then reload the tutorial window on the right-hand side of your screen (run this
+again any time you accidentally close the tutorial or the editor):
 
 ```bash
 bk-start
 ```
+
+New terminals load the environment automatically — you only re-run `. bk` after
+changing your configuration.
 
 Now, your
 
@@ -56,6 +55,7 @@ Now, your
 
 * `GCP_USERNAME` is `{% if GCP_USERNAME == "" %}None{% else %}{{ GCP_USERNAME }}{% endif %}`.
 
+If either shows `None` or looks wrong, open `vars.local.sh` <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>, set the correct value (no spaces), save, and run `. bk` again. You can also set your (first) name in `MY_NAME`.
 
 If neither is `None`, press the `START` button below to get started!
 

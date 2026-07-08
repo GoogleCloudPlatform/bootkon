@@ -52,21 +52,18 @@ git status
 
 ## Set up your development environment
 
-During the first lab, participants are asked to edit `vars.sh`. It is suggested to make a copy of this file and not touch the original in order not to accidently commit it to git.
+`. bk` creates `vars.local.sh` from `vars.sh` on first run and auto-detects your
+`PROJECT_ID`/`GCP_USERNAME` from Cloud Shell. `vars.local.sh` is git-ignored, so
+you never risk committing your project — never edit `vars.sh` itself.
 
-First, make a copy:
+To override a detected value (or set `MY_NAME`), <walkthrough-editor-open-file filePath="vars.local.sh">edit `vars.local.sh`</walkthrough-editor-open-file>, then reload:
 ```bash
-cp vars.sh vars.local.sh
+. bk
 ```
 
-And <walkthrough-editor-open-file filePath="vars.local.sh">edit it</walkthrough-editor-open-file>. It also runs on Argolis (for Google employees).
-
-Next, source it:
-```bash
-. vars.local.sh
-```
-
-Note that the init script (`bk`) automatically loads `vars.local.sh` the next time and `vars.local.sh` takes presendence over `vars.sh`.
+It also runs on Argolis (for Google employees). `vars.local.sh` takes precedence
+over `vars.sh`, and every new terminal picks it up automatically via the block
+`bk` adds to `~/.bashrc`.
 
 ## Reloading the tutorial
 

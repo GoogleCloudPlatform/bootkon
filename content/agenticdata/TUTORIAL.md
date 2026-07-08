@@ -31,27 +31,24 @@ echo "Let's go, Cymbal!"
 
 Execute by pressing the return key in the terminal that has been opened in the lower part of your screen.
 
-### Setting environment variables
-You can open files directly from this tutorial.
-Open `vars.sh` <walkthrough-editor-open-file filePath="vars.sh">by clicking here</walkthrough-editor-open-file>
-and set `GCP_USERNAME`, `PROJECT_ID` according to the information you received. Also let us know your (first?) name in `MY_NAME`. Don't forget to save it.
+### Set up your environment
 
-❗ Please do not include any whitespaces when setting these variables.
-
-Please initialize bootkon. The next command will set environment variables in your current terminal.
+Initialize bootkon. This sets your environment variables and auto-detects your
+Google Cloud project and account from Cloud Shell:
 
 ```bash
 . bk
 ```
 
-Reload the tutorial window on the right-hand side of your screen.
+Then reload the tutorial window on the right-hand side of your screen (run this
+again any time you accidentally close the tutorial or the editor):
 
 ```bash
 bk-start
 ```
 
-In case you accidentally close the tutorial or the editor, you can execute `bk-start` to start it again. Please make sure that you execute `. bk` in every terminal
-you open so that the environment variables are set.
+New terminals load the environment automatically — you only re-run `. bk` after
+changing your configuration.
 
 Now, your
 
@@ -59,6 +56,7 @@ Now, your
 
 * `GCP_USERNAME` is `{% if GCP_USERNAME == "" %}None{% else %}{{ GCP_USERNAME }}{% endif %}`.
 
+If either shows `None` or looks wrong, open `vars.local.sh` <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>, set the correct value (no spaces), save, and run `. bk` again. You can also set your (first) name in `MY_NAME`.
 
 If neither is `None`, press the `START` button below to get started!
 

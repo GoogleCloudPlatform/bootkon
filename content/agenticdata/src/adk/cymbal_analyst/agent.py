@@ -5,8 +5,8 @@ agent (Conversational Analytics) and is exposed to other agents over the A2A
 protocol by a2a_server.py.
 
 All configuration (GOOGLE_CLOUD_PROJECT, GOOGLE_GENAI_USE_VERTEXAI,
-BK_CYMBAL_MODEL, BK_DATA_AGENT_ID) comes from environment variables exported to
-~/.bashrc by bk-bootstrap in Lab 1.
+BK_CYMBAL_MODEL, BK_DATA_AGENT_ID) comes from environment variables written to
+vars.local.sh by bk-bootstrap in Lab 1.
 """
 
 import os
