@@ -164,5 +164,5 @@ fi
 echo
 echo "Bootstrap complete. The stream configuration is in vars.local.sh."
 echo "Load it into this terminal with:"
-echo "  source ~/.bashrc"
+echo "  . bk"
 echo "(New terminals pick it up automatically.)"

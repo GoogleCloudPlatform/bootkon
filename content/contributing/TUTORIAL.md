@@ -65,6 +65,23 @@ It also runs on Argolis (for Google employees). `vars.local.sh` takes precedence
 over `vars.sh`, and every new terminal picks it up automatically via the block
 `bk` adds to `~/.bashrc`.
 
+## Test a branch end-to-end
+
+To try your branch the way a participant would — a clean clone and the full
+`bk` bootstrap — run the one-liner with your branch in **both** `BK_BRANCH` and
+the URL. The stream READMEs hard-code `main`, so you must swap it out:
+
+```bash
+BK_BRANCH=<your-branch> BK_STREAM=<stream> BK_REPO=<user>/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/.scripts/bk)
+```
+
+`bk` clones the branch into `~/bootkon`. If `~/bootkon` already exists (your dev
+checkout), `bk` reuses it instead of cloning — so for a truly clean test, remove
+it first (`rm -rf ~/bootkon`). In your own dev checkout you don't need the
+one-liner at all: `git checkout <your-branch>` and run `. bk`. `BK_BRANCH` — and
+therefore the rendered image links (`.../blob/<branch>/...`) — follow whatever
+the checkout is on, so push image changes before expecting them to render.
+
 ## Reloading the tutorial
 
 You can reload a lab on-the-fly by typing `bk-tutorial` followed by the lab markdown file into the terminal and pressing return. Let's reload

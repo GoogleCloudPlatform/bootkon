@@ -43,10 +43,10 @@ Execute the following script. It installs Python dependencies, grants IAM roles,
 content/agenticdata/bk-bootstrap
 ```
 
-The script wrote your generated database passwords and agent settings to `vars.local.sh`, so **every new terminal picks them up automatically**. Load them into this already-open one:
+The script wrote your generated database passwords and agent settings to `vars.local.sh`, so **every new terminal picks them up automatically**. Reload this already-open one:
 
 ```bash
-source ~/.bashrc
+. bk
 ```
 
 Then reload the tutorial once — this renders your freshly generated passwords directly into the commands of the next labs:
