@@ -110,7 +110,9 @@ SET_VAR="$BK_DIR/.scripts/bk-set-var"
 echo "Writing stream configuration to vars.local.sh (generating passwords if needed) ..."
 "$SET_VAR" --if-empty --comment "Cloud SQL (Postgres) root password -- generated once" "$LOCAL" BK_DB_PASSWORD "$(openssl rand -hex 16)"
 "$SET_VAR" --if-empty --comment "Datastream connection password -- generated once" "$LOCAL" BK_DS_PASSWORD "$(openssl rand -hex 16)"
-"$SET_VAR" --comment "Project for the ADK / Antigravity (agy) runtime" "$LOCAL" GOOGLE_CLOUD_PROJECT "$PROJECT_ID"
+# GOOGLE_CLOUD_PROJECT is intentionally NOT set here: Cloud Shell already exports
+# it (= the active project = PROJECT_ID), so the google-genai/Vertex SDK and agy
+# read it from there. bootkon's own code uses PROJECT_ID.
 "$SET_VAR" --comment "Route google-genai through Vertex AI" "$LOCAL" GOOGLE_GENAI_USE_VERTEXAI TRUE
 "$SET_VAR" --comment "Location for the GenAI/Vertex client" "$LOCAL" GOOGLE_CLOUD_LOCATION global
 "$SET_VAR" --comment "Gemini model id used by the Cymbal agents" "$LOCAL" BK_CYMBAL_MODEL gemini-2.5-flash
@@ -120,8 +122,9 @@ echo "Writing stream configuration to vars.local.sh (generating passwords if nee
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell
 # and authenticates with the ambient Cloud Shell credentials (ADC); it reads
-# the project and location from GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION
-# (exported above). Seeding settings.json suppresses the first-run wizard's
+# the project from GOOGLE_CLOUD_PROJECT (Cloud Shell sets it to the active
+# project) and the location from GOOGLE_CLOUD_LOCATION (written above). Seeding
+# settings.json suppresses the first-run wizard's
 # auth, theme and workspace-trust prompts so the labs start clean.
 AGY_DIR=~/.gemini/antigravity-cli
 if [ ! -f "$AGY_DIR/settings.json" ]; then
