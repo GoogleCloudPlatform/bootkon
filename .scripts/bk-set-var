@@ -16,12 +16,16 @@
 # bk-set-var — idempotently upsert an `export NAME='VALUE'` line into a file.
 #
 # Usage:
-#   bk-set-var [--if-empty] FILE NAME VALUE
+#   bk-set-var [--if-empty] [--comment "text"] FILE NAME VALUE
 #
 #   --if-empty   Only write if NAME is currently unset or empty in FILE.
 #                Existing non-empty values are left untouched. Used for
 #                autodetected config (respect manual edits) and for
 #                once-generated secrets (never regenerate).
+#   --comment    One-line description, written as a `# text` comment directly
+#                above the export when the line is first appended (so a fresh
+#                vars.local.sh is self-documenting). Not re-added on later
+#                in-place replacements, and never duplicated.
 #
 # The file is created if missing. An existing `export NAME=...` line is
 # replaced in place (order preserved, duplicates collapsed); otherwise the
@@ -31,10 +35,14 @@
 set -eu
 
 if_empty=0
-if [ "${1:-}" = "--if-empty" ]; then
-    if_empty=1
-    shift
-fi
+comment=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --if-empty) if_empty=1; shift ;;
+        --comment)  comment="$2"; shift 2 ;;   # one-line description, written above the export
+        *)          break ;;
+    esac
+done
 
 file="${1:?bk-set-var: FILE required}"
 name="${2:?bk-set-var: NAME required}"
@@ -100,6 +108,7 @@ if grep -qE "$match" "$file"; then
     ' "$file" > "$tmp"
 else
     cat "$file" > "$tmp"
+    [ -n "$comment" ] && printf '# %s\n' "$comment" >> "$tmp"
     printf '%s\n' "$new_line" >> "$tmp"
 fi
 mv "$tmp" "$file"

@@ -79,6 +79,7 @@ fi
 BK_WAS_INITIALIZED="${BK_INITIALIZED:-}"
 BK_REQ_REPO="$BK_REPO"
 BK_REQ_STREAM="$BK_STREAM"
+BK_REQ_MY_NAME="${MY_NAME:-}"   # optionally provided in the launch command; captured before sourcing overwrites it
 
 export BK_REPO="$BK_REPO"
 export BK_STREAM="$BK_STREAM"
@@ -148,6 +149,11 @@ fi
 if [ -z "$GCP_USERNAME" ] && [ -n "$detected_account" ]; then
     "$BK_SET_VAR" "$LOCAL" GCP_USERNAME "$detected_account"
 fi
+# Fill MY_NAME from the launch command if it was provided and not already set
+# (respects a later manual edit; the comment from vars.sh stays on replace).
+if [ -z "$MY_NAME" ] && [ -n "$BK_REQ_MY_NAME" ]; then
+    "$BK_SET_VAR" "$LOCAL" MY_NAME "$BK_REQ_MY_NAME"
+fi
 # Reload so this shell sees any freshly detected values.
 source "$LOCAL"
 
@@ -186,12 +192,12 @@ echo -e "Config: PROJECT_ID=${YELLOW}$PROJECT_ID${NC} GCP_USERNAME=${YELLOW}$GCP
 # Persist the managed variables and install the ~/.bashrc block BEFORE the
 # project is validated below: even if validation fails (expired auth, wrong
 # project) a freshly opened terminal must still have PATH and the seed vars.
-"$BK_SET_VAR" "$LOCAL" BK_STREAM "$BK_STREAM"
-"$BK_SET_VAR" "$LOCAL" BK_REPO "$BK_REPO"
-"$BK_SET_VAR" "$LOCAL" BK_BRANCH "$BK_BRANCH"
-"$BK_SET_VAR" "$LOCAL" BK_GITHUB_USERNAME "$BK_GITHUB_USERNAME"
-"$BK_SET_VAR" "$LOCAL" BK_GITHUB_REPOSITORY "$BK_GITHUB_REPOSITORY"
-"$BK_SET_VAR" "$LOCAL" BK_REPO_URL "$BK_REPO_URL"
+"$BK_SET_VAR" --comment "Selected stream; picks content/<stream>/" "$LOCAL" BK_STREAM "$BK_STREAM"
+"$BK_SET_VAR" --comment "GitHub repo the labs are served from (user/repo)" "$LOCAL" BK_REPO "$BK_REPO"
+"$BK_SET_VAR" --comment "Checkout branch; used for rendered image links" "$LOCAL" BK_BRANCH "$BK_BRANCH"
+"$BK_SET_VAR" --comment "GitHub org/user (first half of BK_REPO)" "$LOCAL" BK_GITHUB_USERNAME "$BK_GITHUB_USERNAME"
+"$BK_SET_VAR" --comment "GitHub repo name (second half of BK_REPO)" "$LOCAL" BK_GITHUB_REPOSITORY "$BK_GITHUB_REPOSITORY"
+"$BK_SET_VAR" --comment "Clone URL derived from BK_REPO" "$LOCAL" BK_REPO_URL "$BK_REPO_URL"
 
 # Install/refresh a single guarded block in ~/.bashrc so every new terminal
 # loads the environment by sourcing vars.local.sh. bk-remove-block strips any
@@ -233,14 +239,14 @@ else
     # Persist project-derived state only once it is valid: the stream bootstrap
     # scripts guard on BK_INITIALIZED and rely on PROJECT_NUMBER.
     if [ -n "$PROJECT_NUMBER" ]; then
-        "$BK_SET_VAR" "$LOCAL" PROJECT_NUMBER "$PROJECT_NUMBER"
-        "$BK_SET_VAR" "$LOCAL" BK_INITIALIZED 1
+        "$BK_SET_VAR" --comment "Numeric GCP project number (derived from PROJECT_ID)" "$LOCAL" PROJECT_NUMBER "$PROJECT_NUMBER"
+        "$BK_SET_VAR" --comment "Set to 1 once bk validated the project; stream bootstraps guard on it" "$LOCAL" BK_INITIALIZED 1
     fi
 fi
 
 unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
 unset detected_project detected_account _origin _actual _branch
-unset BK_REQ_REPO BK_REQ_STREAM
+unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME
 
 if [ -z "$BK_WAS_INITIALIZED" ]; then
     echo

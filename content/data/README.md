@@ -133,6 +133,7 @@ Click into the terminal that has opened at the bottom of your screen.
 And copy & paste the following command and press return:
 
 ```bash
+MY_NAME=""     # your (first) name, shown in the greeting (optional)
 BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/main/.scripts/bk)
 ```
 

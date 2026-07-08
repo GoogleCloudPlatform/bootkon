@@ -55,7 +55,7 @@ Now, your
 
 * `GCP_USERNAME` is `{% if GCP_USERNAME == "" %}None{% else %}{{ GCP_USERNAME }}{% endif %}`.
 
-If either shows `None` or looks wrong, open `vars.local.sh` <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>, set the correct value (no spaces), save, and run `. bk` again. You can also set your (first) name in `MY_NAME`.
+If either shows `None` or looks wrong, open `vars.local.sh` <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>, set the correct value (no spaces), save, and run `. bk` again. (Your name comes from the launch command; edit `MY_NAME` here to change it.)
 
 If neither is `None`, press the `START` button below to get started!
 
