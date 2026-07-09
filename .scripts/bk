@@ -14,7 +14,8 @@
 #     PROJECT_ID/GCP_USERNAME, render and open the tutorial.
 #   * Re-run (already initialized): a fast reload -- re-source vars.local.sh,
 #     fill still-empty config from the environment, refresh PROJECT_NUMBER and
-#     the active gcloud project. Handy after editing vars.local.sh.
+#     the active gcloud project. Handy after editing vars.local.sh. A reload
+#     never changes the caller's working directory.
 #
 # Author: Fabian Hirschmann
 #
@@ -158,11 +159,13 @@ else
     fi
 fi
 
-cd "$BK_DIR"
-
-if [ ! -d "content/${BK_STREAM}" ]; then
+# NOTE: this script never cd's the caller's shell mid-run -- it is sourced, so
+# a cd here would teleport the participant out of their lab directory on every
+# reload and every error path. Everything below works from absolute paths; only
+# a successful FIRST run ends with a cd to the repo root (see the bottom).
+if [ ! -d "$BK_DIR/content/${BK_STREAM}" ]; then
     err "Stream '${BK_STREAM}' does not exist (no content/${BK_STREAM} directory)."
-    err "Available streams: $(cd content && ls -d */ | tr -d '/' | grep -vE '^(common|contributing|example)$' | tr '\n' ' ')"
+    err "Available streams: $(cd "$BK_DIR/content" && ls -d */ | tr -d '/' | grep -vE '^(common|contributing|example)$' | tr '\n' ' ')"
     err "To fix this, correct BK_STREAM in the command you pasted, then paste it again."
     return 1
 fi
@@ -392,6 +395,9 @@ if [ -z "$BK_WAS_INITIALIZED" ]; then
     echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
     echo -e '      `---''---`'
     echo
+    # A first run ends at the repo root: that is where the labs' relative
+    # commands are meant to run from.
+    cd "$BK_DIR"
 else
     echo -e "${GREEN}Reloaded bootkon environment${NC} (BK_STREAM=${YELLOW}$BK_STREAM${NC} BK_BRANCH=${YELLOW}$BK_BRANCH${NC}) — tutorial closed? Type ${GREEN}bk-start${NC}."
 fi
