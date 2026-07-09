@@ -189,6 +189,19 @@ if [ ! -f "$LOCAL" ]; then
     chmod 600 "$LOCAL"
 fi
 
+# The tutorial explicitly sends beginners into vars.local.sh; one lost quote
+# would otherwise surface as a raw 'unexpected EOF' in every new terminal,
+# with everything below the broken line (stream, secrets) silently unloaded
+# and every follow-up error pointing away from the cause. Check the file and
+# name the actual problem before sourcing it. (The ~/.bashrc block written
+# below carries the same guard.)
+if ! bash -n "$LOCAL" 2>/dev/null; then
+    err "Your configuration file has a syntax error (usually a missing quote):"
+    err "  $(bash -n "$LOCAL" 2>&1 | head -n 1)"
+    err "Open $LOCAL in the editor, fix that line, save it, then run '. bk' again."
+    return 1
+fi
+
 # Migrate older vars.local.sh files: BK_INITIALIZED is gone (a non-empty
 # PROJECT_NUMBER is the "environment is ready" signal now). Nothing reads the
 # stale line anymore; drop it and its comment to keep the file clean.
@@ -277,7 +290,14 @@ cat >> "$BASHRC" <<EOF
 # terminal. Edit values in \$BK_DIR/vars.local.sh, not here.
 export BK_DIR="$BK_DIR"
 case ":\$PATH:" in *":\$BK_DIR/.scripts:"*) ;; *) export PATH="\$BK_DIR/.scripts:\$PATH" ;; esac
-[ -f "\$BK_DIR/vars.local.sh" ] && source "\$BK_DIR/vars.local.sh"
+if [ -f "\$BK_DIR/vars.local.sh" ]; then
+    if bash -n "\$BK_DIR/vars.local.sh" 2>/dev/null; then
+        source "\$BK_DIR/vars.local.sh"
+    else
+        echo "bootkon: vars.local.sh has a syntax error (usually a missing quote) --" >&2
+        echo "bootkon: open it in the editor, fix the marked line, then run: . bk" >&2
+    fi
+fi
 export PROJECT_ID="\${DEVSHELL_PROJECT_ID:-\$GOOGLE_CLOUD_PROJECT}"  # live from Cloud Shell
 # <<< bootkon <<<
 EOF
