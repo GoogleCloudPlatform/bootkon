@@ -18,10 +18,10 @@
 # Your (first) name, shown in the tutorial greeting. Optional. Example: Ada
 export MY_NAME=""
 
-# Google Cloud project and account. Leave empty to auto-detect from Cloud Shell;
-# set a value to override what `. bk` detects.
-# Examples: bootkon-data-3472 / devstar3110@gcplab.me
-export PROJECT_ID=""
+# Your Google Cloud account. Leave empty to auto-detect from Cloud Shell.
+# (PROJECT_ID is NOT set here: bk derives it live from the Cloud Shell project
+#  picker. To use a different project, switch it in the picker.)
+# Example: devstar3110@gcplab.me
 export GCP_USERNAME=""
 
 # Deployment region. Do not change this value.
