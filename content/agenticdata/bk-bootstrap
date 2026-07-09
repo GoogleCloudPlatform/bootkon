@@ -6,7 +6,9 @@
 # those commands live inline in the labs, so the connectivity variant can be
 # swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
 
-[[ "$BK_INITIALIZED" != "1" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
+# PROJECT_NUMBER is set by `. bk` only after successful project validation --
+# and it is exactly what the service-agent emails below are built from.
+[[ -z "$PROJECT_NUMBER" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
 
 # The Datastream service agent must exist and hold its service-agent role
 # BEFORE Lab 1 creates the private connection: on a fresh project the agent

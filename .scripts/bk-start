@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ -z "$BK_INITIALIZED" ]; then
+if [ -z "$PROJECT_NUMBER" ]; then
     echo "Bootkon has not been initialized."
     echo "Please execute: "
     echo "  . bk (including the dot)"

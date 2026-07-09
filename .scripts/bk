@@ -73,10 +73,12 @@ if [ -z "$BK_STREAM" ]; then
     return 1
 fi
 
-# Remember whether this is a first run or a reload (before we set the flag), and
-# the explicitly requested repo/stream (env or argument) so they can win over a
-# stale persisted value further below.
-BK_WAS_INITIALIZED="${BK_INITIALIZED:-}"
+# Remember whether this is a first run or a reload, and the explicitly
+# requested repo/stream (env or argument) so they can win over a stale
+# persisted value further below. A non-empty PROJECT_NUMBER is THE "bk has
+# validated a project" signal: it is set and persisted only after successful
+# validation (and reaches new terminals via the ~/.bashrc block).
+BK_WAS_INITIALIZED="${PROJECT_NUMBER:-}"
 BK_REQ_REPO="$BK_REPO"
 BK_REQ_STREAM="$BK_STREAM"
 BK_REQ_MY_NAME="${MY_NAME:-}"   # optionally provided in the launch command; captured before sourcing overwrites it
@@ -143,6 +145,13 @@ if [ ! -f "$LOCAL" ]; then
     echo -e "Creating $(readlink -f "$LOCAL") from vars.sh"
     cp "$BK_DIR/vars.sh" "$LOCAL"
     chmod 600 "$LOCAL"
+fi
+
+# Migrate older vars.local.sh files: BK_INITIALIZED is gone (a non-empty
+# PROJECT_NUMBER is the "environment is ready" signal now). Nothing reads the
+# stale line anymore; drop it and its comment to keep the file clean.
+if grep -q '^export BK_INITIALIZED=' "$LOCAL" 2>/dev/null; then
+    sed -i '/^# Set to 1 once bk validated the project/d; /^export BK_INITIALIZED=/d' "$LOCAL"
 fi
 
 echo -e "Sourcing $(readlink -f "$BK_DIR/vars.sh")"
@@ -258,11 +267,10 @@ fi
 export PROJECT_NUMBER
 echo -e "Project: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW}${PROJECT_NUMBER}${NC}."
 
-# Only NOW mark the environment initialized -- AFTER the project validated, so the
-# stream bootstraps (which guard on BK_INITIALIZED and rely on PROJECT_NUMBER)
-# never run on a failed setup. bk-start (wget path) runs after this line.
-export BK_INITIALIZED=1
-"$BK_SET_VAR" --comment "Set to 1 once bk validated the project; stream bootstraps guard on it" "$LOCAL" BK_INITIALIZED 1
+# There is deliberately no separate "initialized" flag: the PROJECT_NUMBER
+# export/persist above happens only on this validated path, so bk-start and
+# the stream bootstraps guard on a non-empty PROJECT_NUMBER -- the exact
+# precondition they consume. A failed or aborted setup never sets it.
 
 # Optional per-stream init hook: content/$BK_STREAM/bk-init. Runs on every `. bk`
 # once the project is validated -- and, crucially, BEFORE the first tutorial

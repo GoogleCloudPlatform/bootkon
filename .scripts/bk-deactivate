@@ -22,4 +22,4 @@ fi
 
 echo "Removed the bootkon block from ~/.bashrc."
 echo "Open a new terminal for a clean environment (this one keeps the variables"
-echo "until you 'unset BK_INITIALIZED' or start a new shell)."
+echo "until you 'unset PROJECT_NUMBER' or start a new shell)."
