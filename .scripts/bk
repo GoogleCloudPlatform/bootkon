@@ -32,13 +32,23 @@
 #   BK_STREAM: stream to start (a directory under content/).
 #   BK_DIR:    checkout location (defaults to ~/bootkon).
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# The whole body lives in _bk_main, called once at the very bottom. The launch
+# streams this file via `. <(wget ...)`: with a plain script body, a connection
+# drop would execute everything up to the break (worst case inside the
+# ~/.bashrc heredoc, appending a block without its end marker). Wrapped in a
+# function, a truncated download is a parse error that executes NOTHING. It
+# also lets internal working variables be `local` instead of leaking into the
+# participant's shell on early returns. The body is deliberately NOT indented,
+# to keep diffs and history readable.
+_bk_main() {
+
+local RED='\033[0;31m'
+local GREEN='\033[0;32m'
+local YELLOW='\033[0;33m'
+local BLUE='\033[0;34m'
+local MAGENTA='\033[0;35m'
+local CYAN='\033[0;36m'
+local NC='\033[0m' # No Color
 
 err() {
   echo -e "${RED}Error: $1${NC}" >&2
@@ -85,9 +95,9 @@ fi
 
 # Remember the explicitly requested repo/stream (env or argument) so they can
 # win over a stale persisted value further below.
-BK_REQ_REPO="$BK_REPO"
-BK_REQ_STREAM="$BK_STREAM"
-BK_REQ_MY_NAME="${MY_NAME:-}"   # optionally provided in the launch command; captured before sourcing overwrites it
+local BK_REQ_REPO="$BK_REPO"
+local BK_REQ_STREAM="$BK_STREAM"
+local BK_REQ_MY_NAME="${MY_NAME:-}"   # optionally provided in the launch command; captured before sourcing overwrites it
 
 export BK_REPO="$BK_REPO"
 export BK_STREAM="$BK_STREAM"
@@ -123,7 +133,7 @@ fi
 #     the tty, unlike `wget | bash`, so read works on the launch path);
 #   * MY_NAME=... in the launch env still short-circuits the prompt, so
 #     organizer/scripted/headless flows are unaffected.
-BK_FIRST_RUN=""
+local BK_FIRST_RUN=""
 if [ ! -f "$BK_DIR/vars.local.sh" ]; then
     BK_FIRST_RUN=1
     echo
@@ -182,7 +192,7 @@ else
     # One HEAD request against the raw stream tutorial validates BK_REPO,
     # BK_BRANCH and BK_STREAM at once. (--spider returns non-zero on a 404;
     # curl -fsIL is the fallback in case the wget build GETs instead.)
-    _probe="https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/content/${BK_STREAM}/TUTORIAL.md"
+    local _probe="https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/content/${BK_STREAM}/TUTORIAL.md"
     if ! wget -q --spider "$_probe" 2>/dev/null && ! curl -fsIL "$_probe" >/dev/null 2>&1; then
         err "Could not find stream '${BK_STREAM}' on ${BK_REPO}@${BK_BRANCH} (or the network is down)."
         err "Check BK_STREAM / BK_REPO / BK_BRANCH in the command you pasted, then paste it again."
@@ -211,16 +221,16 @@ fi
 
 # Add the scripts directory to the current session's PATH (idempotent). The
 # permanent export lives in the ~/.bashrc block written further below.
-BK_SCRIPTS="$BK_DIR/.scripts"
+local BK_SCRIPTS="$BK_DIR/.scripts"
 case ":$PATH:" in
     *":$BK_SCRIPTS:"*) ;;
     *) dbg "${MAGENTA}Adding $BK_SCRIPTS to your current session's PATH${NC}"
        export PATH="$BK_SCRIPTS:$PATH" ;;
 esac
 
-LOCAL="$BK_DIR/vars.local.sh"
-BK_SET_VAR="$BK_SCRIPTS/bk-set-var"
-BK_REMOVE_BLOCK="$BK_SCRIPTS/bk-remove-block"
+local LOCAL="$BK_DIR/vars.local.sh"
+local BK_SET_VAR="$BK_SCRIPTS/bk-set-var"
+local BK_REMOVE_BLOCK="$BK_SCRIPTS/bk-remove-block"
 
 # vars.local.sh is the single per-participant config + state file. Seed it from
 # the checked-in template on first run; it is git-ignored, never pushed, and
@@ -264,7 +274,7 @@ dbg "Sourcing $(readlink -f "$LOCAL")"
 source "$LOCAL"
 
 # GCP_USERNAME: autodetect once, filling only if still empty (a manual edit wins).
-detected_account="$(gcloud config get-value account 2>/dev/null || true)"
+local detected_account="$(gcloud config get-value account 2>/dev/null || true)"
 [ "$detected_account" = "(unset)" ] && detected_account=""
 if [ -z "$GCP_USERNAME" ] && [ -n "$detected_account" ]; then
     "$BK_SET_VAR" "$LOCAL" GCP_USERNAME "$detected_account"
@@ -289,8 +299,8 @@ export PROJECT_ID
 # clobber it) and from the checkout's own origin remote, so BK_REPO and the
 # rendered image links always match the files actually on disk -- even if
 # vars.local.sh is stale or a fork was requested against an existing checkout.
-_origin="$(git -C "$BK_DIR" remote get-url origin 2>/dev/null || true)"
-_actual="$(printf '%s' "$_origin" | sed -E 's#^git@github\.com:##; s#^https?://github\.com/##; s#\.git$##')"
+local _origin="$(git -C "$BK_DIR" remote get-url origin 2>/dev/null || true)"
+local _actual="$(printf '%s' "$_origin" | sed -E 's#^git@github\.com:##; s#^https?://github\.com/##; s#\.git$##')"
 if [ -n "$_actual" ]; then
     if [ "$_actual" != "$BK_REQ_REPO" ]; then
         echo -e "${YELLOW}Note: $BK_DIR is a checkout of $_actual, not $BK_REQ_REPO.${NC}"
@@ -309,7 +319,7 @@ export BK_STREAM="$BK_REQ_STREAM"
 
 # BK_BRANCH is derived from the checkout. Fall back cleanly for a detached HEAD
 # ('HEAD') or a non-git directory (empty), which are not valid clone targets.
-_branch="$(git -C "$BK_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+local _branch="$(git -C "$BK_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
 if [ -z "$_branch" ] || [ "$_branch" = "HEAD" ]; then
     _branch="${BK_BRANCH:-main}"
 fi
@@ -329,7 +339,7 @@ export BK_BRANCH="$_branch"
 # Install/refresh a single guarded block in ~/.bashrc so every new terminal
 # loads the environment by sourcing vars.local.sh. bk-remove-block strips any
 # existing block robustly; then we append a fresh one.
-BASHRC=~/.bashrc
+local BASHRC=~/.bashrc
 "$BK_REMOVE_BLOCK" "$BASHRC" 2>/dev/null || true
 cat >> "$BASHRC" <<EOF
 
@@ -415,10 +425,6 @@ if [ -x "$BK_DIR/content/$BK_STREAM/bk-init" ]; then
     source "$LOCAL"
 fi
 
-unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
-unset detected_account _origin _actual _branch _probe
-unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME
-
 if [ -n "$BK_FIRST_RUN" ]; then
     # The robot already greeted up front; close the first run with the facts
     # and a path-aware call to action (on the wget path bk-start auto-runs).
@@ -436,9 +442,16 @@ else
     echo -e "${GREEN}Reloaded bootkon${NC}: project ${YELLOW}$PROJECT_ID${NC} · account ${YELLOW}$GCP_USERNAME${NC} · stream ${YELLOW}$BK_STREAM${NC}@${BK_BRANCH} — tutorial closed? Type ${GREEN}bk-start${NC}."
 fi
 
-unset BK_FIRST_RUN
-
 if [ "$(basename ${BASH_SOURCE[0]})" != "bk" ]; then
     # This script is run the first time from GitHub
     bk-start
 fi
+
+}
+
+_bk_main "$@"
+_bk_rc=$?
+unset -f _bk_main err dbg
+# Propagate the status: `return` works in the sourced case (the normal one);
+# if someone executes the file instead, return fails silently and exit runs.
+return $_bk_rc 2>/dev/null || exit $_bk_rc
