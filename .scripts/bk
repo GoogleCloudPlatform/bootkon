@@ -114,12 +114,48 @@ if ! command -v git &> /dev/null; then
     return 1
 fi
 
-if [ -d "$BK_DIR/.git" ]; then
-    echo -e "${GREEN}Not cloning $BK_REPO_URL because $BK_DIR already exists.${NC}"
+# Reuse a healthy checkout, reject a broken one (an interrupted first clone
+# used to wedge the participant permanently: the .git test passed, the copy of
+# vars.sh failed, and every re-paste printed a reassuring green message), or
+# clone fresh -- after a one-second remote probe that catches repo/branch/
+# stream typos BEFORE any clone happens or any workspace opens.
+BK_BRANCH="${BK_BRANCH:-main}" # defaults to main; can be overwritten
+if [ -d "$BK_DIR/.git" ] && [ -f "$BK_DIR/vars.sh" ]; then
+    echo -e "${GREEN}Using the existing checkout in $BK_DIR.${NC}"
+    # Re-pasting the launch command is the documented way to pick up mid-event
+    # content fixes, so on that path -- and only there; plain `. bk` reloads
+    # stay offline and instant -- fast-forward a clean tree quietly.
+    if [ "$(basename "${BASH_SOURCE[0]}")" != "bk" ]; then
+        if [ -n "$(git -C "$BK_DIR" status --porcelain 2>/dev/null)" ]; then
+            echo -e "${YELLOW}Not updating it: you have local changes (to update: git -C $BK_DIR pull).${NC}"
+        elif ! git -C "$BK_DIR" pull --ff-only --quiet 2>/dev/null; then
+            echo -e "${YELLOW}Could not update it; continuing with the current files.${NC}"
+        fi
+    fi
+elif [ -e "$BK_DIR" ]; then
+    err "$BK_DIR exists but does not look like a working bootkon checkout"
+    err "(usually a previous setup was interrupted). To start over, run:"
+    err "  rm -rf $BK_DIR"
+    err "and then paste the setup command again."
+    return 1
 else
-    BK_BRANCH="${BK_BRANCH:-main}" # defaults to main; can be overwritten
+    # One HEAD request against the raw stream tutorial validates BK_REPO,
+    # BK_BRANCH and BK_STREAM at once. (--spider returns non-zero on a 404;
+    # curl -fsIL is the fallback in case the wget build GETs instead.)
+    _probe="https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/content/${BK_STREAM}/TUTORIAL.md"
+    if ! wget -q --spider "$_probe" 2>/dev/null && ! curl -fsIL "$_probe" >/dev/null 2>&1; then
+        err "Could not find stream '${BK_STREAM}' on ${BK_REPO}@${BK_BRANCH} (or the network is down)."
+        err "Check BK_STREAM / BK_REPO / BK_BRANCH in the command you pasted, then paste it again."
+        err "(Tried: $_probe)"
+        return 1
+    fi
     echo -e "Cloning branch $BK_BRANCH from $BK_REPO_URL into $BK_DIR..."
-    git clone --branch "$BK_BRANCH" "$BK_REPO_URL" "$BK_DIR"
+    if ! git clone --branch "$BK_BRANCH" "$BK_REPO_URL" "$BK_DIR"; then
+        err "Cloning $BK_REPO_URL failed -- see the git message above."
+        err "Usually this is a network hiccup: paste the setup command again."
+        err "If $BK_DIR was partially created, remove it first with: rm -rf $BK_DIR"
+        return 1
+    fi
 fi
 
 cd "$BK_DIR"
@@ -304,7 +340,7 @@ if [ -x "$BK_DIR/content/$BK_STREAM/bk-init" ]; then
 fi
 
 unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
-unset detected_account _origin _actual _branch
+unset detected_account _origin _actual _branch _probe
 unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME
 
 if [ -z "$BK_WAS_INITIALIZED" ]; then
