@@ -1,7 +1,5 @@
 #!/bin/sh
 
-cd $BK_DIR
-
 if [ -z "$BK_INITIALIZED" ]; then
     echo "Bootkon has not been initialized."
     echo "Please execute: "
@@ -9,7 +7,13 @@ if [ -z "$BK_INITIALIZED" ]; then
     exit 1
 fi
 
-bk-tutorial content/${BK_STREAM}/TUTORIAL.md
+cd "$BK_DIR" || {
+    echo "ERROR: the bootkon folder $BK_DIR is missing." >&2
+    echo "Paste the setup command from the workshop instructions again to reinstall." >&2
+    exit 1
+}
+
+bk-tutorial "content/${BK_STREAM}/TUTORIAL.md"
 if [ "${BK_STREAM}" != "devex" ]; then
     cloudshell open-workspace .
 fi
