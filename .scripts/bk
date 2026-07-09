@@ -44,7 +44,14 @@ err() {
   echo -e "${RED}Error: $1${NC}" >&2
 }
 
-echo -e "${YELLOW}Running bootkon init script $(readlink -f ${BASH_SOURCE[0]})...${NC}"
+# Internal narration (paths, sourcing, PATH bookkeeping) is hidden unless
+# BK_DEBUG is set: a /proc/self/fd/... pipe path must not be the first thing
+# a first-day participant ever sees in a terminal.
+dbg() {
+  if [ -n "${BK_DEBUG:-}" ]; then echo -e "$1"; fi
+}
+
+dbg "${YELLOW}Running bootkon init script $(readlink -f ${BASH_SOURCE[0]})...${NC}"
 
 if [ -z "$CLOUD_SHELL" ]; then
     err 'bootkon runs inside Google Cloud Shell.'
@@ -122,11 +129,11 @@ fi
 # stream typos BEFORE any clone happens or any workspace opens.
 BK_BRANCH="${BK_BRANCH:-main}" # defaults to main; can be overwritten
 if [ -d "$BK_DIR/.git" ] && [ -f "$BK_DIR/vars.sh" ]; then
-    echo -e "${GREEN}Using the existing checkout in $BK_DIR.${NC}"
     # Re-pasting the launch command is the documented way to pick up mid-event
     # content fixes, so on that path -- and only there; plain `. bk` reloads
-    # stay offline and instant -- fast-forward a clean tree quietly.
+    # stay offline, instant and quiet -- fast-forward a clean tree.
     if [ "$(basename "${BASH_SOURCE[0]}")" != "bk" ]; then
+        echo -e "${GREEN}Using the existing checkout in $BK_DIR.${NC}"
         if [ -n "$(git -C "$BK_DIR" status --porcelain 2>/dev/null)" ]; then
             echo -e "${YELLOW}Not updating it: you have local changes (to update: git -C $BK_DIR pull).${NC}"
         elif ! git -C "$BK_DIR" pull --ff-only --quiet 2>/dev/null; then
@@ -175,7 +182,7 @@ fi
 BK_SCRIPTS="$BK_DIR/.scripts"
 case ":$PATH:" in
     *":$BK_SCRIPTS:"*) ;;
-    *) echo -e "${MAGENTA}Adding $BK_SCRIPTS to your current session's PATH${NC}"
+    *) dbg "${MAGENTA}Adding $BK_SCRIPTS to your current session's PATH${NC}"
        export PATH="$BK_SCRIPTS:$PATH" ;;
 esac
 
@@ -187,7 +194,7 @@ BK_REMOVE_BLOCK="$BK_SCRIPTS/bk-remove-block"
 # the checked-in template on first run; it is git-ignored, never pushed, and
 # holds generated secrets, so keep it private.
 if [ ! -f "$LOCAL" ]; then
-    echo -e "Creating $(readlink -f "$LOCAL") from vars.sh"
+    echo -e "Creating your personal config file: $LOCAL"
     cp "$BK_DIR/vars.sh" "$LOCAL"
     chmod 600 "$LOCAL"
 fi
@@ -219,9 +226,9 @@ if grep -qE '^export (BK_INITIALIZED|BK_GITHUB_USERNAME|BK_GITHUB_REPOSITORY|BK_
         -e '/^export (BK_INITIALIZED|BK_GITHUB_USERNAME|BK_GITHUB_REPOSITORY|BK_REPO_URL)=/d' "$LOCAL"
 fi
 
-echo -e "Sourcing $(readlink -f "$BK_DIR/vars.sh")"
+dbg "Sourcing $(readlink -f "$BK_DIR/vars.sh")"
 source "$BK_DIR/vars.sh"
-echo -e "Sourcing $(readlink -f "$LOCAL")"
+dbg "Sourcing $(readlink -f "$LOCAL")"
 source "$LOCAL"
 
 # GCP_USERNAME: autodetect once, filling only if still empty (a manual edit wins).
@@ -275,8 +282,6 @@ if [ -z "$_branch" ] || [ "$_branch" = "HEAD" ]; then
     _branch="${BK_BRANCH:-main}"
 fi
 export BK_BRANCH="$_branch"
-
-echo -e "Config: PROJECT_ID=${YELLOW}$PROJECT_ID${NC} GCP_USERNAME=${YELLOW}$GCP_USERNAME${NC} REGION=${YELLOW}$REGION${NC}"
 
 # Persist the managed variables and install the ~/.bashrc block BEFORE the
 # project is validated below: even if validation fails (expired auth, wrong
@@ -355,7 +360,6 @@ if [ -z "$PROJECT_NUMBER" ] || [ "$PROJECT_ID" != "${BK_PROJECT_NUMBER_OF:-}" ];
     "$BK_SET_VAR" --comment "Internal: the project the cached PROJECT_NUMBER belongs to" "$LOCAL" BK_PROJECT_NUMBER_OF "$PROJECT_ID"
 fi
 export PROJECT_NUMBER
-echo -e "Project: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW}${PROJECT_NUMBER}${NC}."
 
 # There is deliberately no separate "initialized" flag: the PROJECT_NUMBER
 # export/persist above happens only on this validated path, so bk-start and
@@ -384,6 +388,7 @@ unset detected_account _origin _actual _branch _probe
 unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME
 
 if [ -z "$BK_WAS_INITIALIZED" ]; then
+    echo -e "Project: ${YELLOW}$PROJECT_ID${NC} (number $PROJECT_NUMBER) · Account: ${YELLOW}$GCP_USERNAME${NC} · Stream: ${YELLOW}$BK_STREAM${NC}"
     echo
     echo -e "         __                 ---------------------------------------"
     echo -e " _(\    |${RED}@@${NC}|                |                                     |"
@@ -391,15 +396,20 @@ if [ -z "$BK_WAS_INITIALIZED" ]; then
     echo -e "   \___|----|  |   __       |                                     |"
     echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
     echo -e "       /\__/\ \__O (__"
-    echo -e "      (--/\--)    \__/      To start ${BK_STREAM} Bootkon, type ${GREEN}\e[1mbk-start\e[0m${NC}."
-    echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
+    if [ "$(basename "${BASH_SOURCE[0]}")" != "bk" ]; then
+        echo -e "      (--/\--)    \__/      Opening the ${BK_STREAM} tutorial and IDE workspace now."
+        echo -e "      _)(  )(_              If the tutorial ever closes, type ${GREEN}\e[1mbk-start\e[0m${NC} to reopen it."
+    else
+        echo -e "      (--/\--)    \__/      To start ${BK_STREAM} Bootkon, type ${GREEN}\e[1mbk-start\e[0m${NC}."
+        echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
+    fi
     echo -e '      `---''---`'
     echo
     # A first run ends at the repo root: that is where the labs' relative
     # commands are meant to run from.
     cd "$BK_DIR"
 else
-    echo -e "${GREEN}Reloaded bootkon environment${NC} (BK_STREAM=${YELLOW}$BK_STREAM${NC} BK_BRANCH=${YELLOW}$BK_BRANCH${NC}) — tutorial closed? Type ${GREEN}bk-start${NC}."
+    echo -e "${GREEN}Reloaded bootkon${NC}: project ${YELLOW}$PROJECT_ID${NC} · account ${YELLOW}$GCP_USERNAME${NC} · stream ${YELLOW}$BK_STREAM${NC}@${BK_BRANCH} — tutorial closed? Type ${GREEN}bk-start${NC}."
 fi
 
 unset BK_WAS_INITIALIZED
