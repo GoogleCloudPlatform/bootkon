@@ -104,9 +104,12 @@ if [ -z "$PROJECT_ID" ]; then
     return 1
 fi
 
+# Cloud Shell ships git; if it is ever missing something is deeply wrong with
+# the environment -- do not greet a novice with a sudo prompt and apt noise.
 if ! command -v git &> /dev/null; then
-    sudo apt update
-    sudo apt install -y git
+    err 'git is not available in this environment. Please open a fresh Cloud Shell'
+    err 'at https://shell.cloud.google.com and paste the setup command again.'
+    return 1
 fi
 
 if [ -d "$BK_DIR/.git" ]; then
