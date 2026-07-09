@@ -39,10 +39,26 @@ comment=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --if-empty) if_empty=1; shift ;;
-        --comment)  comment="$2"; shift 2 ;;   # one-line description, written above the export
+        --comment)                             # one-line description, written above the export
+            if [ $# -lt 2 ]; then
+                echo "bk-set-var: --comment requires an argument" >&2
+                exit 1
+            fi
+            comment="$2"; shift 2 ;;
         *)          break ;;
     esac
 done
+
+# A multi-line comment would put its second line outside the '# ' prefix --
+# executed by every new terminal that sources the file. Reject it like a
+# newline in the value.
+case "$comment" in
+    *"
+"*)
+        echo "bk-set-var: comment may not contain a newline" >&2
+        exit 1
+        ;;
+esac
 
 file="${1:?bk-set-var: FILE required}"
 name="${2:?bk-set-var: NAME required}"
@@ -66,7 +82,12 @@ case "$value" in
         ;;
 esac
 
-[ -f "$file" ] || touch "$file"
+# If we create the file it may receive secrets later, so make it private
+# from the start (a file created via the default umask would be 644).
+if [ ! -f "$file" ]; then
+    touch "$file"
+    chmod 600 "$file"
+fi
 
 match="^[[:space:]]*export[[:space:]]+${name}="
 
@@ -108,6 +129,11 @@ if grep -qE "$match" "$file"; then
     ' "$file" > "$tmp"
 else
     cat "$file" > "$tmp"
+    # A hand-edited file may lack a trailing newline; appending directly would
+    # concatenate two exports on one line.
+    if [ -s "$tmp" ] && [ -n "$(tail -c1 "$tmp")" ]; then
+        echo >> "$tmp"
+    fi
     [ -n "$comment" ] && printf '# %s\n' "$comment" >> "$tmp"
     printf '%s\n' "$new_line" >> "$tmp"
 fi
