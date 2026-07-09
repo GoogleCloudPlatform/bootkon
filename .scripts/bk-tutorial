@@ -8,21 +8,44 @@
 #
 # Usage: bk-tutorial <path/to/tutorial.md>
 
-MEMORY="${BK_DIR}/.tutorial.memory"
+if [[ -z "${BK_DIR}" ]]; then
+    echo "The bootkon environment is not loaded. Please run: . bk" >&2
+    exit 1
+fi
+
+# Tutorial paths (argument and memory) are relative to the checkout, and the
+# renderer resolves includes relative to ./content -- so always work from
+# $BK_DIR, no matter which lab directory the participant is currently in.
+cd "$BK_DIR" || {
+    echo "ERROR: the bootkon folder $BK_DIR is missing." >&2
+    echo "Paste the setup command from the workshop instructions again to reinstall." >&2
+    exit 1
+}
+
+MEMORY="$BK_DIR/.tutorial.memory"
 RENDERED=/tmp/bootkon.md
 
 FILE=$1
 
-if [[ -z "${FILE}" ]]; then
-    if [[ -f "${MEMORY}" ]]; then
-        FILE=$(cat $MEMORY)
-        echo "No tutorial specified. Reloading last opened file ${FILE}"
-    fi
+if [[ -z "$FILE" && -f "$MEMORY" ]]; then
+    FILE="$(cat "$MEMORY")"
+    echo "No tutorial specified. Reloading last opened file $FILE"
 fi
 
-echo "$FILE" > $MEMORY
+if [[ -z "$FILE" || ! -f "$FILE" ]]; then
+    echo "No tutorial to open. Type bk-start to open your stream's tutorial." >&2
+    exit 1
+fi
 
-bk-render-jinja2 $FILE $RENDERED
-cloudshell launch-tutorial $RENDERED
+bk-render-jinja2 "$FILE" "$RENDERED" || exit 1
+
+# Remember the file only after a successful render, so a bad invocation can
+# never poison the reload memory.
+echo "$FILE" > "$MEMORY"
+
+# Launching twice with a pause works around the tutorial pane sometimes not
+# picking up the new content on the first call (observed in Cloud Shell).
+# If a future Cloud Shell release makes the second call unnecessary, drop it.
+cloudshell launch-tutorial "$RENDERED"
 sleep 1.5
-cloudshell launch-tutorial $RENDERED
+cloudshell launch-tutorial "$RENDERED"
