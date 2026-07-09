@@ -88,6 +88,20 @@ export BK_REPO_URL="https://github.com/${BK_REPO}.git"
 # BK_DIR (e.g. contributors juggling several checkouts) is honored.
 export BK_DIR="${BK_DIR:-$HOME/bootkon}"
 
+# A Google Cloud project must be selected in the Cloud Shell project picker before
+# we do anything -- every lab needs it and PROJECT_ID is derived live from it.
+# Fail fast HERE, before cloning or opening the editor, instead of setting up a
+# project-less dead end. (DEVSHELL_PROJECT_ID / GOOGLE_CLOUD_PROJECT are empty when
+# no project is selected; Cloud Shell refreshes them on every prompt.)
+export PROJECT_ID="${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}"
+[ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID=""
+if [ -z "$PROJECT_ID" ]; then
+    err 'No Google Cloud project is selected.'
+    err 'Pick your event project in the project selector at the top of the Cloud'
+    err 'Shell window, then paste the setup command again.'
+    return 1
+fi
+
 if ! command -v git &> /dev/null; then
     sudo apt update
     sudo apt install -y git
@@ -150,11 +164,10 @@ fi
 # Reload so this shell sees any freshly detected values.
 source "$LOCAL"
 
-# PROJECT_ID is LIVE from Cloud Shell -- it always mirrors the project selected
-# in the Cloud Shell project picker (DEVSHELL_PROJECT_ID, which Cloud Shell
-# refreshes on every prompt). Derived AFTER the source so a stale persisted value
-# can never override it, and never written to vars.local.sh: nothing to edit,
-# nothing to go stale. To use a different project, switch it in the picker.
+# Re-assert the live PROJECT_ID after the source: an older vars.local.sh may still
+# carry a persisted PROJECT_ID line that would otherwise clobber the value we
+# derived (and validated) up front. It stays live from the picker -- never written
+# to vars.local.sh, nothing to edit, nothing to go stale.
 PROJECT_ID="${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}"
 [ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID=""
 export PROJECT_ID
@@ -218,44 +231,38 @@ export PROJECT_ID="\${DEVSHELL_PROJECT_ID:-\$GOOGLE_CLOUD_PROJECT}"  # live from
 # <<< bootkon <<<
 EOF
 
-# Mark the environment initialized in this shell so bk-start opens the tutorial
-# even before a project is set (the tutorial is what guides the user to set it).
-export BK_INITIALIZED=1
+# The project is guaranteed selected (checked before the clone). Validate it now
+# -- this also triggers the "Authorize Cloud Shell" popup at setup rather than
+# mid-lab. gcloud already points at the picker's project, so no `config set`.
+if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
+    echo -e "${RED}ERROR: Unable to access project $PROJECT_ID.${NC}"
+    echo -e "${RED}Two common causes:${NC}"
+    echo -e "${RED}  1. Your session needs re-authentication (typical after a break) —${NC}"
+    echo -e "${RED}     re-authorize Cloud Shell when prompted, or run 'gcloud auth login', then '. bk' again.${NC}"
+    echo -e "${RED}  2. The wrong project is selected — switch it in the Cloud Shell project selector.${NC}"
+    return 1
+fi
 
-if [ -z "$PROJECT_ID" ]; then
-    echo -e "${YELLOW}No Google Cloud project is selected. Pick your event project in the${NC}"
-    echo -e "${YELLOW}Cloud Shell project selector (top of the window), then run '. bk' again.${NC}"
-else
-    # Validate the project (this also triggers the "Authorize Cloud Shell" popup
-    # now, at setup, rather than mid-lab). gcloud is already pointed at the
-    # picker's project, so no `gcloud config set project` is needed.
-    if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
-        echo -e "${RED}ERROR: Unable to access project $PROJECT_ID.${NC}"
-        echo -e "${RED}Two common causes:${NC}"
-        echo -e "${RED}  1. Your session needs re-authentication (typical after a break) —${NC}"
-        echo -e "${RED}     re-authorize Cloud Shell when prompted, or run 'gcloud auth login', then '. bk' again.${NC}"
-        echo -e "${RED}  2. The wrong project is selected — switch it in the Cloud Shell project selector.${NC}"
+# PROJECT_NUMBER is the only project value NOT available from the environment, so
+# cache it in vars.local.sh. Recompute only when missing or when the live project
+# changed; every new terminal then reads it with no network call.
+if [ -z "$PROJECT_NUMBER" ] || [ "$PROJECT_ID" != "${BK_PROJECT_NUMBER_OF:-}" ]; then
+    PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+    if [ -z "$PROJECT_NUMBER" ]; then
+        err "Could not read the project number for $PROJECT_ID — please run '. bk' again."
         return 1
     fi
-
-    # PROJECT_NUMBER is the only project value NOT available from the environment,
-    # so cache it in vars.local.sh. Recompute only when it is missing or when the
-    # live project changed; every new terminal then reads it with no network call.
-    if [ -z "$PROJECT_NUMBER" ] || [ "$PROJECT_ID" != "${BK_PROJECT_NUMBER_OF:-}" ]; then
-        PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
-        if [ -z "$PROJECT_NUMBER" ]; then
-            err "Could not read the project number for $PROJECT_ID — please run '. bk' again."
-            return 1
-        fi
-        "$BK_SET_VAR" --comment "Numeric project number, cached for the current project" "$LOCAL" PROJECT_NUMBER "$PROJECT_NUMBER"
-        "$BK_SET_VAR" --comment "Internal: the project the cached PROJECT_NUMBER belongs to" "$LOCAL" BK_PROJECT_NUMBER_OF "$PROJECT_ID"
-    fi
-    export PROJECT_NUMBER
-    echo -e "Project: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW}${PROJECT_NUMBER}${NC}."
-
-    # Mark validated (persisted): the stream bootstraps guard on BK_INITIALIZED.
-    "$BK_SET_VAR" --comment "Set to 1 once bk validated the project; stream bootstraps guard on it" "$LOCAL" BK_INITIALIZED 1
+    "$BK_SET_VAR" --comment "Numeric project number, cached for the current project" "$LOCAL" PROJECT_NUMBER "$PROJECT_NUMBER"
+    "$BK_SET_VAR" --comment "Internal: the project the cached PROJECT_NUMBER belongs to" "$LOCAL" BK_PROJECT_NUMBER_OF "$PROJECT_ID"
 fi
+export PROJECT_NUMBER
+echo -e "Project: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW}${PROJECT_NUMBER}${NC}."
+
+# Only NOW mark the environment initialized -- AFTER the project validated, so the
+# stream bootstraps (which guard on BK_INITIALIZED and rely on PROJECT_NUMBER)
+# never run on a failed setup. bk-start (wget path) runs after this line.
+export BK_INITIALIZED=1
+"$BK_SET_VAR" --comment "Set to 1 once bk validated the project; stream bootstraps guard on it" "$LOCAL" BK_INITIALIZED 1
 
 unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
 unset detected_account _origin _actual _branch
