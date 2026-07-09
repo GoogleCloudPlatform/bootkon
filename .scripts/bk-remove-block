@@ -30,6 +30,10 @@ set -eu
 file="${1:?bk-remove-block: FILE required}"
 [ -f "$file" ] || exit 0
 
+# Operate on the real file: replacing a symlinked ~/.bashrc with a regular
+# file would silently detach dotfile setups.
+file="$(readlink -f "$file")"
+
 start='# >>> bootkon >>>'
 end='# <<< bootkon <<<'
 
