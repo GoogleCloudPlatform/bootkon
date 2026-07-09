@@ -1,28 +1,50 @@
 #!/bin/bash
 # Bootstraps the Agentic Data Bootkon stream: Python deps, APIs, IAM,
-# service accounts, and the secrets used across the labs.
+# service accounts, and the agy pre-configuration.
 #
 # It deliberately does NOT create the Cloud SQL instance or any networking:
 # those commands live inline in the labs, so the connectivity variant can be
 # swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
+#
+# Error handling: every step is checked and counted. The script keeps going
+# so one flaky IAM call does not abort the remaining setup, but it only
+# claims success when NOTHING failed -- a silent failure here used to
+# resurface an hour later as a cryptic PERMISSION_DENIED in Lab 1.
 
 # PROJECT_NUMBER is set by `. bk` only after successful project validation --
 # and it is exactly what the service-agent emails below are built from.
 [[ -z "$PROJECT_NUMBER" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
+
+# The lab invokes this script by relative path from the repo root, but a fresh
+# tab starts in $HOME -- pin the cwd so the relative paths below always work.
+cd "$BK_DIR" || { echo "ERROR: could not enter $BK_DIR -- please run '. bk' first." >&2; exit 1; }
+
+FAILURES=0
+step_failed() {
+    FAILURES=$((FAILURES + 1))
+    echo "ERROR: $1 -- see the message above." >&2
+}
 
 # The Datastream service agent must exist and hold its service-agent role
 # BEFORE Lab 1 creates the private connection: on a fresh project the agent
 # is created lazily, and `private-connections create` then fails with
 # PERMISSION_DENIED on the network attachment (verified live). The IAM grant
 # also needs a few minutes to propagate -- doing this FIRST, before the
-# pip install and the role loop below, buys that time for free.
-gcloud services enable datastream.googleapis.com >/dev/null 2>&1
-gcloud beta services identity create --service=datastream.googleapis.com --project=$PROJECT_ID >/dev/null 2>&1
+# pip install and the role loop below, buys that time for free. This block
+# is the reason this script exists: keep its errors loud.
+echo "Preparing the Datastream service agent (Lab 1 depends on it) ..."
+gcloud services enable datastream.googleapis.com \
+    || step_failed "enabling the Datastream API failed"
+gcloud beta services identity create --service=datastream.googleapis.com \
+    --project="$PROJECT_ID" >/dev/null \
+    || step_failed "creating the Datastream service identity failed"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
-    --role="roles/datastream.serviceAgent" --condition=None >>/dev/null
+    --role="roles/datastream.serviceAgent" --condition=None >/dev/null \
+    || step_failed "granting the Datastream service-agent role failed"
 
-pip install -r content/agenticdata/requirements.txt
+pip install -r content/agenticdata/requirements.txt \
+    || step_failed "installing the Python dependencies (pip) failed"
 
 echo "Enabling APIs (idempotent; the tutorial enables these too) ..."
 gcloud services enable \
@@ -44,13 +66,20 @@ gcloud services enable \
     serviceusage.googleapis.com \
     cloudresourcemanager.googleapis.com \
     iam.googleapis.com \
-    artifactregistry.googleapis.com
+    artifactregistry.googleapis.com \
+    || step_failed "enabling the APIs failed"
 
 # Knowledge Catalog data-quality service account: profile/quality scans in
-# Lab 4 run as this SA (custom execution identity).
+# Lab 4 run as this SA (custom execution identity). Creation is idempotent:
+# re-running the bootstrap is the natural novice recovery and must not greet
+# them with an unexplained 'already exists' error.
 DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
 DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
-gcloud iam service-accounts create $DQ_SCAN_SERVICE_ACCOUNT --display-name="Knowledge Catalog DQ Service Account"
+if ! gcloud iam service-accounts describe "$DQ_SCAN_SA_EMAIL" >/dev/null 2>&1; then
+    gcloud iam service-accounts create "$DQ_SCAN_SERVICE_ACCOUNT" \
+        --display-name="Knowledge Catalog DQ Service Account" \
+        || step_failed "creating the data-quality service account failed"
+fi
 # A freshly created SA can take a few seconds to become visible to IAM;
 # granting against it too early fails with "does not exist".
 for i in $(seq 1 15); do
@@ -60,6 +89,9 @@ done
 
 # Roles for the participant. Sandbox users are typically project owners
 # already; the explicit list keeps the stream portable to other setups.
+# --condition=None: a conditional binding anywhere in the project's policy
+# would otherwise make gcloud stop and prompt interactively -- mid-bootstrap,
+# once per role, with the actual question hidden by the stdout redirect.
 declare -a user_roles=(
     "roles/cloudsql.admin"                      # create/manage the Cymbal instance
     "roles/datastream.admin"                    # profiles, private connection, stream
@@ -79,7 +111,8 @@ declare -a user_roles=(
 for role in "${user_roles[@]}"; do
     echo "Assigning role $role to $GCP_USERNAME in project $PROJECT_ID..."
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="user:$GCP_USERNAME" --role="$role" >>/dev/null
+        --member="user:$GCP_USERNAME" --role="$role" --condition=None >>/dev/null \
+        || step_failed "assigning $role to $GCP_USERNAME failed"
 done
 
 # Roles for the data-quality service account.
@@ -94,7 +127,8 @@ declare -a dataquality_roles=(
 for role in "${dataquality_roles[@]}"; do
     echo "Assigning role $role to $DQ_SCAN_SA_EMAIL in project $PROJECT_ID..."
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
+        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" --condition=None >>/dev/null \
+        || step_failed "assigning $role to $DQ_SCAN_SA_EMAIL failed"
 done
 
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
@@ -125,9 +159,9 @@ if [ ! -f "$AGY_DIR/settings.json" ]; then
   "security": { "auth": { "selectedType": "cloud-shell" } },
   "selectedAuthType": "cloud-shell",
   "trustedWorkspaces": [
-    "$HOME/bootkon",
-    "$HOME/bootkon/content/agenticdata/src/dataform",
-    "$HOME/bootkon/content/agenticdata/src/adk"
+    "$BK_DIR",
+    "$BK_DIR/content/agenticdata/src/dataform",
+    "$BK_DIR/content/agenticdata/src/adk"
   ],
   "permissions": {
     "allow": [
@@ -147,4 +181,11 @@ else
 fi
 
 echo
-echo "Bootstrap complete."
+if [ "$FAILURES" -eq 0 ]; then
+    echo "Bootstrap complete."
+else
+    echo "Bootstrap finished with $FAILURES error(s) -- scroll up for the details," >&2
+    echo "then run this script again (it is safe to re-run). If it keeps failing," >&2
+    echo "ask the event staff." >&2
+    exit 1
+fi
