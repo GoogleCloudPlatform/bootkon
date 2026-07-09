@@ -95,30 +95,10 @@ for role in "${dataquality_roles[@]}"; do
         --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" >>/dev/null
 done
 
-# Per-participant stream config, written to vars.local.sh so every new terminal
-# picks it up automatically (bk's ~/.bashrc block sources that file). Only
-# secrets and Python/ADK runtime config live here; static values (project,
-# region, the reserved endpoint IP, instance/db names) are rendered into the
-# lab commands via Jinja2 or as literals, so they are NOT duplicated.
-# Passwords are generated once (--if-empty); the rest are deterministic and
-# always refreshed. bk-set-var is on PATH via the same ~/.bashrc block.
-LOCAL="$BK_DIR/vars.local.sh"
-# Resolve by absolute path (not via PATH): if this script runs in a shell where
-# the ~/.bashrc block was not sourced, a bare `bk-set-var` would fail with 127
-# and, since there is no `set -e` here, silently write nothing.
-SET_VAR="$BK_DIR/.scripts/bk-set-var"
-echo "Writing stream configuration to vars.local.sh (generating passwords if needed) ..."
-"$SET_VAR" --if-empty --comment "Cloud SQL (Postgres) root password -- generated once" "$LOCAL" BK_DB_PASSWORD "$(openssl rand -hex 16)"
-"$SET_VAR" --if-empty --comment "Datastream connection password -- generated once" "$LOCAL" BK_DS_PASSWORD "$(openssl rand -hex 16)"
-# GOOGLE_CLOUD_PROJECT is intentionally NOT set here: Cloud Shell already exports
-# it (= the active project = PROJECT_ID), so the google-genai/Vertex SDK and agy
-# read it from there. bootkon's own code uses PROJECT_ID.
-"$SET_VAR" --comment "Route google-genai through Vertex AI" "$LOCAL" GOOGLE_GENAI_USE_VERTEXAI TRUE
-"$SET_VAR" --comment "Location for the GenAI/Vertex client" "$LOCAL" GOOGLE_CLOUD_LOCATION global
-"$SET_VAR" --comment "Gemini model id used by the Cymbal agents" "$LOCAL" BK_CYMBAL_MODEL gemini-2.5-flash
-"$SET_VAR" --comment "Conversational Analytics data agent id" "$LOCAL" BK_DATA_AGENT_ID cymbal-data-agent
-"$SET_VAR" --comment "Cymbal DB host (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_HOST localhost
-"$SET_VAR" --comment "Cymbal DB port (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_PORT 5432
+# NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
+# are NOT written here -- they are created by content/agenticdata/bk-init, which
+# `. bk` runs at initialization, before the first tutorial render. This script
+# keeps only the heavy, visible GCP work: APIs, IAM, service accounts, pip, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell
 # and authenticates with the ambient Cloud Shell credentials (ADC); it reads
@@ -165,7 +145,4 @@ else
 fi
 
 echo
-echo "Bootstrap complete. The stream configuration is in vars.local.sh."
-echo "Load it into this terminal with:"
-echo "  . bk"
-echo "(New terminals pick it up automatically.)"
+echo "Bootstrap complete."

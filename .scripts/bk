@@ -264,6 +264,23 @@ echo -e "Project: PROJECT_ID=${YELLOW}${PROJECT_ID}${NC} PROJECT_NUMBER=${YELLOW
 export BK_INITIALIZED=1
 "$BK_SET_VAR" --comment "Set to 1 once bk validated the project; stream bootstraps guard on it" "$LOCAL" BK_INITIALIZED 1
 
+# Optional per-stream init hook: content/$BK_STREAM/bk-init. Runs on every `. bk`
+# once the project is validated -- and, crucially, BEFORE the first tutorial
+# render, so stream secrets already exist when the labs are rendered. Contract:
+# idempotent (write via `bk-set-var --if-empty`), local-only and instant (no
+# gcloud calls); heavy, visible GCP work belongs in the participant-run
+# bk-bootstrap instead. Streams without a hook simply skip this.
+if [ -x "$BK_DIR/content/$BK_STREAM/bk-init" ]; then
+    if ! "$BK_DIR/content/$BK_STREAM/bk-init"; then
+        err "The $BK_STREAM stream's init script (content/$BK_STREAM/bk-init) failed."
+        err "Please run '. bk' again; if it keeps failing, ask the event staff."
+        return 1
+    fi
+    # Load what the hook just wrote (e.g. generated passwords) into this shell,
+    # so the upcoming render and any lab command here already see them.
+    source "$LOCAL"
+fi
+
 unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
 unset detected_account _origin _actual _branch
 unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME

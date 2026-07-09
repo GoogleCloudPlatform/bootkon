@@ -39,7 +39,7 @@ def log(action, detail):
 def main():
     password = os.environ.get("BK_DB_PASSWORD")
     if not password:
-        sys.exit("BK_DB_PASSWORD is not set. Run '. bk' to reload it (written to vars.local.sh by bk-bootstrap).")
+        sys.exit("BK_DB_PASSWORD is not set. Run '. bk' to reload it (written to vars.local.sh at setup by bk-init).")
     host = os.environ.get("BK_CYMBAL_DB_HOST", "localhost")
     port = int(os.environ.get("BK_CYMBAL_DB_PORT", "5432"))
 

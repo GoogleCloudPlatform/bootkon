@@ -1,0 +1,29 @@
+#!/bin/bash
+# Stream init hook for agenticdata, run by `. bk` on every initialization and
+# reload -- AFTER project validation and BEFORE the first tutorial render, so
+# everything written here is already available when the labs are rendered.
+#
+# Contract (see .scripts/bk): idempotent, local-only, instant. Secrets are
+# written once (--if-empty); deterministic runtime config is upserted. Heavy,
+# visible GCP work (APIs, IAM, service accounts, pip) lives in bk-bootstrap,
+# which participants run in Lab 1.
+
+set -eu
+
+LOCAL="$BK_DIR/vars.local.sh"
+SET_VAR="$BK_DIR/.scripts/bk-set-var"
+
+# Generated once: Lab 1 creates the Cloud SQL instance with BK_DB_PASSWORD and
+# Lab 2 the Datastream connection profile with BK_DS_PASSWORD.
+"$SET_VAR" --if-empty --comment "Cloud SQL (Postgres) root password -- generated once" "$LOCAL" BK_DB_PASSWORD "$(openssl rand -hex 16)"
+"$SET_VAR" --if-empty --comment "Datastream connection password -- generated once" "$LOCAL" BK_DS_PASSWORD "$(openssl rand -hex 16)"
+
+# Deterministic runtime config for the ADK / Antigravity (agy) tooling.
+# GOOGLE_CLOUD_PROJECT is intentionally NOT set: Cloud Shell already exports it
+# (= the active project = PROJECT_ID); bootkon's own code uses PROJECT_ID.
+"$SET_VAR" --comment "Route google-genai through Vertex AI" "$LOCAL" GOOGLE_GENAI_USE_VERTEXAI TRUE
+"$SET_VAR" --comment "Location for the GenAI/Vertex client" "$LOCAL" GOOGLE_CLOUD_LOCATION global
+"$SET_VAR" --comment "Gemini model id used by the Cymbal agents" "$LOCAL" BK_CYMBAL_MODEL gemini-2.5-flash
+"$SET_VAR" --comment "Conversational Analytics data agent id" "$LOCAL" BK_DATA_AGENT_ID cymbal-data-agent
+"$SET_VAR" --comment "Cymbal DB host (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_HOST localhost
+"$SET_VAR" --comment "Cymbal DB port (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_PORT 5432
