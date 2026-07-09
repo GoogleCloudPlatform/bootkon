@@ -30,15 +30,26 @@ def render_tutorial(content):
 
     # Pass all variables starting with BK_ to the template context
     context = {k: v for k, v in os.environ.items() if k.startswith("BK_")}
+    # Unset scalars must render as '' (like undefined variables do), never as
+    # the literal string 'None' inside copy-paste commands.
     context.update(
         ON_ARGOLIS=(os.getenv("GCP_USERNAME") or "").endswith("altostrat.com"),
-        PROJECT_ID=os.getenv("PROJECT_ID"),
-        PROJECT_NUMBER=os.getenv("PROJECT_NUMBER"),
-        REGION=os.getenv("REGION"),
-        MY_NAME=os.getenv("MY_NAME"),
-        GCP_USERNAME=os.getenv("GCP_USERNAME"),
+        PROJECT_ID=os.getenv("PROJECT_ID") or "",
+        PROJECT_NUMBER=os.getenv("PROJECT_NUMBER") or "",
+        REGION=os.getenv("REGION") or "",
+        MY_NAME=os.getenv("MY_NAME") or "",
+        GCP_USERNAME=os.getenv("GCP_USERNAME") or "",
         author=partial(render_author),
     )
+
+    # A secret that renders empty produces labs with blank passwords in the
+    # copy-paste commands -- warn loudly instead of failing an hour later.
+    for name in sorted(set(re.findall(
+            r"{{\s*(BK_\w*(?:PASSWORD|SECRET|TOKEN|KEY)\w*)\s*}}", content))):
+        if not os.getenv(name):
+            print(f"WARNING: {name} is referenced by this tutorial but is "
+                  f"empty -- commands using it will not work. Run '. bk' and "
+                  f"then bk-start to refresh.", file=sys.stderr)
 
     rendered = template.render(**context)
 
