@@ -322,6 +322,15 @@ if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
     return 1
 fi
 
+# agy and the google-genai/Vertex SDKs read GOOGLE_CLOUD_PROJECT, and the
+# agenticdata stream deliberately does not pin it. Cloud Shell refreshes the
+# variable on every new prompt, but THIS shell still holds the pre-switch
+# value right after a project change -- align it with the project we just
+# validated so SDK calls in this very session hit the right project.
+if [ -n "${GOOGLE_CLOUD_PROJECT:-}" ] && [ "$GOOGLE_CLOUD_PROJECT" != "$PROJECT_ID" ]; then
+    export GOOGLE_CLOUD_PROJECT="$PROJECT_ID"
+fi
+
 # PROJECT_NUMBER is the only project value NOT available from the environment, so
 # cache it in vars.local.sh. Recompute only when missing or when the live project
 # changed; every new terminal then reads it with no network call.
