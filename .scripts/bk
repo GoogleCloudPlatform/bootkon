@@ -46,13 +46,15 @@ err() {
 echo -e "${YELLOW}Running bootkon init script $(readlink -f ${BASH_SOURCE[0]})...${NC}"
 
 if [ -z "$CLOUD_SHELL" ]; then
-    err 'Please run this script in Cloud Shell.'
+    err 'bootkon runs inside Google Cloud Shell.'
+    err 'Open https://shell.cloud.google.com and paste the setup command there.'
     return 1
 fi
 
 if [ "${BASH_SOURCE[0]}" == "$0" ]; then
-    err 'Script is not sourced. Please source it.'
-    err 'Example: BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon . bk'
+    err 'This command must start with a dot and a space -- the dot loads bootkon'
+    err 'into your current terminal. Example:'
+    err '  . bk'
     exit 1
 fi
 
@@ -124,7 +126,8 @@ cd "$BK_DIR"
 
 if [ ! -d "content/${BK_STREAM}" ]; then
     err "Stream '${BK_STREAM}' does not exist (no content/${BK_STREAM} directory)."
-    err "Available streams: $(ls content | grep -vx common | tr '\n' ' ')"
+    err "Available streams: $(cd content && ls -d */ | tr -d '/' | grep -vE '^(common|contributing|example)$' | tr '\n' ' ')"
+    err "To fix this, correct BK_STREAM in the command you pasted, then paste it again."
     return 1
 fi
 
@@ -246,12 +249,20 @@ EOF
 # The project is guaranteed selected (checked before the clone). Validate it now
 # -- this also triggers the "Authorize Cloud Shell" popup at setup rather than
 # mid-lab. gcloud already points at the picker's project, so no `config set`.
+# On failure, disambiguate the cause (auth vs. wrong project) so the
+# participant gets exactly ONE instruction -- and always say how to get the
+# tutorial afterwards, because on this path it was never opened.
 if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
-    echo -e "${RED}ERROR: Unable to access project $PROJECT_ID.${NC}"
-    echo -e "${RED}Two common causes:${NC}"
-    echo -e "${RED}  1. Your session needs re-authentication (typical after a break) —${NC}"
-    echo -e "${RED}     re-authorize Cloud Shell when prompted, or run 'gcloud auth login', then '. bk' again.${NC}"
-    echo -e "${RED}  2. The wrong project is selected — switch it in the Cloud Shell project selector.${NC}"
+    if ! gcloud auth print-access-token >/dev/null 2>&1; then
+        err "Your Cloud Shell session is not authorized (this happens after clicking"
+        err "Reject on the authorization popup, or after a longer break)."
+        err "Run '. bk' again and click 'Authorize' this time."
+    else
+        err "Your account has no access to project $PROJECT_ID."
+        err "Pick your event project in the project selector at the top of the"
+        err "Cloud Shell window, then run '. bk' again."
+    fi
+    err "Afterwards, type bk-start to open the tutorial."
     return 1
 fi
 
@@ -309,7 +320,7 @@ if [ -z "$BK_WAS_INITIALIZED" ]; then
     echo -e '      `---''---`'
     echo
 else
-    echo -e "${GREEN}Reloaded bootkon environment${NC} (BK_STREAM=${YELLOW}$BK_STREAM${NC} BK_BRANCH=${YELLOW}$BK_BRANCH${NC})."
+    echo -e "${GREEN}Reloaded bootkon environment${NC} (BK_STREAM=${YELLOW}$BK_STREAM${NC} BK_BRANCH=${YELLOW}$BK_BRANCH${NC}) — tutorial closed? Type ${GREEN}bk-start${NC}."
 fi
 
 unset BK_WAS_INITIALIZED
