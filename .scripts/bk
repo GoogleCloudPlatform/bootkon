@@ -83,12 +83,8 @@ if [ -z "$BK_STREAM" ]; then
     return 1
 fi
 
-# Remember whether this is a first run or a reload, and the explicitly
-# requested repo/stream (env or argument) so they can win over a stale
-# persisted value further below. A non-empty PROJECT_NUMBER is THE "bk has
-# validated a project" signal: it is set and persisted only after successful
-# validation (and reaches new terminals via the ~/.bashrc block).
-BK_WAS_INITIALIZED="${PROJECT_NUMBER:-}"
+# Remember the explicitly requested repo/stream (env or argument) so they can
+# win over a stale persisted value further below.
 BK_REQ_REPO="$BK_REPO"
 BK_REQ_STREAM="$BK_STREAM"
 BK_REQ_MY_NAME="${MY_NAME:-}"   # optionally provided in the launch command; captured before sourcing overwrites it
@@ -113,6 +109,42 @@ if [ -z "$PROJECT_ID" ]; then
     err 'Shell window, then paste the setup command again.'
     return 1
 fi
+
+# ── Interactive first-run onboarding ──────────────────────────────────────
+# On the very first launch (no vars.local.sh yet) the robot greets UP FRONT
+# and asks for the participant's name, instead of silently running the whole
+# setup and dropping a banner at the end. Because the name is collected here,
+# the launch command needs no MY_NAME= edit anymore -- a single, edit-free
+# paste, which kills the whole editing-inside-a-quoted-string trap (deleting
+# a quote left novices at a bare dquote> prompt as their first terminal
+# experience). Guards:
+#   * first run only -- never on `. bk` reloads or in new terminals;
+#   * interactive only ([ -t 0 ]: sourcing `. <(wget ...)` keeps stdin on
+#     the tty, unlike `wget | bash`, so read works on the launch path);
+#   * MY_NAME=... in the launch env still short-circuits the prompt, so
+#     organizer/scripted/headless flows are unaffected.
+BK_FIRST_RUN=""
+if [ ! -f "$BK_DIR/vars.local.sh" ]; then
+    BK_FIRST_RUN=1
+    echo
+    echo -e "         __                 ---------------------------------------"
+    echo -e " _(\    |${RED}@@${NC}|                |                                     |"
+    echo -e "(__/\__ \--/ __             |          \e[34mW\e[31me\e[33ml\e[32mc\e[34mo\e[31mm\e[33me \e[32mt\e[34mo \e[32mB\e[34mo\e[31mo\e[33mt\e[32mk\e[34mo\e[31mn\e[0m!        |"
+    echo -e "   \___|----|  |   __       |                                     |"
+    echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
+    echo -e "       /\__/\ \__O (__"
+    echo -e "      (--/\--)    \__/      Setting you up in project ${YELLOW}${PROJECT_ID}${NC}."
+    echo -e "      _)(  )(_              (Wrong project? Switch it in the selector at the"
+    echo -e '      `---''---`'"              top of this window and paste the command again.)"
+    echo
+    if [ -z "$BK_REQ_MY_NAME" ] && [ -t 0 ]; then
+        read -r -p "What should I call you? (first name, or press Enter to skip) " BK_REQ_MY_NAME
+    fi
+fi
+# Whether prompted or passed via the launch env: strip characters that must
+# never reach vars.local.sh or the greeting (bk-set-var rejects newlines
+# outright; stray quotes would just look broken in the rendered markdown).
+BK_REQ_MY_NAME="$(printf '%s' "$BK_REQ_MY_NAME" | tr -d "\r\n'\"")"
 
 # Cloud Shell ships git; if it is ever missing something is deeply wrong with
 # the environment -- do not greet a novice with a sudo prompt and apt noise.
@@ -387,24 +419,16 @@ unset BASHRC LOCAL BK_SET_VAR BK_REMOVE_BLOCK BK_SCRIPTS
 unset detected_account _origin _actual _branch _probe
 unset BK_REQ_REPO BK_REQ_STREAM BK_REQ_MY_NAME
 
-if [ -z "$BK_WAS_INITIALIZED" ]; then
+if [ -n "$BK_FIRST_RUN" ]; then
+    # The robot already greeted up front; close the first run with the facts
+    # and a path-aware call to action (on the wget path bk-start auto-runs).
     echo -e "Project: ${YELLOW}$PROJECT_ID${NC} (number $PROJECT_NUMBER) · Account: ${YELLOW}$GCP_USERNAME${NC} · Stream: ${YELLOW}$BK_STREAM${NC}"
-    echo
-    echo -e "         __                 ---------------------------------------"
-    echo -e " _(\    |${RED}@@${NC}|                |                                     |"
-    echo -e "(__/\__ \--/ __             |          \e[34mW\e[31me\e[33ml\e[32mc\e[34mo\e[31mm\e[33me \e[32mt\e[34mo \e[32mB\e[34mo\e[31mo\e[33mt\e[32mk\e[34mo\e[31mn\e[0m!        |"
-    echo -e "   \___|----|  |   __       |                                     |"
-    echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
-    echo -e "       /\__/\ \__O (__"
     if [ "$(basename "${BASH_SOURCE[0]}")" != "bk" ]; then
-        echo -e "      (--/\--)    \__/      Opening the ${BK_STREAM} tutorial and IDE workspace now."
-        echo -e "      _)(  )(_              If the tutorial ever closes, type ${GREEN}\e[1mbk-start\e[0m${NC} to reopen it."
+        echo -e "${GREEN}All set${MY_NAME:+, $MY_NAME}!${NC} Opening the ${BK_STREAM} tutorial and IDE workspace now."
+        echo -e "If the tutorial ever closes, type ${GREEN}bk-start${NC} to reopen it."
     else
-        echo -e "      (--/\--)    \__/      To start ${BK_STREAM} Bootkon, type ${GREEN}\e[1mbk-start\e[0m${NC}."
-        echo -e "      _)(  )(_              This will open the tutorial and IDE workspace."
+        echo -e "${GREEN}All set${MY_NAME:+, $MY_NAME}!${NC} Type ${GREEN}bk-start${NC} to open the ${BK_STREAM} tutorial and IDE workspace."
     fi
-    echo -e '      `---''---`'
-    echo
     # A first run ends at the repo root: that is where the labs' relative
     # commands are meant to run from.
     cd "$BK_DIR"
@@ -412,7 +436,7 @@ else
     echo -e "${GREEN}Reloaded bootkon${NC}: project ${YELLOW}$PROJECT_ID${NC} · account ${YELLOW}$GCP_USERNAME${NC} · stream ${YELLOW}$BK_STREAM${NC}@${BK_BRANCH} — tutorial closed? Type ${GREEN}bk-start${NC}."
 fi
 
-unset BK_WAS_INITIALIZED
+unset BK_FIRST_RUN
 
 if [ "$(basename ${BASH_SOURCE[0]})" != "bk" ]; then
     # This script is run the first time from GitHub
