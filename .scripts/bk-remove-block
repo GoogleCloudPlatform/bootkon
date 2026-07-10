@@ -1,0 +1,65 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# bk-remove-block FILE
+#
+# Remove the bootkon-managed block(s) from FILE. Shared by `bk` (which strips
+# then re-appends a fresh block) and `bk-deactivate`. Robust by design:
+#   * markers are matched ignoring trailing whitespace / CR (CRLF-safe);
+#   * a start marker with no matching end (truncated/corrupted file) is KEPT,
+#     not deleted to EOF -- no data loss;
+#   * trailing blank lines are stripped so repeated `. bk` reloads do not
+#     accumulate whitespace;
+#   * the rewrite is atomic (temp file in the SAME directory, then mv) and
+#     preserves the original file's permissions.
+
+set -eu
+
+file="${1:?bk-remove-block: FILE required}"
+[ -f "$file" ] || exit 0
+
+# Operate on the real file: replacing a symlinked ~/.bashrc with a regular
+# file would silently detach dotfile setups.
+file="$(readlink -f "$file")"
+
+start='# >>> bootkon >>>'
+end='# <<< bootkon <<<'
+
+dir="$(dirname "$file")"
+tmp="$(mktemp "$dir/.bootkon.XXXXXX")"
+chmod --reference="$file" "$tmp" 2>/dev/null || true
+
+awk -v s="$start" -v e="$end" '
+    function trim(x) { sub(/[[:space:]]+$/, "", x); return x }
+    {
+        if (!inblk) {
+            if (trim($0) == s) { inblk = 1; buf = $0; next }
+            out[++n] = $0; next
+        }
+        buf = buf "\n" $0
+        if (trim($0) == e) { inblk = 0; buf = ""; next }
+        next
+    }
+    END {
+        if (inblk) {                       # unterminated block: keep it verbatim
+            m = split(buf, a, "\n")
+            for (i = 1; i <= m; i++) out[++n] = a[i]
+        }
+        while (n > 0 && trim(out[n]) == "") n--   # strip trailing blank lines
+        for (i = 1; i <= n; i++) print out[i]
+    }
+' "$file" > "$tmp"
+
+mv "$tmp" "$file"

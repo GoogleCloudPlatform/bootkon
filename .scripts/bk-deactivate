@@ -1,13 +1,25 @@
 #!/bin/bash
+# Removes the bootkon block from ~/.bashrc so new terminals no longer load the
+# environment automatically. vars.local.sh and the checkout are left untouched;
+# re-run `. bk` to reactivate.
 
-line='if [ -f ${BK_INIT_SCRIPT} ]; then source ${BK_INIT_SCRIPT}; fi'
+BASHRC=~/.bashrc
+START='# >>> bootkon >>>'
+REMOVE="${BK_DIR:-$HOME/bootkon}/.scripts/bk-remove-block"
 
-# Check if the line exists in the file
-if grep -qF "$line" ~/.bashrc; then
-    sed -i "/$(echo "$line" | sed 's/[]\\/.*^$[]/\\&/g')/d" ~/.bashrc
-    echo "SUCCESS: The following line has been removed from ~/.bashrc:"
-else
-    echo "ERROR: The following line has not been found in ~/.bashrc:"
+if [ ! -f "$BASHRC" ] || ! grep -qF "$START" "$BASHRC"; then
+    echo "No bootkon block found in ~/.bashrc; nothing to do."
+    exit 0
 fi
 
-echo $line
+"$REMOVE" "$BASHRC"
+
+if grep -qF "$START" "$BASHRC"; then
+    echo "ERROR: could not cleanly remove the bootkon block from ~/.bashrc" >&2
+    echo "(the block may be missing its end marker). Please check the file by hand." >&2
+    exit 1
+fi
+
+echo "Removed the bootkon block from ~/.bashrc."
+echo "Open a new terminal for a clean environment (this one keeps the variables"
+echo "until you 'unset PROJECT_NUMBER' or start a new shell)."

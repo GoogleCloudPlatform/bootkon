@@ -39,23 +39,13 @@ Along the way you will spot **Prefer the console?** notes: optional UI routes fo
 
 ### Assign permissions
 
-Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, and generates the database passwords for your project. It runs for about two minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
+Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, and pre-configures your AI co-engineer. It runs for about two minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
 ```
 
-The script appended your generated database passwords and agent settings to `~/.bashrc`, so **every new terminal picks them up automatically**. Load them into this already-open one:
-
-```bash
-source ~/.bashrc
-```
-
-Then reload the tutorial once — this renders your freshly generated passwords directly into the commands of the next labs:
-
-```bash
-bk-start
-```
+Your database passwords were already generated during setup and live in `vars.local.sh` — the commands below use them as `$BK_DB_PASSWORD`, and **every terminal picks them up automatically**.
 
 ### Create the network path
 

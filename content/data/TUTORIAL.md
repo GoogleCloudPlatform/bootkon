@@ -31,36 +31,31 @@ echo "I'm ready to get started."
 
 Execute by pressing the return key in the terminal that has been opened in the lower part of your screen.
 
-### Setting environment variables
-You can open files directly from this tutorial.
-Open `vars.sh` <walkthrough-editor-open-file filePath="vars.sh">by clicking here</walkthrough-editor-open-file>
-and set `GCP_USERNAME`, `PROJECT_ID` according to the information you received. Also let us know your (first?) name in `MY_NAME`. Don't forget to save it.
+### Check your environment
 
-❗ Please do not include any whitespaces when setting these variablers.
+The setup command you pasted has already configured everything. Let's verify it:
 
-Please initialize bootkon. The next command will set environment variables in your current terminal.
+* Your `PROJECT_ID` is `{% if PROJECT_ID == "" %}None{% else %}{{ PROJECT_ID }}{% endif %}`
+
+* Your `GCP_USERNAME` is `{% if GCP_USERNAME == "" %}None{% else %}{{ GCP_USERNAME }}{% endif %}`
+
+If both are correct, you are done — press the `START` button below to get started!
+(Tip: if you ever close this tutorial or the editor, type `bk-start` in the
+terminal to reopen them.)
+
+Only if a value is wrong or shows `None`:
+
+* Wrong `PROJECT_ID`: switch to your event project in the Cloud Shell project
+  selector at the top of the window.
+* Wrong or missing `GCP_USERNAME` or name: open `vars.local.sh`
+  <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>,
+  fix the value (no spaces), and save.
+
+Then reload the environment and refresh the values shown on this page:
 
 ```bash
-. bk
+. bk && bk-start
 ```
-
-Reload the tutorial window on the right-hand side of your screen.
-
-```bash
-bk-start
-```
-
-In case you accidently close the tutorial or the editor, you can execute `bk-start` to start it again. Please make sure that you execute `. bk` in every terminal
-you open so that the environment variables are set.
-
-Now, your
-
-* `PROJECT_ID` is `{% if PROJECT_ID == "" %}None{% else %}{{ PROJECT_ID }}{% endif %}`
-
-* `GCP_USERNAME` is `{% if GCP_USERNAME == "" %}None{% else %}{{ GCP_USERNAME }}{% endif %}`.
-
-
-If neither is `None`, press the `START` button below to get started!
 
 {% include 'data/labs/1_environment_setup.md' %}
 

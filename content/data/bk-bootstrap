@@ -1,9 +1,12 @@
 #!/bin/bash
 # author: Fabian Hirschmann
 
-pip install -r content/data/requirements.txt
+# PROJECT_NUMBER is set by `. bk` only after successful project validation --
+# and the service-account emails below are built from it. Guard before doing
+# any work (the pip install used to run before this check).
+[[ -z "$PROJECT_NUMBER" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
 
-[[ "$BK_INITIALIZED" != "1" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
+pip install -r content/data/requirements.txt
 
 # Create Knowledge Catalog DQ Service Account first here to avoid potential timing issues during role assignment later
 DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"

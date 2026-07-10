@@ -46,9 +46,11 @@ tunnel on localhost:5432.
   `from google.adk.a2a.utils.agent_to_a2a import to_a2a`,
   `from google.cloud import geminidataanalytics`.
 - All configuration comes from environment variables:
-  `GOOGLE_CLOUD_PROJECT`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_LOCATION`,
+  `PROJECT_ID` (bootkon's canonical project var — use this, not
+  `GOOGLE_CLOUD_PROJECT`), `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_LOCATION`,
   `BK_CYMBAL_MODEL` (default `gemini-2.5-flash`), `BK_DATA_AGENT_ID`,
-  `BK_CYMBAL_DB_HOST`/`BK_CYMBAL_DB_PORT`, `BK_DB_PASSWORD`.
+  `BK_CYMBAL_DB_HOST`/`BK_CYMBAL_DB_PORT`, `BK_DB_PASSWORD`. (The Vertex SDK and
+  agy read `GOOGLE_CLOUD_PROJECT`, which Cloud Shell provides = `PROJECT_ID`.)
   Never create config files and never hardcode credentials.
 - Read the model as `os.environ.get("BK_CYMBAL_MODEL", "gemini-2.5-flash")`.
 - Keep tools small and readable; docstrings are the tool documentation the

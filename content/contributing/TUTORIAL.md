@@ -52,21 +52,35 @@ git status
 
 ## Set up your development environment
 
-During the first lab, participants are asked to edit `vars.sh`. It is suggested to make a copy of this file and not touch the original in order not to accidently commit it to git.
+`. bk` creates `vars.local.sh` from `vars.sh` on first run and auto-detects your
+`PROJECT_ID`/`GCP_USERNAME` from Cloud Shell. `vars.local.sh` is git-ignored, so
+you never risk committing your project — never edit `vars.sh` itself.
 
-First, make a copy:
+To override a detected value (or set `MY_NAME`), <walkthrough-editor-open-file filePath="vars.local.sh">edit `vars.local.sh`</walkthrough-editor-open-file>, then reload:
 ```bash
-cp vars.sh vars.local.sh
+. bk
 ```
 
-And <walkthrough-editor-open-file filePath="vars.local.sh">edit it</walkthrough-editor-open-file>. It also runs on Argolis (for Google employees).
+It also runs on Argolis (for Google employees). `vars.local.sh` takes precedence
+over `vars.sh`, and every new terminal picks it up automatically via the block
+`bk` adds to `~/.bashrc`.
 
-Next, source it:
+## Test a branch end-to-end
+
+To try your branch the way a participant would — a clean clone and the full
+`bk` bootstrap — run the one-liner with your branch in **both** `BK_BRANCH` and
+the URL. The stream READMEs hard-code `main`, so you must swap it out:
+
 ```bash
-. vars.local.sh
+BK_BRANCH=<your-branch> BK_STREAM=<stream> BK_REPO=<user>/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/.scripts/bk)
 ```
 
-Note that the init script (`bk`) automatically loads `vars.local.sh` the next time and `vars.local.sh` takes presendence over `vars.sh`.
+`bk` clones the branch into `~/bootkon`. If `~/bootkon` already exists (your dev
+checkout), `bk` reuses it instead of cloning — so for a truly clean test, remove
+it first (`rm -rf ~/bootkon`). In your own dev checkout you don't need the
+one-liner at all: `git checkout <your-branch>` and run `. bk`. `BK_BRANCH` — and
+therefore the rendered image links (`.../blob/<branch>/...`) — follow whatever
+the checkout is on, so push image changes before expecting them to render.
 
 ## Reloading the tutorial
 

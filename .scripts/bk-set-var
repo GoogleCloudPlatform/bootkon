@@ -1,0 +1,140 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# bk-set-var — idempotently upsert an `export NAME='VALUE'` line into a file.
+#
+# Usage:
+#   bk-set-var [--if-empty] [--comment "text"] FILE NAME VALUE
+#
+#   --if-empty   Only write if NAME is currently unset or empty in FILE.
+#                Existing non-empty values are left untouched. Used for
+#                autodetected config (respect manual edits) and for
+#                once-generated secrets (never regenerate).
+#   --comment    One-line description, written as a `# text` comment directly
+#                above the export when the line is first appended (so a fresh
+#                vars.local.sh is self-documenting). Not re-added on later
+#                in-place replacements, and never duplicated.
+#
+# The file is created if missing. An existing `export NAME=...` line is
+# replaced in place (order preserved, duplicates collapsed); otherwise the
+# line is appended. This one helper replaces the repetitive grep/sed/echo
+# blocks that used to litter `bk` and the stream bootstraps.
+
+set -eu
+
+if_empty=0
+comment=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --if-empty) if_empty=1; shift ;;
+        --comment)                             # one-line description, written above the export
+            if [ $# -lt 2 ]; then
+                echo "bk-set-var: --comment requires an argument" >&2
+                exit 1
+            fi
+            comment="$2"; shift 2 ;;
+        *)          break ;;
+    esac
+done
+
+# A multi-line comment would put its second line outside the '# ' prefix --
+# executed by every new terminal that sources the file. Reject it like a
+# newline in the value.
+case "$comment" in
+    *"
+"*)
+        echo "bk-set-var: comment may not contain a newline" >&2
+        exit 1
+        ;;
+esac
+
+file="${1:?bk-set-var: FILE required}"
+name="${2:?bk-set-var: NAME required}"
+value="${3-}"
+
+# Guard: NAME must be a plain shell identifier.
+case "$name" in
+    [!A-Za-z_]* | *[!A-Za-z0-9_]*)
+        echo "bk-set-var: invalid variable name '$name'" >&2
+        exit 1
+        ;;
+esac
+
+# A newline would be split across physical lines and corrupt the file on the
+# next upsert; no caller needs it, so reject it outright.
+case "$value" in
+    *"
+"*)
+        echo "bk-set-var: value for '$name' may not contain a newline" >&2
+        exit 1
+        ;;
+esac
+
+# If we create the file it may receive secrets later, so make it private
+# from the start (a file created via the default umask would be 644).
+if [ ! -f "$file" ]; then
+    touch "$file"
+    chmod 600 "$file"
+fi
+
+match="^[[:space:]]*export[[:space:]]+${name}="
+
+if [ "$if_empty" -eq 1 ]; then
+    # Skip if a non-empty value is already present. Parse robustly: strip the
+    # `export NAME=` prefix, a trailing ` # comment`, surrounding whitespace and
+    # quotes. (Values in this project never contain a literal '#'.)
+    current_line="$(grep -E "$match" "$file" | tail -n1 || true)"
+    if [ -n "$current_line" ]; then
+        current_value="$(printf '%s' "$current_line" | sed -E \
+            's/^[^=]*=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//; s/^"(.*)"$/\1/; s/^'\''(.*)'\''$/\1/')"
+        [ -n "$current_value" ] && exit 0
+    fi
+    # Nothing to gain from writing an empty value.
+    [ -z "$value" ] && exit 0
+fi
+
+# Single-quote the value, escaping any embedded single quotes.
+escaped="$(printf '%s' "$value" | sed "s/'/'\\\\''/g")"
+new_line="export ${name}='${escaped}'"
+
+# No-op if the exact line is already present -- avoids rewriting the file (and
+# its mtime) on every `. bk` reload for the many deterministic values.
+grep -qxF "$new_line" "$file" && exit 0
+
+# Write atomically: a temp file in the SAME directory (so the final mv is a
+# same-filesystem rename, not a cross-device copy -- $HOME and /tmp are
+# different filesystems in Cloud Shell), preserving the target's permissions.
+# This protects the once-generated secrets in vars.local.sh from a truncated
+# write if the process is interrupted mid-update.
+dir="$(dirname "$file")"
+tmp="$(mktemp "$dir/.bkvar.XXXXXX")"
+chmod --reference="$file" "$tmp" 2>/dev/null || true
+if grep -qE "$match" "$file"; then
+    # Replace the first matching line, drop any later duplicates.
+    NEW_LINE="$new_line" MATCH="$match" awk '
+        $0 ~ ENVIRON["MATCH"] { if (!seen) { print ENVIRON["NEW_LINE"]; seen=1 } next }
+        { print }
+    ' "$file" > "$tmp"
+else
+    cat "$file" > "$tmp"
+    # A hand-edited file may lack a trailing newline; appending directly would
+    # concatenate two exports on one line.
+    if [ -s "$tmp" ] && [ -n "$(tail -c1 "$tmp")" ]; then
+        echo >> "$tmp"
+    fi
+    [ -n "$comment" ] && printf '# %s\n' "$comment" >> "$tmp"
+    printf '%s\n' "$new_line" >> "$tmp"
+fi
+mv "$tmp" "$file"

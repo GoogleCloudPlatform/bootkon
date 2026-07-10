@@ -133,7 +133,8 @@ Click into the terminal that has opened at the bottom of your screen.
 And copy & paste the following command and press return:
 
 ```bash
-BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/main/.scripts/bk)
+BK_STREAM=data BK_REPO=GoogleCloudPlatform/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/main/.scripts/bk \
+   || echo 'echo "ERROR: could not download bootkon — check your network and paste the command again, or ask the event staff." >&2')
 ```
 
 Now, please go back to Cloud Shell and continue with the tutorial that has been opened on the right hand side of your screen!

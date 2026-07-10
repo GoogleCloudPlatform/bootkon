@@ -4,9 +4,10 @@ It answers business questions by consulting Cymbal's published BigQuery data
 agent (Conversational Analytics) and is exposed to other agents over the A2A
 protocol by a2a_server.py.
 
-All configuration (GOOGLE_CLOUD_PROJECT, GOOGLE_GENAI_USE_VERTEXAI,
-BK_CYMBAL_MODEL, BK_DATA_AGENT_ID) comes from environment variables exported to
-~/.bashrc by bk-bootstrap in Lab 1.
+All configuration (PROJECT_ID, GOOGLE_GENAI_USE_VERTEXAI, BK_CYMBAL_MODEL,
+BK_DATA_AGENT_ID) comes from environment variables in vars.local.sh (written by
+bk / bk-bootstrap in Lab 1). Vertex AI reads GOOGLE_CLOUD_PROJECT, which Cloud
+Shell provides (= PROJECT_ID).
 """
 
 import os

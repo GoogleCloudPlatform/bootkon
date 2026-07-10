@@ -7,23 +7,32 @@ MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+if [ -z "$BK_DIR" ] || [ -z "$BK_STREAM" ]; then
+    echo "The bootkon environment is not loaded. Please run: . bk"
+    exit 1
+fi
+
 echo -e "${CYAN}Variables:${NC}"
-echo -e "BK_GITHUB_USERNAME: ${GREEN}$BK_GITHUB_USERNAME${NC}"
-echo -e "BK_GITHUB_REPOSITORY: ${GREEN}$BK_GITHUB_REPOSITORY${NC}"
-echo -e "BK_REPO_URL: ${GREEN}$BK_REPO_URL${NC}"
-echo -e "BK_TUTORIAL: ${GREEN}$BK_TUTORIAL${NC}"
+echo -e "BK_REPO: ${GREEN}$BK_REPO${NC} (https://github.com/${BK_REPO}.git)"
 echo -e "BK_DIR: ${GREEN}$BK_DIR${NC}"
-echo -e "BK_INIT_SCRIPT: ${GREEN}$BK_INIT_SCRIPT${NC}"
-echo -e "BK_INITIALIZED: ${GREEN}$BK_INITIALIZED${NC}"
+echo -e "BK_STREAM: ${GREEN}$BK_STREAM${NC}"
+echo -e "BK_BRANCH: ${GREEN}$BK_BRANCH${NC}"
+echo -e "config file: ${GREEN}$BK_DIR/vars.local.sh${NC}"
+echo -e "PROJECT_ID: ${GREEN}$PROJECT_ID${NC}"
+echo -e "PROJECT_NUMBER: ${GREEN}$PROJECT_NUMBER${NC}"
+echo -e "REGION: ${GREEN}$REGION${NC}"
 echo
 
 echo -e "${CYAN}Info:${NC}"
 
-if [ ! -d "data" ]; then
-    echo -e "data: ${RED}does not exist${NC}"
-else
-    echo -e "data: ${GREEN}exists${NC}"
-    du -sh data
+# The bundled dataset exists only for the data stream; other streams should
+# not see an alarming red line about it.
+if [ "$BK_STREAM" = "data" ]; then
+    if [ -d "${BK_DIR}/data" ]; then
+        echo -e "data: ${GREEN}exists${NC} ($(du -sh "${BK_DIR}/data" 2>/dev/null | cut -f1))"
+    else
+        echo -e "data: not downloaded yet (the data-stream labs fetch it when needed)"
+    fi
 fi
 
-echo -e "git origin: ${GREEN}$(git config --get remote.origin.url)${NC}"
+echo -e "git origin: ${GREEN}$(git -C "${BK_DIR}" config --get remote.origin.url 2>/dev/null)${NC}"
