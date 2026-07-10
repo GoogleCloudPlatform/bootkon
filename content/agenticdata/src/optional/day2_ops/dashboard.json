@@ -1,0 +1,134 @@
+{
+  "displayName": "Cymbal Day-2 Ops",
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "Datastream - data freshness (s)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"datastream.googleapis.com/stream/freshness\" resource.type=\"datastream.googleapis.com/Stream\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MAX"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 120,
+              "label": "Freshness SLO (120 s)"
+            }
+          ],
+          "yAxis": { "label": "seconds", "scale": "LINEAR" }
+        }
+      },
+      {
+        "title": "Cloud SQL - PostgreSQL connections",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"cloudsql.googleapis.com/database/postgresql/num_backends\" resource.type=\"cloudsql_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "yAxis": { "label": "connections", "scale": "LINEAR" }
+        }
+      },
+      {
+        "title": "Datastream - throughput (events/s)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"datastream.googleapis.com/stream/event_count\" resource.type=\"datastream.googleapis.com/Stream\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_RATE"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "yAxis": { "label": "events/s", "scale": "LINEAR" }
+        }
+      },
+      {
+        "title": "Cloud SQL - CPU utilization",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\" resource.type=\"cloudsql_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "yAxis": { "label": "utilization (0-1)", "scale": "LINEAR" }
+        }
+      },
+      {
+        "title": "BigQuery Storage Write API - ingested rows/min",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"bigquerystorage.googleapis.com/write/uploaded_row_count\" resource.type=\"bigquery_project\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "yAxis": { "label": "rows/min", "scale": "LINEAR" }
+        }
+      },
+      {
+        "title": "Datastream - unsupported events",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"datastream.googleapis.com/stream/unsupported_event_count\" resource.type=\"datastream.googleapis.com/Stream\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE"
+            }
+          ],
+          "yAxis": { "label": "events", "scale": "LINEAR" }
+        }
+      }
+    ]
+  }
+}
