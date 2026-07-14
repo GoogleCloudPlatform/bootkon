@@ -42,15 +42,8 @@ If both are correct, you are done — press the `START` button below to get star
 (Tip: if you ever close this tutorial or the editor, type `bk-start` in the
 terminal to reopen them.)
 
-Only if a value is wrong or shows `None`:
-
-* Wrong `PROJECT_ID`: switch to your event project in the Cloud Shell project
-  selector at the top of the window.
-* Wrong or missing `GCP_USERNAME` or name: open `vars.local.sh`
-  <walkthrough-editor-open-file filePath="vars.local.sh">by clicking here</walkthrough-editor-open-file>,
-  fix the value (no spaces), and save.
-
-Then reload the environment and refresh the values shown on this page:
+Wrong project? Switch to your event project in the Cloud Shell project
+selector at the top of the window, then refresh this page:
 
 ```bash
 . bk && bk-start
