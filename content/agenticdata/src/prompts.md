@@ -44,14 +44,6 @@ project compiles cleanly.
 
 Fallback: `cp content/agenticdata/src/dataform_reference/definitions/*.sqlx content/agenticdata/src/dataform/definitions/`
 
-## Lab 3 challenge — incremental gold
-
-```
-/goal Convert fct_daily_revenue into an incremental Dataform table that only
-processes orders newer than the latest order_date already in the table.
-Explain the trade-off versus a full rebuild in two sentences.
-```
-
 ## Lab 5 — data agent instructions
 
 ```
@@ -71,13 +63,3 @@ describes.
 ```
 
 Fallback: `git restore content/agenticdata/src/adk/cymbal_analyst/`
-
-## Lab 6 challenge — extend the concierge
-
-```
-/goal Add a second tool to cymbal_concierge/agent.py:
-recent_orders(customer_email: str) returning the last 5 orders (id, status,
-total, order_ts) for that customer from the live Postgres database, reusing
-the existing connection pattern. Update the agent instruction so it knows
-when to use which tool.
-```

@@ -120,14 +120,6 @@ Gemini-powered search reads the same metadata you just curated — every aspect,
 
 One more look: open `cymbal_gold.fct_daily_revenue` in BigQuery and its <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. Bronze→silver→gold, captured automatically from the Dataform runs. (Datastream's Postgres→bronze hop publishes its metadata to the catalog in Preview, but doesn't draw lineage edges yet — watch that space.)
 
-### Challenge: publish a data product
-
-**\[TASK\]** Take up to 10 minutes: package `cymbal_gold` as a **data product** — the contract your data agent will consume in Lab 5.
-
-- In Knowledge Catalog, find <walkthrough-spotlight-pointer locator="text('Data products')">Data products</walkthrough-spotlight-pointer> and create one from the three gold tables.
-- Let Gemini generate the product documentation — then *edit it*: you are accountable for the contract, the model just drafts it.
-- Explore what a consumer would see before requesting access.
-
 ### Success
 
 🎉 Splendid{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your platform now explains itself: tiers are labeled, quality is measured continuously (and honestly — bronze fails, as it should), PII is locked down even against project owners, business terms live next to the data, and lineage draws itself. Governance done — the agents can come. 🛡️

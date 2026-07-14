@@ -12,7 +12,7 @@ Before you start: this lab assumes **Labs 1–3 are complete** — the medallion
 
 ### About TimesFM and AI.FORECAST
 
-**TimesFM** is a foundation model for time series from Google Research, pre-trained on billions of time points — the forecasting equivalent of a pre-trained language model: it predicts new series *zero-shot*, without being trained on your data. BigQuery ML ships it **built in**, exposed through the GA table-valued function **`AI.FORECAST`**: no `CREATE MODEL`, no training job, no endpoint to deploy or manage — you hand it a query and get forecast rows back, accuracy comparable to classic statistical models like ARIMA. It has siblings: `AI.EVALUATE` scores forecasts against actuals, and `AI.DETECT_ANOMALIES` flags outliers — both wait for you in the challenge.
+**TimesFM** is a foundation model for time series from Google Research, pre-trained on billions of time points — the forecasting equivalent of a pre-trained language model: it predicts new series *zero-shot*, without being trained on your data. BigQuery ML ships it **built in**, exposed through the GA table-valued function **`AI.FORECAST`**: no `CREATE MODEL`, no training job, no endpoint to deploy or manage — you hand it a query and get forecast rows back, accuracy comparable to classic statistical models like ARIMA.
 
 Learn more:
 - [The AI.FORECAST function](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-forecast)
@@ -135,7 +135,7 @@ Look at the seam where the two series meet: the forecast picks up the level and 
 
 ### Teach the data agent to see the future
 
-**If you completed Lab 5**, your `cymbal-data-agent` is about to get an upgrade — otherwise skip ahead to the challenge; nothing below is needed there.
+**If you completed Lab 5**, your `cymbal-data-agent` is about to get an upgrade — otherwise skip ahead to the end of the lab; nothing below is needed there.
 
 First, establish the "before". Open [BigQuery Agents](https://console.cloud.google.com/bigquery/agents_hub), on the **Agent Catalog** tab find the ``cymbal-data-agent`` card, open it, and start a conversation. Then stress-test it Lab 5 style with something forward-looking:
 
@@ -161,16 +161,6 @@ What does our revenue forecast look like, per currency?
 ```
 
 Watch the SQL it generates: a query against `cymbal_gold.fct_revenue_forecast`, per currency, medians with their intervals — governed data in, honest uncertainty out. That's the difference between an agent that *sounds* confident and one that has something to be confident about. (Re-ask the *"next week"* question too: if the seed's 14-day forecast window still covers next week, you now get numbers; at a later event, the agent tells you the horizon ends before then instead of guessing — the rule you just wrote, doing its job either way.)
-
-### Challenge: interrogate the crystal ball
-
-**\[TASK\]** Take up to 10 minutes — pick at least one:
-
-1. **Backtest it**: how good would the forecast have been? `AI.EVALUATE` re-forecasts the past and scores it against what actually happened — hold out the last two seed weeks (11–24 June 2026) and measure. Run the shipped query <walkthrough-editor-open-file filePath="content/agenticdata/src/optional/forecast/challenge_backtest.sql">challenge_backtest.sql</walkthrough-editor-open-file> in the BigQuery editor and compare the five currencies: high-volume EUR usually beats thin PLN — volume smooths series, and smooth series forecast better. Discuss with your table how you would keep such a backtest honest in production (hint: it's one more tagged Dataform model).
-2. **Upgrade the engine**: the default model is TimesFM 2.0. Re-run the warm-up query with `model => 'TimesFM 2.5'` — the newer generation with a much longer context window (up to 15,360 points vs 2,048). On 540 days of history the numbers will differ only modestly; ask agy when the difference *would* matter.
-3. **Anomaly patrol**: `AI.DETECT_ANOMALIES` uses the same TimesFM machinery in reverse — forecast the past, then flag actuals that fall outside the prediction interval. Run <walkthrough-editor-open-file filePath="content/agenticdata/src/optional/forecast/challenge_anomalies.sql">challenge_anomalies.sql</walkthrough-editor-open-file> over the last 60 seed days: Cymbal's steady synthetic revenue should yield few flags — possibly none, which is itself the finding. If you did Lab 5, you already asked the agent about "days with unusually high revenue" — this puts that hunch on statistical footing.
-
-Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain.
 
 ### Success
 

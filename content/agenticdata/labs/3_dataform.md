@@ -106,16 +106,6 @@ FROM `{{ PROJECT_ID }}.cymbal_silver.stg_orders` WHERE status = 'shiped'
 
 One more thing: your simulator (terminal 3) is still writing to Postgres, and Datastream keeps updating bronze. Re-run `dataform run` at any time and the whole medallion refreshes with the latest data.
 
-### Challenge: harden the pipeline
-
-**\[TASK\]** Take up to 10 minutes — pick at least one:
-
-1. **Incremental gold**: ask agy to convert `fct_daily_revenue` into an incremental table that only processes new days. (Reference prompt in <walkthrough-editor-open-file filePath="content/agenticdata/src/prompts.md">prompts.md</walkthrough-editor-open-file>.)
-2. **Detect, don't just filter**: silver silently drops negative payments. Add a standalone assertion on the **bronze** payments table so the pipeline *alerts* on them — run it with `dataform run --tags challenge` and watch it fail on purpose (982 planted rows). (Reference: <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform_reference/definitions/assert_bronze_payments_non_negative.sqlx">assert_bronze_payments_non_negative.sqlx</walkthrough-editor-open-file>.)
-3. **Bonus**: ask agy to add a gold table that classifies `cymbal_reviews` sentiment with BigQuery's `AI.GENERATE` — and discuss with your table what that costs at scale.
-
-Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain.
-
 ### Success
 
 🎉 Bravo{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! You briefed an AI agent, and it wrote, compiled, and repaired a complete medallion pipeline — which *you* reviewed, executed, and verified, assertions and all. Duplicates deduplicated, typos untypo'd, orphans re-homed (well, evicted). The gold layer shines — now let's govern it. 🥇

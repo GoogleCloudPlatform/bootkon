@@ -4,8 +4,7 @@ and returns the agent's textual answer.
 
 This is deliberately a small, readable function tool so participants can see
 the seams of the integration. ADK also ships a built-in DataAgentToolset
-(google.adk.tools.data_agent) that wraps the same API -- swapping to it is a
-lab challenge.
+(google.adk.tools.data_agent) that wraps the same API.
 """
 
 import os

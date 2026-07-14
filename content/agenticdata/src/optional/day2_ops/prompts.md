@@ -37,15 +37,3 @@ Read content/agenticdata/src/optional/day2_ops/chaos.sh and explain, statement b
 ```
 
 Fallback: the header comment of `chaos.sh` explains itself, statement by statement.
-
-## Challenge — the postmortem
-
-Run in the *same* agy session that witnessed the incident:
-
-```
-/goal Write a blameless postmortem of the incident you just helped diagnose to content/agenticdata/src/optional/day2_ops/POSTMORTEM.md, overwriting the shipped example. Sections: summary, impact, timeline with the actual times from this session (the chaos script printed T0), root cause, detection, resolution, and action items. Blameless means: name systems and decisions, not people.
-```
-
-Fallback: the shipped `POSTMORTEM.md` *is* the reference —
-`git -C ~/bootkon restore content/agenticdata/src/optional/day2_ops/POSTMORTEM.md`
-brings it back after comparing with `git -C ~/bootkon diff`.

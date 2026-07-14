@@ -16,13 +16,3 @@ Explain the managed Dataform model like I run data platforms for a living: what 
 Fallback: concept question — the answer is in
 https://docs.cloud.google.com/dataform/docs/release-configurations and
 https://docs.cloud.google.com/dataform/docs/workflow-configurations.
-
-## Lab 7 challenge — policy tags that survive rebuilds
-
-```
-stg_customers is rebuilt by managed Dataform every 15 minutes. Explain why a BigQuery policy tag attached by hand to its email column disappears on rebuild, and show how to declare it in the SQLX config with bigqueryPolicyTags so every rebuild reapplies it.
-```
-
-Fallback: https://docs.cloud.google.com/dataform/docs/policy-tags (the
-`bigqueryPolicyTags` column setting; the full tag path comes from the
-`cymbal-governance` taxonomy created in Lab 4).

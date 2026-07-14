@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "cymbal_silver",
   tags: ["silver"],
-  description: "Payments joined to valid orders; planted negative amounts are filtered out (see the challenge: an assertion on the BRONZE table detects them instead of silently dropping them).",
+  description: "Payments joined to valid orders; planted negative amounts are filtered out.",
   assertions: {
     uniqueKey: ["payment_id"],
     nonNull: ["payment_id", "order_id", "method", "status"],

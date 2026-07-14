@@ -155,7 +155,7 @@ Two statements: `ALTER ROLE datastream_user NOLOGIN` bars new connections, and `
 
 ### Fix it like it's 3:07 a.m.
 
-Leave agy open — it witnessed the whole incident, and the challenge will put that memory to work. Open a **new terminal tab** (`+`) instead: the fix is one line, and — operating surface — you type it, through the tunnel, as the superuser:
+Open a **new terminal tab** (`+`): the fix is one line, and — operating surface — you type it, through the tunnel, as the superuser:
 
 ```bash
 PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
@@ -183,16 +183,6 @@ Within a couple of minutes of the stream turning healthy, the two `MAX(order_id)
 ### Watch the incident close
 
 One loose end: your pager. Back on [Monitoring → Alerting](https://console.cloud.google.com/monitoring/alerting), find the `cymbal-freshness-slo` incident that opened mid-chaos. You don't have to do anything — once freshness has been back under 120 s for the policy's window, Monitoring **resolves the incident automatically** (like the firing, this takes a few minutes after the metric recovers; the incident's timeline shows both edges). Open the incident and read it as your future 3 a.m. self: when it started, how long it lasted, which metric and threshold. Trust, but verify — and now, *monitor*.
-
-### Challenge: run the incident review
-
-**\[TASK\]** Take up to 10 minutes — pick at least one:
-
-1. **The postmortem.** Every real incident ends with a blameless write-up, and yours had an unusually well-documented perpetrator. In the *same* agy session (it witnessed the whole thing), have agy write a blameless postmortem — summary, impact, timeline with your actual times, root cause, detection, resolution, action items — to `POSTMORTEM.md` in the lab's folder, overwriting the shipped example (prompt in the lab folder's own <walkthrough-editor-open-file filePath="content/agenticdata/src/optional/day2_ops/prompts.md">prompts.md</walkthrough-editor-open-file>). Then compare against the reference with `git -C ~/bootkon diff content/agenticdata/src/optional/day2_ops/POSTMORTEM.md` — did agy catch that the dashboard beat the pager?
-2. **Design your own chaos.** Propose the next drill to your table — but *discuss reversibility before anyone runs anything*. The safe list is short: today's script only flipped a role attribute. Dropping `cymbal_pub` or `cymbal_slot` is **off the table** — kill the slot and Datastream loses its position in the WAL; that's the `Failed permanently` state, and the road back is a re-backfill, not a one-liner. A genuinely reversible (and sneaky) one: `gcloud compute instances stop cymbal-jump --zone={{ REGION }}-a` — then explain why freshness now stays at *zero* while it's the *simulator* that dies. Which plane did you just break? (Afterwards: `start` the VM; `bk-tunnel` reconnects on its own, then restart the simulator in terminal 3.)
-3. **Page on the logs, not just the lag.** The error log line you found above appeared minutes before the freshness alert fired. In [Logs Explorer](https://console.cloud.google.com/logs), query `resource.type="datastream.googleapis.com/Stream" severity>=ERROR`, then use **Create alert** to turn it into a [log-based alert](https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts) — and discuss: when do you page on symptoms (freshness) versus causes (error logs)?
-
-Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain.
 
 ### Success
 

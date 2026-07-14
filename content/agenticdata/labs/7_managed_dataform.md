@@ -9,8 +9,7 @@
      src/optional/managed_dataform/prompts.md into src/prompts.md, and add the
      40 min to the README agenda table. Placement: slot this module AFTER Lab 4
      (governance) — once the 15-minute schedule is live, every rebuild removes
-     console-attached column metadata such as Lab 4's hand-attached policy tags
-     (see challenge 3). -->
+     console-attached column metadata such as Lab 4's hand-attached policy tags. -->
 
 Lab 3 ended with a promise: *"In production you would run the same project on a schedule in managed Dataform."* This lab cashes it. You push the exact project agy wrote — not a rewrite, the very same SQLX files — into a **managed Dataform repository**, walk its interactive dependency graph, and put it on a 15-minute schedule that runs as a service account instead of you. When you leave this lab, the medallion refreshes itself.
 
@@ -104,7 +103,7 @@ Two details deserve your attention. `gcloud auth print-access-token` turns your 
 
 ### Admire the compiled graph
 
-The workspace compiles your project automatically. Click the <walkthrough-spotlight-pointer locator="semantic({tab 'Compiled graph'})">Compiled graph</walkthrough-spotlight-pointer> tab: there it is — the medallion as an interactive DAG. Six bronze declarations on the left, five silver staging models, three gold marts, and every assertion agy wrote (the reference solution compiles to 26 nodes, 12 of them assertions — one more of each if you built Lab 3's challenge assertion; agy's count varies). This graph is what the `${ref(...)}` calls in agy's SQLX have been encoding all along — in Lab 3 you saw it as lineage *after* running; here you see it *before*, computed from code alone.
+The workspace compiles your project automatically. Click the <walkthrough-spotlight-pointer locator="semantic({tab 'Compiled graph'})">Compiled graph</walkthrough-spotlight-pointer> tab: there it is — the medallion as an interactive DAG. Six bronze declarations on the left, five silver staging models, three gold marts, and every assertion agy wrote (the reference solution compiles to 26 nodes, 12 of them assertions; agy's count varies). This graph is what the `${ref(...)}` calls in agy's SQLX have been encoding all along — in Lab 3 you saw it as lineage *after* running; here you see it *before*, computed from code alone.
 
 ❗ If the tab shows a compilation error mentioning `Failed to resolve workflow_settings.yaml` or missing packages, open `workflow_settings.yaml` inside the workspace and click **Install packages** — then the graph appears.
 
@@ -173,16 +172,6 @@ LIMIT 8
 ```
 
 The top rows are *today* — and the numbers are already bigger than anything your Lab 3 run could have seen: the simulator has been writing orders all along, Datastream mirrored them into bronze, and the execution you just triggered folded them into gold. Re-run the query after the next quarter-hour tick (check the execution logs for the scheduled entry) and watch today's `orders` climb — no terminal, no `dataform run`, no you.
-
-### Challenge: run the production playbook
-
-**\[TASK\]** Take up to 10 minutes — pick at least one:
-
-1. **A gold-only lane**: create a second workflow configuration `cymbal-gold-only` on the same release configuration, scoped via *Selection of tags* to `gold` only, and trigger it with the same `curl` (swap the configuration ID at the end of the `workflowConfig` path in the request body). In the execution log, only the three marts and their assertions ran — scoping by tags is how production separates a cheap, frequent refresh from a full rebuild.
-2. **Fail like production**: put the deliberately failing bronze assertion from Lab 3's challenge on a schedule of its own. If you didn't build it then, take the reference (`cp content/agenticdata/src/dataform_reference/definitions/assert_bronze_payments_non_negative.sqlx content/agenticdata/src/dataform/definitions/`), re-run the push script, and click **New compilation** — new code needs a new compilation result. Then create a workflow configuration `cymbal-challenge` scoped to the tag `challenge`, schedule `0 3 * * *` (the traditional hour for data-quality surprises), and trigger it via `curl`. Watch it turn **Failed** in the execution logs — 982 planted negative payments, caught by a robot. Your `cymbal-15min` lane stays green: it never runs the `challenge` tag. In production, the next step would be an alert on failed invocations — a story for an operations lab.
-3. **Policy tags that survive robots**: your silver and gold tables are now rebuilt every 15 minutes — and a rebuilt table does not keep column settings that were attached by hand in the console, which matters the moment governance (policy tags on PII columns) enters the picture. Ask agy: *"stg_customers is rebuilt by managed Dataform every 15 minutes. Explain why a BigQuery policy tag attached by hand to its email column disappears on rebuild, and show how to declare it in the SQLX config with bigqueryPolicyTags so every rebuild reapplies it."* ([Control column access](https://docs.cloud.google.com/dataform/docs/policy-tags))
-
-Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain. And leave everything running when you're done — at this data size, the quarter-hourly executions cost cents, and nothing that follows depends on switching them off; cleaning up the schedule after the event is entirely optional.
 
 ### Success
 

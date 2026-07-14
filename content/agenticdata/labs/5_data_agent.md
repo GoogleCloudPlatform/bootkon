@@ -77,14 +77,6 @@ Now click ``Create conversation`` and interrogate your platform. Try these, then
 
 Watch what comes back: the agent shows the SQL it generated against your gold tables. You spent three labs making those tables mean something — this is where it pays off. (Also try asking for customer *emails* — the agent queries gold, where governance applies.)
 
-### Challenge: stress-test the grounding
-
-**\[TASK\]** Take up to 5 minutes: try to make the agent say something wrong.
-
-- Ask about data it doesn't have ("What's our warehouse inventory?") — does it admit ignorance or hallucinate?
-- Ask an ambiguous question ("How are sales?") — does it apply your default groupings from the instructions?
-- Refine the instructions based on what you find and re-publish. Iterating on agent context *is* data work now.
-
 ### Success
 
 🎉 Excellent{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Cymbal now has a published data agent: natural language in, governed SQL out, grounded in the gold layer you built and documented. One agent down — in the finale, it gets a colleague. 🤖

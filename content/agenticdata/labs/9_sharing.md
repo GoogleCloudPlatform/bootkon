@@ -8,7 +8,7 @@
 
 Remember where this story started: Cymbal's analytics team drowning in one-off CSV exports. You built the cure for the *inside* of the company — but Cymbal's partners still get their numbers the old way: somebody exports a CSV, attaches it to an email, and it's stale before it lands. In this lab you close that loop with **BigQuery sharing**: publish the gold marts as a **listing** in your own **data exchange**, then switch chairs and subscribe to it exactly like a partner would — receiving a live, read-only, zero-copy view instead of an attachment.
 
-This lab assumes Labs 1–3 are complete (the `cymbal_gold` marts exist and have been built at least once) and that your two background terminals from Lab 2 are still open: the tunnel (terminal 2) and the data simulator (terminal 3) — the simulator is what makes the zero-copy proof land. If you also did Lab 4's data-product challenge, you'll recognize the shape: the catalog *described* the contract; now you *distribute* it. (Nothing below depends on Lab 4.)
+This lab assumes Labs 1–3 are complete (the `cymbal_gold` marts exist and have been built at least once) and that your two background terminals from Lab 2 are still open: the tunnel (terminal 2) and the data simulator (terminal 3) — the simulator is what makes the zero-copy proof land.
 
 ### About BigQuery sharing
 
@@ -84,7 +84,7 @@ Time to switch chairs. Open your freshly published listing from the exchange pag
     - Primary region: **US** (the multi-region, matching the source).
 3. Click <walkthrough-spotlight-pointer locator="semantic({button 'Save'})">Save</walkthrough-spotlight-pointer>.
 
-❗ **The dialog refuses your own project?** Pair up with a neighbor and subscribe to each other's listings instead — the Challenge below has the exact steps. Name the linked dataset `cymbal_gold_linked` and everything below works the same, on their live data instead of your own.
+❗ **The dialog refuses your own project?** Pair up with a neighbor and subscribe to each other's listings instead: each of you opens your own listing, clicks *Set permissions* → *Add principal*, and adds the other's account as an **Analytics Hub Subscriber**; then find their listing via *Search listings* (filter to *Private*) and subscribe. Name the linked dataset `cymbal_gold_linked` and everything below works the same, on their live data instead of your own. (If the org policy blocks cross-account grants, subscribe to a **public** listing instead — Google Trends is a classic.)
 
 Now look at what arrived: open [BigQuery](https://console.cloud.google.com/bigquery), expand your project, and find <walkthrough-spotlight-pointer locator="text('cymbal_gold_linked')">cymbal_gold_linked</walkthrough-spotlight-pointer> — wearing a small *linked* badge on its dataset icon. Click into `fct_daily_revenue`: same schema, same descriptions — but read-only. No copy job ran, no bytes moved; this dataset is a pointer.
 
@@ -116,15 +116,6 @@ Re-run the query above. Both rows climbed — **in lockstep**. Nobody re-exporte
 One more publisher privilege: back on [Sharing (Analytics Hub)](https://console.cloud.google.com/bigquery/analytics-hub), open `cymbal-exchange`, switch to its <walkthrough-spotlight-pointer locator="text('Usage metrics')">Usage metrics</walkthrough-spotlight-pointer> tab, and pick your listing from the *Listings* menu. As the publisher you see total subscriptions, subscribers per organization, jobs executed, bytes scanned, and which shared tables get queried most ([monitor listings](https://docs.cloud.google.com/bigquery/docs/analytics-hub-monitor-listings)). Your own subscription should already be counted; the job charts may trail the queries you just ran — check back later. Under the hood the same numbers live in a SQL view, ready for the day you want to build a mart about your marts: `` `region-us`.INFORMATION_SCHEMA.SHARED_DATASET_USAGE ``.
 
 And the egress control? Try copying a table out of `cymbal_gold_linked` (three-dot menu next to the table → *Copy*) — you ticked the box, so the copy is denied. Querying: yes. Exfiltrating: no.
-
-### Challenge: subscribe to a neighbor's listing
-
-**\[TASK\]** Take up to 10 minutes — data sharing is more fun with two projects:
-
-1. Team up with a neighbor. Each of you opens your own listing, clicks *Set permissions* → *Add principal*, and adds the other's account as an **Analytics Hub Subscriber**. Then find their listing — *Search listings* on the Sharing page, filter to *Private* — and subscribe to it as `cymbal_gold_neighbor`: you are now watching *their* simulator's numbers, live, from your project. ❗ This one depends on the sandbox's org policy: **domain-restricted sharing** may block grants to other accounts. If IAM refuses, that's the policy working as intended — move on to option 2.
-2. Plan B (works everywhere): on *Search listings*, filter to **public** listings and subscribe to one Google publishes — the **Google Trends** listing is a classic. Top search terms land as a linked dataset next to your gold, zero copies, same mechanism you just built for Cymbal.
-
-Note: If you are stuck and cannot figure out how to proceed after a few minutes, ask your team captain.
 
 ### Success
 
