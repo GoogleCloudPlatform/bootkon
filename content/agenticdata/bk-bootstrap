@@ -1,6 +1,7 @@
 #!/bin/bash
 # Bootstraps the Agentic Data Bootkon stream: Python deps, APIs, IAM,
-# service accounts, and the agy pre-configuration.
+# service accounts, the seed data (generated and staged in GCS), and the
+# agy pre-configuration.
 #
 # It deliberately does NOT create the Cloud SQL instance or any networking:
 # those commands live inline in the labs, so the connectivity variant can be
@@ -69,6 +70,32 @@ gcloud services enable \
     artifactregistry.googleapis.com \
     || step_failed "enabling the APIs failed"
 
+# Seed data: deterministic synthetic CSVs (the pinned faker from the pip
+# install above is what guarantees identical rows for every participant),
+# staged in GCS for Lab 2's server-side import. The .complete marker is
+# written only after a successful run, so a crash mid-generation regenerates
+# on the next attempt -- while the natural novice recovery (re-running this
+# script) skips the minute of generation. Re-uploads are harmless: identical
+# content, gcloud storage cp just overwrites.
+if [ -f seed_data/.complete ]; then
+    echo "Seed data already generated; skipping the generator."
+else
+    echo "Generating the Cymbal seed data (about a minute) ..."
+    if python3 content/agenticdata/src/datagen/generate.py --out seed_data; then
+        touch seed_data/.complete
+    else
+        step_failed "generating the seed data failed"
+    fi
+fi
+
+echo "Staging the seed data in Cloud Storage ..."
+if ! gcloud storage buckets describe "gs://${PROJECT_ID}-bucket" >/dev/null 2>&1; then
+    gcloud storage buckets create "gs://${PROJECT_ID}-bucket" --location="$REGION" \
+        || step_failed "creating the seed bucket failed"
+fi
+gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
+    || step_failed "uploading the seed data failed"
+
 # Knowledge Catalog data-quality service account: profile/quality scans in
 # Lab 4 run as this SA (custom execution identity). Creation is idempotent:
 # re-running the bootstrap is the natural novice recovery and must not greet
@@ -134,7 +161,8 @@ done
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
 # are NOT written here -- they are created by content/agenticdata/bk-init, which
 # `. bk` runs at initialization, before the first tutorial render. This script
-# keeps only the heavy, visible GCP work: APIs, IAM, service accounts, pip, agy.
+# keeps only the heavy, visible work: APIs, IAM, service accounts, pip, seed
+# data, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell
 # and authenticates with the ambient Cloud Shell credentials (ADC); it reads

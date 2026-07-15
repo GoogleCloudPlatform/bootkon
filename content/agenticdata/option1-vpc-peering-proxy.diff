@@ -23,9 +23,9 @@ If the labs have drifted since this diff was written:
 
     git apply --recount -C1 content/agenticdata/option1-vpc-peering-proxy.diff
 
---- a/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
-+++ b/content/agenticdata/labs/1_environment_setup.md	2026-07-03 09:04:24
-@@ -57,7 +57,7 @@
+--- a/content/agenticdata/labs/1_environment_setup.md
++++ b/content/agenticdata/labs/1_environment_setup.md
+@@ -49,7 +49,7 @@ Your database passwords were already generated during setup and live in `vars.lo
  
  ### Create the network path
  
@@ -34,7 +34,7 @@ If the labs have drifted since this diff was written:
  
  ```bash
  gcloud compute networks create cymbal-vpc --subnet-mode=custom
-@@ -68,25 +68,27 @@
+@@ -60,25 +60,27 @@ gcloud compute networks subnets create cymbal-subnet \
      --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
  ```
  
@@ -71,7 +71,7 @@ If the labs have drifted since this diff was written:
  
  {% if ON_ARGOLIS %}
  ❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
-@@ -99,8 +101,7 @@
+@@ -91,8 +93,7 @@ gcloud sql instances create cymbal-oltp \
      --region={{ REGION }} \
      --root-password=$BK_DB_PASSWORD \
      --database-flags=cloudsql.logical_decoding=on \
@@ -81,7 +81,7 @@ If the labs have drifted since this diff was written:
      --no-assign-ip \
      --async
  ```
-@@ -117,7 +118,7 @@
+@@ -109,10 +110,10 @@ Datastream's private connection takes around 5–10 minutes to build, so kick it
  ```bash
  gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
      --display-name=cymbal-psc \
@@ -89,7 +89,11 @@ If the labs have drifted since this diff was written:
 +    --vpc=cymbal-vpc --subnet=10.20.0.0/29
  ```
  
- ### Stage the seed data
+-**Prefer the console?** The same thing, clickable: open [Datastream → Private connectivity configurations](https://console.cloud.google.com/datastream/private-connections) → **Create configuration**: name `cymbal-psc`, region `{{ REGION }}`, private connectivity method **PSC interfaces**, project left on `{{ PROJECT_ID }}`, network attachment `cymbal-attachment`. If the wizard offers an **Update allowlist** step, click it (a formality with our auto-accept attachment), then **Create**. And if the wizard balks at anything, the gcloud command above is the sure path.
++**Prefer the console?** The same thing, clickable: open [Datastream → Private connectivity configurations](https://console.cloud.google.com/datastream/private-connections) → **Create configuration**: name `cymbal-psc`, region `{{ REGION }}`, private connectivity method **VPC peering**, VPC `cymbal-vpc`, IP range `10.20.0.0/29`, then **Create**. And if the wizard balks at anything, the gcloud command above is the sure path.
+ 
+ ### The seed data
+ 
 --- a/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
 +++ b/content/agenticdata/labs/2_replication.md	2026-07-03 09:04:24
 @@ -34,35 +34,36 @@

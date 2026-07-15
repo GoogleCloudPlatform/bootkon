@@ -7,7 +7,7 @@
 
 Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over **A2A** — the open *agent-to-agent* protocol that lets AI agents call each other the way HTTP lets services do it. Don't worry if that's new to you: the finale lab explains and builds it step by step.
 
-In this lab you will enable services, kick off the two slow infrastructure builds (they run in the background while you work), stage the seed data, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
+In this lab you will enable services, run the bootstrap that preps your project and stages the seed data, kick off the two slow infrastructure builds (they run in the background while you work), and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 
 One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
@@ -39,7 +39,7 @@ Along the way you will spot **Prefer the console?** notes: optional UI routes fo
 
 ### Assign permissions
 
-Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, and pre-configures your AI co-engineer. It runs for about two minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
+Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. It runs for about four minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
@@ -114,23 +114,17 @@ gcloud datastream private-connections create cymbal-psc --location={{ REGION }} 
 
 **Prefer the console?** The same thing, clickable: open [Datastream → Private connectivity configurations](https://console.cloud.google.com/datastream/private-connections) → **Create configuration**: name `cymbal-psc`, region `{{ REGION }}`, private connectivity method **PSC interfaces**, project left on `{{ PROJECT_ID }}`, network attachment `cymbal-attachment`. If the wizard offers an **Update allowlist** step, click it (a formality with our auto-accept attachment), then **Create**. And if the wizard balks at anything, the gcloud command above is the sure path.
 
-### Stage the seed data
+### The seed data
 
-Cymbal's order history is generated **inside your project** — deterministic synthetic data, so every participant works with identical rows (including some deliberately broken ones you will meet again in Lab 3). Create a bucket and generate the data:
+Cymbal's order history was generated **inside your project** while the bootstrap ran — deterministic synthetic data, so every participant works with identical rows (including some deliberately broken ones you will meet again in Lab 3). Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/generate.py">generate.py</walkthrough-editor-open-file> — note the *planted flaws* section at the top.
 
-```bash
-gcloud storage buckets create gs://{{ PROJECT_ID }}-bucket --location={{ REGION }}
-```
+The bootstrap staged the six CSVs in Cloud Storage, where Lab 2's server-side import will pick them up. Verify they are there:
 
 ```bash
-python3 content/agenticdata/src/datagen/generate.py --out seed_data
+gcloud storage ls -l gs://{{ PROJECT_ID }}-bucket/seed/
 ```
 
-While it runs (about a minute), have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/generate.py">generate.py</walkthrough-editor-open-file> — note the *planted flaws* section at the top. Then upload the CSVs:
-
-```bash
-gcloud storage cp seed_data/*.csv gs://{{ PROJECT_ID }}-bucket/seed/
-```
+Six files, about 111 MB in total — half a million orders plus the customers, products, order items, payments and reviews around them.
 
 ### Meet your co-engineer
 
