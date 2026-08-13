@@ -1,0 +1,47 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Per-terminal init, SOURCED by the guarded ~/.bashrc block bk installs --
+# it runs in every new terminal. It lives in the repo (not in ~/.bashrc) so
+# a `git pull` updates terminal behavior everywhere without rewriting the
+# block; the block itself is a stable two-line hook that only sets BK_DIR
+# and sources this file.
+#
+# Rules for this file: it runs in the participant's interactive shell, so
+# never `set -e`/`exit`, keep it silent on the happy path, and guard every
+# expansion -- a broken line here breaks every new terminal.
+
+case ":$PATH:" in
+    *":$BK_DIR/.scripts:"*) ;;
+    *) export PATH="$BK_DIR/.scripts:$PATH" ;;
+esac
+
+# vars.local.sh is hand-edited by participants; a lost quote would otherwise
+# surface as a raw 'unexpected EOF' in every new terminal, with everything
+# below the broken line silently unloaded. Check it and name the problem.
+if [ -f "$BK_DIR/vars.local.sh" ]; then
+    if bash -n "$BK_DIR/vars.local.sh" 2>/dev/null; then
+        source "$BK_DIR/vars.local.sh"
+    else
+        echo "bootkon: vars.local.sh has a syntax error (usually a missing quote) --" >&2
+        echo "bootkon: open it in the editor, fix the marked line, then run: . bk" >&2
+    fi
+fi
+
+# gcloud takes the project from this env var with priority over its config --
+# Cloud Shell ties the config to the project picker and may blank it, so pin
+# every terminal to the persisted project instead.
+if [ -n "${PROJECT_ID:-}" ]; then
+    export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
+fi

@@ -355,30 +355,22 @@ export BK_BRANCH="$_branch"
 # outside this session -- persisting them only buried the lines participants
 # actually care about.
 
-# Install/refresh a single guarded block in ~/.bashrc so every new terminal
-# loads the environment by sourcing vars.local.sh. bk-remove-block strips any
-# existing block robustly; then we append a fresh one.
+# Install/refresh a single guarded block in ~/.bashrc. The block is a stable
+# two-line hook: it only sets BK_DIR and sources .scripts/bk-terminal-init,
+# where ALL per-terminal logic lives -- versioned in the repo, so a git pull
+# updates the behavior of every new terminal without touching ~/.bashrc
+# again. bk-remove-block strips any existing block (old fat variants
+# included) robustly; then we append a fresh one.
 local BASHRC=~/.bashrc
 "$BK_REMOVE_BLOCK" "$BASHRC" 2>/dev/null || true
 cat >> "$BASHRC" <<EOF
 
 # >>> bootkon >>>
 # Managed by bk (.scripts/bk). Loads the bootkon environment in every new
-# terminal. Edit values in \$BK_DIR/vars.local.sh, not here.
+# terminal; the logic lives in \$BK_DIR/.scripts/bk-terminal-init (updated
+# by git pull). Edit values in \$BK_DIR/vars.local.sh, not here.
 export BK_DIR="$BK_DIR"
-case ":\$PATH:" in *":\$BK_DIR/.scripts:"*) ;; *) export PATH="\$BK_DIR/.scripts:\$PATH" ;; esac
-if [ -f "\$BK_DIR/vars.local.sh" ]; then
-    if bash -n "\$BK_DIR/vars.local.sh" 2>/dev/null; then
-        source "\$BK_DIR/vars.local.sh"
-    else
-        echo "bootkon: vars.local.sh has a syntax error (usually a missing quote) --" >&2
-        echo "bootkon: open it in the editor, fix the marked line, then run: . bk" >&2
-    fi
-fi
-# gcloud takes the project from this env var with priority over its config --
-# Cloud Shell ties the config to the project picker and may blank it, so pin
-# every terminal to the persisted project instead.
-[ -n "\$PROJECT_ID" ] && export CLOUDSDK_CORE_PROJECT="\$PROJECT_ID"
+[ -f "\$BK_DIR/.scripts/bk-terminal-init" ] && source "\$BK_DIR/.scripts/bk-terminal-init"
 # <<< bootkon <<<
 EOF
 
