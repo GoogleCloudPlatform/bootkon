@@ -45,7 +45,7 @@ if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PREP="$SCRIPT_DIR/../content/agenticdata/bk-prep-project"
+PREP="$SCRIPT_DIR/bk-prep-project"
 if [ ! -x "$PREP" ]; then
     echo "Error: $PREP not found or not executable." >&2
     exit 1

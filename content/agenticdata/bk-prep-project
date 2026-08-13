@@ -24,7 +24,7 @@
 #
 # Callers, all through this one interface:
 #   * single project:  bk-prep-project PROJECT_ID USERNAME
-#   * organizers:      .scripts/bk-bootstrap-accounts-agenticdata runs it for
+#   * organizers:      content/agenticdata/bk-bootstrap-accounts runs it for
 #                      every CSV row (in parallel), days before the event
 #   * Argolis/self-run: Lab 1 has the participant run it without arguments --
 #                      PROJECT_ID/GCP_USERNAME come from the bootkon
@@ -32,13 +32,24 @@
 #
 # Safe to re-run any time (idempotent apply). Parallel runs for DIFFERENT
 # projects are safe: each gets its own TF_DATA_DIR and its own state bucket.
+# `--destroy` (first argument) tears the prepared resources down again --
+# meant for resetting TEST projects between runs; see the flag comment below.
 
 set -u
+
+# --destroy tears down everything this script created (for resetting test
+# projects; event sandboxes are deleted whole and never need it). APIs stay
+# enabled (disable_on_destroy=false) and the state bucket survives.
+MODE=apply
+if [ "${1:-}" = "--destroy" ]; then
+    MODE=destroy
+    shift
+fi
 
 PROJECT="${1:-${PROJECT_ID:-}}"
 ACCOUNT="${2:-${GCP_USERNAME:-}}"
 if [ -z "$PROJECT" ] || [ -z "$ACCOUNT" ]; then
-    echo "Usage: $(basename "$0") [PROJECT_ID [USERNAME]]" >&2
+    echo "Usage: $(basename "$0") [--destroy] [PROJECT_ID [USERNAME]]" >&2
     echo "(without arguments both come from the bootkon environment:" >&2
     echo " PROJECT_ID/GCP_USERNAME -- run '. bk' first)" >&2
     exit 1
@@ -51,16 +62,23 @@ if ! command -v terraform >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Preparing project $PROJECT for $ACCOUNT ..."
-
 # Per-project state bucket, inside the project it describes -- the state
 # dies with the sandbox, and no cross-project access is ever needed.
 BUCKET="${PROJECT}-tfstate"
-if ! gcloud storage buckets describe "gs://$BUCKET" --project="$PROJECT" >/dev/null 2>&1; then
-    echo "Creating the state bucket gs://$BUCKET ..."
-    gcloud storage buckets create "gs://$BUCKET" --project="$PROJECT" \
-        --location="$REGION" --uniform-bucket-level-access \
-        || { echo "ERROR: creating the state bucket failed." >&2; exit 1; }
+if [ "$MODE" = "destroy" ]; then
+    echo "Destroying the prepared resources in project $PROJECT ..."
+    if ! gcloud storage buckets describe "gs://$BUCKET" --project="$PROJECT" >/dev/null 2>&1; then
+        echo "No state bucket gs://$BUCKET -- nothing this script created to destroy."
+        exit 0
+    fi
+else
+    echo "Preparing project $PROJECT for $ACCOUNT ..."
+    if ! gcloud storage buckets describe "gs://$BUCKET" --project="$PROJECT" >/dev/null 2>&1; then
+        echo "Creating the state bucket gs://$BUCKET ..."
+        gcloud storage buckets create "gs://$BUCKET" --project="$PROJECT" \
+            --location="$REGION" --uniform-bucket-level-access \
+            || { echo "ERROR: creating the state bucket failed." >&2; exit 1; }
+    fi
 fi
 
 # Isolate parallel runs: each project gets its own working dir; the provider
@@ -76,11 +94,25 @@ terraform -chdir="$TF_DIR" init -input=false -reconfigure \
     || { echo "ERROR: terraform init for $PROJECT failed." >&2; exit 1; }
 
 tf_apply() {
-    terraform -chdir="$TF_DIR" apply -input=false -auto-approve \
+    terraform -chdir="$TF_DIR" "$1" -input=false -auto-approve \
         -var "project_id=$PROJECT" -var "username=$ACCOUNT" -var "region=$REGION"
 }
 
-if ! tf_apply; then
+if [ "$MODE" = "destroy" ]; then
+    if tf_apply destroy; then
+        echo "Project $PROJECT: prepared resources destroyed in $((SECONDS/60))m$((SECONDS%60))s"
+        echo "(APIs stay enabled; the state bucket gs://$BUCKET remains)."
+        exit 0
+    else
+        echo "ERROR: terraform destroy for $PROJECT failed -- see above. Typical" >&2
+        echo "cause: lab-created resources still hold the prepped ones (e.g. a" >&2
+        echo "Datastream stream and its connection profiles on the private" >&2
+        echo "connection). Delete those first, then re-run with --destroy." >&2
+        exit 1
+    fi
+fi
+
+if ! tf_apply apply; then
     # The one known flaky failure: the Datastream private connection loses
     # the IAM propagation race despite the time_sleep buffer and ends up
     # FAILED ("Failed to create PrivateConnection. An unknown error
@@ -100,7 +132,7 @@ if ! tf_apply; then
             --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; do
             sleep 10
         done
-        tf_apply || { echo "ERROR: retry apply for $PROJECT failed -- see above." >&2; exit 1; }
+        tf_apply apply || { echo "ERROR: retry apply for $PROJECT failed -- see above." >&2; exit 1; }
     else
         echo "ERROR: terraform apply for $PROJECT failed -- see above. Re-running is" >&2
         echo "safe. A 409/alreadyExists usually means the project was prepped by the" >&2
@@ -109,4 +141,4 @@ if ! tf_apply; then
         exit 1
     fi
 fi
-echo "Project $PROJECT prepared."
+echo "Project $PROJECT prepared in $((SECONDS/60))m$((SECONDS%60))s."

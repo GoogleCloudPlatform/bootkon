@@ -36,5 +36,11 @@ terraform {
       source  = "hashicorp/time"
       version = ">= 0.9"
     }
+    # Placeholder root password for the Cloud SQL instance; participants
+    # replace it with their own BK_DB_PASSWORD in Lab 1.
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.0"
+    }
   }
 }

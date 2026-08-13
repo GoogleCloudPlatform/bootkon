@@ -189,3 +189,74 @@ resource "google_compute_instance" "jump" {
     startup-script = file("${path.module}/../src/jumpvm-startup.sh")
   }
 }
+
+# Cymbal's production order database: PostgreSQL with logical decoding
+# enabled at creation time (the CDC prerequisite -- set here so the instance
+# boots with it and never needs a flag-change restart), PSC instead of a
+# public IP, and a deliberately small machine (CDC reads the log, it does
+# not stress the database). Created STOPPED (activation_policy NEVER): the
+# prep can then run days ahead at storage-only cost (~$0.06/day instead of
+# ~$1.70/day); Lab 1 has the participant start the instance and take
+# ownership by setting their own BK_DB_PASSWORD. The ignore_changes below
+# is load-bearing -- without it a later re-prep would stop a started
+# instance mid-event. This is the slowest build of the prep (10-15
+# minutes); it runs in parallel with the private connection above.
+resource "random_password" "sql_root" {
+  length  = 24
+  special = false
+}
+
+resource "google_sql_database_instance" "oltp" {
+  name                = "cymbal-oltp"
+  database_version    = "POSTGRES_15"
+  region              = var.region
+  root_password       = random_password.sql_root.result
+  deletion_protection = false # sandbox projects; --destroy must work
+
+  settings {
+    edition           = "ENTERPRISE"
+    tier              = "db-custom-1-3840"
+    disk_size         = 10
+    availability_type = "ZONAL"
+    activation_policy = "NEVER"
+
+    database_flags {
+      name  = "cloudsql.logical_decoding"
+      value = "on"
+    }
+
+    ip_configuration {
+      ipv4_enabled = false
+      psc_config {
+        psc_enabled               = true
+        allowed_consumer_projects = [var.project_id]
+      }
+    }
+  }
+
+  timeouts {
+    create = "45m"
+  }
+
+  lifecycle {
+    # Lab 1 flips the instance to ALWAYS; never flip it back on re-applies.
+    ignore_changes = [settings[0].activation_policy]
+  }
+
+  depends_on = [google_project_service.this]
+}
+
+# The consumer half of the database's PSC pair: the endpoint at the reserved
+# 10.10.0.5, plugged into the service attachment the instance publishes.
+# From here on that address IS the database -- for Datastream and for the
+# jump VM's iptables forward. load_balancing_scheme must be empty for PSC
+# consumer forwarding rules.
+resource "google_compute_forwarding_rule" "endpoint" {
+  name                    = "cymbal-endpoint"
+  region                  = var.region
+  network                 = google_compute_network.vpc.id
+  ip_address              = google_compute_address.endpoint_ip.id
+  target                  = google_sql_database_instance.oltp.psc_service_attachment_link
+  load_balancing_scheme   = ""
+  allow_psc_global_access = true
+}

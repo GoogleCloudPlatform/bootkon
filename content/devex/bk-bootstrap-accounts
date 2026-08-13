@@ -1,0 +1,66 @@
+#!/bin/bash
+LOCAL_CSV_FILE="$1"
+PROJECT_ID_PREFIX="$2"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+# Check if variables are set
+if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
+    echo "Error: Missing required arguments."
+    echo "Usage: $(basename $0) <LOCAL_CSV_FILE> <PROJECT_ID_PREFIX>"
+    echo "Example: $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
+    echo ""
+    echo "The CSV file needs to have the username in the first column."
+    exit 1
+fi
+
+# Step 1: Count the number of users (rows) in the CSV (excluding the header)
+num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
+
+# Inform the user how many entries will be checked
+echo "Checking IAM roles for $num_users users from the CSV file."
+
+# Step 2: Iterate through each line in the CSV (skip header).
+# The `|| [ ... ]` keeps the final row alive when the file lacks a trailing
+# newline: read then fills the fields but returns non-zero, which would end
+# the loop BEFORE processing that row. The \r strip guards against CRLF
+# line endings (typical for spreadsheet CSV exports).
+tail -n +2 "$LOCAL_CSV_FILE" | while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+    USERNAME=${fields[0]%$'\r'}
+    [ -z "$USERNAME" ] && continue
+    NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+    # Combine PROJECT_ID_PREFIX and extracted number
+    PROJECT_ID="${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}"
+
+    # Step 3: Check if the IAM user exists in the project's IAM policy
+    iam_policy=$(gcloud projects get-iam-policy "$PROJECT_ID" --format=json)
+    
+    # Check if the username exists in the IAM policy
+    if echo "$iam_policy" | grep -q "\"user:$USERNAME\""; then
+        echo -e "${GREEN}Username $USERNAME exists in project $PROJECT_ID.${NC}"
+       
+       	
+        # Check if the user has the roles/editor role assigned
+        if echo "$iam_policy" | jq -r '.bindings[] | select(.role=="roles/editor") | .members[]' | grep -q "user:$USERNAME"; then
+            echo -e "${GREEN}Username $USERNAME has the roles/editor role assigned in project $PROJECT_ID.${NC}"
+        else
+            echo -e "${RED}Username $USERNAME does not have the roles/editor role assigned in project $PROJECT_ID.${RED}"
+            gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="user:$USERNAME" --role="roles/editor" 1>>/dev/null 2>>/dev/null
+	    fi
+
+        # Check if the user has the roles/resourcemanager.projectIamAdmin role assigned
+        if echo "$iam_policy" | jq -r '.bindings[] | select(.role=="roles/resourcemanager.projectIamAdmin") | .members[]' | grep -q "user:$USERNAME"; then
+            echo -e "${GREEN}Username $USERNAME has the roles/resourcemanager.projectIamAdmin role assigned in project $PROJECT_ID.${NC}"
+        else
+            echo -e "${RED}Username $USERNAME does not have the roles/resourcemanager.projectIamAdmin role assigned in project $PROJECT_ID.${NC}"
+	        gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="user:$USERNAME" --role="roles/resourcemanager.projectIamAdmin" 1>>/dev/null 2>>/dev/null
+        fi
+    else
+        echo -e "${RED}Username $USERNAME does not exist in project $PROJECT_ID.${RED}"
+    fi
+    echo ""
+done
+
+echo "If any of the messages were red, please rerun the script and make sure everything is green."

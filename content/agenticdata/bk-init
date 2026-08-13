@@ -34,8 +34,9 @@ if [ "${BK_DS_AGENT_PREP:-}" != "$PROJECT_ID" ]; then
     ) &
 fi
 
-# Generated once: Lab 1 creates the Cloud SQL instance with BK_DB_PASSWORD and
-# Lab 2 the Datastream connection profile with BK_DS_PASSWORD.
+# Generated once: Lab 1 sets BK_DB_PASSWORD as the postgres password on the
+# pre-provisioned Cloud SQL instance; Lab 2 creates the Datastream connection
+# profile with BK_DS_PASSWORD.
 "$SET_VAR" --if-empty --comment "Cloud SQL (Postgres) root password -- generated once" "$LOCAL" BK_DB_PASSWORD "$(openssl rand -hex 16)"
 "$SET_VAR" --if-empty --comment "Datastream connection password -- generated once" "$LOCAL" BK_DS_PASSWORD "$(openssl rand -hex 16)"
 

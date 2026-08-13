@@ -7,7 +7,7 @@
 
 Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over **A2A** — the open *agent-to-agent* protocol that lets AI agents call each other the way HTTP lets services do it. Don't worry if that's new to you: the finale lab explains and builds it step by step.
 
-In this lab you will enable services, run the bootstrap that stages the seed data, kick off your operational database build (it runs in the background while you work), and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
+In this lab you will enable services, run the bootstrap that stages the seed data, take ownership of your already-provisioned production database, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 
 One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
@@ -40,11 +40,13 @@ Along the way you will spot **Prefer the console?** notes: optional UI routes fo
 {% if ON_ARGOLIS %}
 ### Prepare your project (Argolis)
 
-At an event, the organizers provision every project days ahead — on Argolis you are your own organizer, so run the prep yourself first. It enables the stream APIs, grants your roles, sets up the Datastream service agent, and creates the data-quality service account (idempotent, safe to re-run):
+At an event, the organizers provision every project days ahead — on Argolis you are your own organizer, so run the prep yourself first. It enables the stream APIs, grants your roles, sets up the Datastream service agent and its private connection, creates the data-quality service account, and builds the network path and the Cloud SQL instance (idempotent, safe to re-run; expect 15–25 minutes):
 
 ```bash
 content/agenticdata/bk-prep-project
 ```
+
+❗ Argolis organization policies (for example `constraints/compute.requireOsLogin`, `constraints/compute.requireShieldedVm`, or SQL constraints) may block the VM or instance creation inside the prep. If it fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and run the prep again.
 {% endif %}
 
 ### Run the bootstrap
@@ -59,7 +61,7 @@ Your database passwords were already generated during setup and live in `vars.lo
 
 ### The network path
 
-Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC) — and the network for that is already in your project{% if ON_ARGOLIS %} (created by the prep step above){% endif %}: the VPC `cymbal-vpc` with subnet `cymbal-subnet` (`10.10.0.0/24`), the reserved address `10.10.0.5` — in Lab 2 that address becomes the door to your database — the network attachment `cymbal-attachment` with Datastream's private connection `cymbal-psc` already plugged into it, and a tiny jump VM (`cymbal-jump`) you will meet in Lab 2. Take a look at [VPC networks](https://console.cloud.google.com/networking/networks/list) to see the pieces.
+Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC) — and the network for that is already in your project{% if ON_ARGOLIS %} (created by the prep step above){% endif %}: the VPC `cymbal-vpc` with subnet `cymbal-subnet` (`10.10.0.0/24`), the address `10.10.0.5` — the PSC endpoint that **is** your database's door — the network attachment `cymbal-attachment` with Datastream's private connection `cymbal-psc` already plugged into it, and a tiny jump VM (`cymbal-jump`) you will meet in Lab 2. Take a look at [VPC networks](https://console.cloud.google.com/networking/networks/list) to see the pieces.
 
 So what is this setup? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
 
@@ -68,28 +70,21 @@ Learn more:
 - [Network attachments](https://docs.cloud.google.com/vpc/docs/about-network-attachments)
 - [Cloud SQL and Private Service Connect](https://docs.cloud.google.com/sql/docs/postgres/about-private-service-connect)
 
-### Launch your operational database
+### Take ownership of your database
 
-This is Cymbal's production order database: PostgreSQL on Cloud SQL, with logical decoding enabled at creation time (Datastream needs it for CDC) and Private Service Connect instead of a public IP. The `--async` flag returns immediately — the instance builds in the background for the next 10–15 minutes while you continue:
+Cymbal's production order database is already built: `cymbal-oltp`, PostgreSQL on Cloud SQL — with **logical decoding** enabled at creation time (Postgres emits every committed change in logical form; the prerequisite for CDC, set at birth so the instance never needs a flag-change restart), **Private Service Connect** instead of a public IP (its endpoint is the `10.10.0.5` from above), and a deliberately small machine (`db-custom-1-3840`) — CDC reads the log, it does not stress the database.
 
-{% if ON_ARGOLIS %}
-❗ You are on Argolis. Instance and VM creation in this stream may be blocked by organization policies (for example `constraints/compute.requireOsLogin` or `constraints/compute.requireShieldedVm`). If a create command fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and retry.
-{% endif %}
+It is parked **stopped** (no point burning money while waiting for you) with a throwaway root password. Wake it up — this takes a minute or two:
 
 ```bash
-gcloud sql instances create cymbal-oltp \
-    --database-version=POSTGRES_15 --edition=enterprise \
-    --tier=db-custom-1-3840 --storage-size=10GB \
-    --region={{ REGION }} \
-    --root-password=$BK_DB_PASSWORD \
-    --database-flags=cloudsql.logical_decoding=on \
-    --enable-private-service-connect \
-    --allowed-psc-projects={{ PROJECT_ID }} \
-    --no-assign-ip \
-    --async
+gcloud sql instances patch cymbal-oltp --activation-policy=ALWAYS
 ```
 
-A word on the flags: `cloudsql.logical_decoding=on` switches Postgres' write-ahead log to *logical* decoding — the prerequisite for change data capture — set at creation time so the instance boots with it and never needs a flag-change restart. `--no-assign-ip` means there is no public address at all; the remaining flags wire the instance to the private path you prepared above. And `db-custom-1-3840` is a deliberately small machine: CDC reads the log, it does not stress the database.
+Then make it yours — set the `postgres` password to your generated `$BK_DB_PASSWORD`:
+
+```bash
+gcloud sql users set-password postgres --instance=cymbal-oltp --password=$BK_DB_PASSWORD
+```
 
 Learn more:
 - [Set up logical replication on Cloud SQL](https://docs.cloud.google.com/sql/docs/postgres/replication/configure-logical-replication)
@@ -136,8 +131,8 @@ Read the answer — this is the pattern for the whole afternoon: you stay in com
 
 ### Verify in the console
 
-Let's check on your database build. Open [Cloud SQL instances](https://console.cloud.google.com/sql/instances) and find <walkthrough-spotlight-pointer locator="text('cymbal-oltp')">cymbal-oltp</walkthrough-spotlight-pointer>. You should see it being created (a spinner) or already running with **Private service connect** as its connectivity — and no public IP anywhere. If it is still creating, perfect: that's exactly why we started it first.
+Let's look at your database. Open [Cloud SQL instances](https://console.cloud.google.com/sql/instances) and find <walkthrough-spotlight-pointer locator="text('cymbal-oltp')">cymbal-oltp</walkthrough-spotlight-pointer>: running, with **Private service connect** as its connectivity — and no public IP anywhere.
 
 ### Success
 
-🎉 Congratulations{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your project has IAM sorted, Datastream already plugged into your VPC, a database building itself in the background, half a million synthetic orders staged in Cloud Storage, and an AI co-engineer standing by in your terminal. On to the data! 🚀
+🎉 Congratulations{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your project has IAM sorted, Datastream already plugged into your VPC, a production database answering to **your** password, half a million synthetic orders staged in Cloud Storage, and an AI co-engineer standing by in your terminal. On to the data! 🚀

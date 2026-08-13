@@ -17,29 +17,13 @@ Learn more:
 - [Datastream overview](https://docs.cloud.google.com/datastream/docs/overview)
 - [PostgreSQL as a source](https://docs.cloud.google.com/datastream/docs/sources-postgresql)
 
-### Wait for the database
+### Back to the shell
 
 Lab 1 left agy standing by in your terminal — but the commands in this lab are **shell commands**, so exit agy first by typing `/quit` (you will call your co-engineer back for the authoring step later in this lab).
 
-If the Lab 1 build already finished, this returns instantly — otherwise it waits for the create operation to complete:
+### The Private Service Connect endpoint
 
-```bash
-gcloud sql operations wait --timeout=unlimited \
-    $(gcloud sql operations list --instance=cymbal-oltp --format='value(name)' --limit=1)
-```
-
-### Create the Private Service Connect endpoint
-
-Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at `10.10.0.5`, the address you reserved back in Lab 1:
-
-```bash
-SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
-gcloud compute forwarding-rules create cymbal-endpoint --region={{ REGION }} \
-    --address=cymbal-endpoint-ip --network=cymbal-vpc \
-    --target-service-attachment=$SA_URI --allow-psc-global-access
-```
-
-From now on, `10.10.0.5` **is** your database — for Datastream (its private connection `cymbal-psc` is already plugged into your VPC) and for the jump VM.
+A quick look at the plumbing you get to use today: your instance exposes a **service attachment** — a private socket other networks can plug into — and your VPC carries the matching **endpoint** for it at `10.10.0.5` (`cymbal-endpoint`, on the address reserved at provisioning time). That address **is** your database — for Datastream (its private connection `cymbal-psc` is already plugged into your VPC) and for the jump VM.
 
 ### The jump VM
 
