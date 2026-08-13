@@ -72,15 +72,9 @@ Learn more:
 
 ### Take ownership of your database
 
-Cymbal's production order database is already built: `cymbal-oltp`, PostgreSQL on Cloud SQL — with **logical decoding** enabled at creation time (Postgres emits every committed change in logical form; the prerequisite for CDC, set at birth so the instance never needs a flag-change restart), **Private Service Connect** instead of a public IP (its endpoint is the `10.10.0.5` from above), and a deliberately small machine (`db-custom-1-3840`) — CDC reads the log, it does not stress the database.
+Cymbal's production order database is already running: `cymbal-oltp`, PostgreSQL on Cloud SQL — with **logical decoding** enabled at creation time (Postgres emits every committed change in logical form; the prerequisite for CDC, set at birth so the instance never needs a flag-change restart), **Private Service Connect** instead of a public IP (its endpoint is the `10.10.0.5` from above), and a deliberately small machine (`db-custom-1-3840`) — CDC reads the log, it does not stress the database.
 
-It is parked **stopped** (no point burning money while waiting for you) with a throwaway root password. Wake it up — this takes a minute or two:
-
-```bash
-gcloud sql instances patch cymbal-oltp --activation-policy=ALWAYS
-```
-
-Then make it yours — set the `postgres` password to your generated `$BK_DB_PASSWORD`:
+It was provisioned with a throwaway root password, so make it yours — set the `postgres` password to your generated `$BK_DB_PASSWORD`:
 
 ```bash
 gcloud sql users set-password postgres --instance=cymbal-oltp --password=$BK_DB_PASSWORD
@@ -103,21 +97,15 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 
 ### Meet your co-engineer
 
-`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (trusted workshop folders). One thing it cannot do for you is sign in — that is a one-time step you do now. **Maximize the terminal first** so the whole sign-in dialog fits on screen, then start agy from the repository root (you are already there):
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured it: your project (`{{ PROJECT_ID }}`), the location, and the workshop folders it may work in. **Maximize the terminal first** so any sign-in dialog fits on screen, then start agy from the repository root (you are already there):
 
 ```bash
 agy
 ```
 
-On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option. agy will tell you your account has **no license for Gemini Enterprise** — that is expected, we don't use Gemini Enterprise today: simply enter your event project ID when asked, so the usage bills to your project:
+The first start is a one-time handshake: accept the Terms of Service if prompted, and if a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. (Should agy still ask how you want to sign in, choose **Google Cloud project** — your project `{{ PROJECT_ID }}` is already configured.) Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are in.
 
-```bash
-{{ PROJECT_ID }}
-```
-
-If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted and choose the Google Cloud Location `global`. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
-
-agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
+agy is configured to work **without per-command approval prompts** today, so authoring flows uninterrupted — which makes reviewing what it did (with `/diff`) genuinely *your* job. You direct, it types, you verify.
 
 ### Let agy explain what just happened
 

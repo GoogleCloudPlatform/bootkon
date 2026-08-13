@@ -125,7 +125,7 @@ What about your pager? Be honest about physics: metric ingestion plus alert eval
 
 ### Diagnose with your co-responder
 
-You know *that* it's broken. An on-call needs *why*. This is investigation, not authoring — so agy joins as a **read-only co-responder**: it proposes the commands, but every single one needs your approval before it runs. That's the incident-response pattern worth taking home: the human authorizes, the agent investigates. Back in terminal 1, start `agy` (from `~/bootkon`) and paste the symptom:
+You know *that* it's broken. An on-call needs *why*. This is investigation, not authoring — so agy joins as a **read-only co-responder**: the prompt below explicitly instructs it to propose each command and wait for your go before running anything. That's the incident-response pattern worth taking home: the human authorizes, the agent investigates — and here the constraint lives in the *instructions*, exactly where you'd pin it for a production runbook agent. Back in terminal 1, start `agy` (from `~/bootkon`) and paste the symptom:
 
 ```bash
 Our BigQuery bronze dataset stopped receiving new rows a few minutes ago, and data freshness on the Datastream stream cymbal-cdc-stream (location us-central1) keeps climbing. The source Postgres itself is healthy and still taking writes. Investigate the Datastream side with read-only commands only (gcloud datastream streams describe, gcloud logging read) and tell me your diagnosis. Ask me before each command, and do not change anything.

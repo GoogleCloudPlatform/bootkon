@@ -148,14 +148,17 @@ if ! tf_apply apply; then
     fi
 fi
 
-# Park a FRESHLY built instance (the API refuses to create one stopped):
-# storage-only cost until Lab 1 wakes it. Gated on this run's apply output,
-# so a re-prep never stops an instance the participant already started.
-if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG"; then
-    echo "Parking the freshly built cymbal-oltp (stopped until Lab 1 wakes it) ..."
-    gcloud sql instances patch cymbal-oltp --activation-policy=NEVER \
-        --project="$PROJECT" --quiet >/dev/null 2>&1 \
-        || echo "WARNING: could not park cymbal-oltp -- it stays running (~\$1.70/day)." >&2
-fi
+# Parking a freshly built instance (activation_policy NEVER, gated on this
+# run's apply output so a re-prep never stops a participant's instance) is
+# currently DISABLED: waking a stopped instance at the start of Lab 1 took
+# too long in practice. The instance therefore RUNS from prep time
+# (~$1.70/day/project) -- run the prep close to the event. To re-enable,
+# uncomment below and restore the wake step in Lab 1.
+#if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG"; then
+#    echo "Parking the freshly built cymbal-oltp (stopped until Lab 1 wakes it) ..."
+#    gcloud sql instances patch cymbal-oltp --activation-policy=NEVER \
+#        --project="$PROJECT" --quiet >/dev/null 2>&1 \
+#        || echo "WARNING: could not park cymbal-oltp -- it stays running (~\$1.70/day)." >&2
+#fi
 
 echo "Project $PROJECT prepared in $((SECONDS/60))m$((SECONDS%60))s."
