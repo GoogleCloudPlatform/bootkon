@@ -153,7 +153,10 @@ gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \
     --backfill-all
 ```
 
+The create takes a few minutes — watch it happen in the [Datastream console](https://console.cloud.google.com/datastream/streams): your stream appears with status **Creating**, then **Not started**. Don't rush the start: an update issued too early answers *"The resource is being created"* (the console may already say Not started while the create operation still finalizes — trust the API, not the list). The first line below waits for the right moment, then the second flips the stream to `RUNNING`:
+
 ```bash
+while [ "$(gcloud datastream streams describe cymbal-cdc-stream --location={{ REGION }} --format='value(state)' 2>/dev/null)" != "NOT_STARTED" ]; do echo "stream still creating ..."; sleep 10; done
 gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
     --state=RUNNING --update-mask=state
 ```
