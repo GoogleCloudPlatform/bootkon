@@ -134,7 +134,7 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 agy
 ```
 
-On the first run, choose **Google OAuth** when asked how to sign in: agy prints a login URL — open it, sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code back into the terminal. Accept the Terms of Service if prompted. This is a one-time step: every later `agy` start lands straight at the prompt.
+On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option: agy then authenticates through your event project (`{{ PROJECT_ID }}`, read from the environment), which is where today's usage belongs. If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac) and sign in as `{{ GCP_USERNAME }}`. Back in the terminal, move down to the token field with **Shift+Down-Arrow** and paste the confirmation code there. Accept the Terms of Service if prompted. This is a one-time step: every later `agy` start lands straight at the prompt.
 
 agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
 

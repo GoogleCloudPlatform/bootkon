@@ -166,11 +166,13 @@ done
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
 # Seedable: theme and the trusted workshop folders (suppresses the theme and
-# workspace-trust prompts). NOT seedable: authentication -- agy signs in with a
-# Google account via OAuth (login URL + code; there is no ADC/cloud-shell auth
-# type, and the earlier Gemini-CLI-style auth/permissions keys were dead
-# config), so Lab 1 walks participants through the one-time login on the first
-# `agy` start. Tool approvals follow agy's toolPermission model; the default
+# workspace-trust prompts). NOT seedable: authentication -- agy's first-run
+# menu offers Google OAuth or Google Cloud project auth, with no settings key
+# to preselect either (the earlier Gemini-CLI-style auth/permissions keys were
+# dead config). Lab 1 walks participants through the one-time login, using the
+# Google Cloud project option so usage bills to the event project (read from
+# GOOGLE_CLOUD_PROJECT, which bk keeps aligned with PROJECT_ID).
+# Tool approvals follow agy's toolPermission model; the default
 # (request-review) is deliberately left in place, so agy asks before it acts
 # and the review-what-the-agent-does habit stays intact.
 AGY_DIR=~/.gemini/antigravity-cli
