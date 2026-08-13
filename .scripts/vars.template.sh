@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This file holds the defaults. `. bk` copies it to vars.local.sh (git-ignored)
-# on first run and works from there -- edit vars.local.sh, not this file.
+# This file is the template for the per-participant config. `. bk` copies it to
+# $BK_DIR/vars.local.sh (git-ignored) on first run and works from there -- edit
+# vars.local.sh, not this file.
 
 # Your (first) name, shown in the tutorial greeting. Optional. Example: Ada
 export MY_NAME=""

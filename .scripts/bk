@@ -178,11 +178,13 @@ fi
 
 # Reuse a healthy checkout, reject a broken one (an interrupted first clone
 # used to wedge the participant permanently: the .git test passed, the copy of
-# vars.sh failed, and every re-paste printed a reassuring green message), or
-# clone fresh -- after a one-second remote probe that catches repo/branch/
-# stream typos BEFORE any clone happens or any workspace opens.
+# the vars template failed, and every re-paste printed a reassuring green
+# message), or clone fresh -- after a one-second remote probe that catches
+# repo/branch/stream typos BEFORE any clone happens or any workspace opens.
+# (vars.sh at the root is the template's pre-move location; accept it so
+# existing checkouts survive the transition until their next pull.)
 BK_BRANCH="${BK_BRANCH:-main}" # defaults to main; can be overwritten
-if [ -d "$BK_DIR/.git" ] && [ -f "$BK_DIR/vars.sh" ]; then
+if [ -d "$BK_DIR/.git" ] && { [ -f "$BK_DIR/.scripts/vars.template.sh" ] || [ -f "$BK_DIR/vars.sh" ]; }; then
     # Re-pasting the launch command is the documented way to pick up mid-event
     # content fixes, so on that path -- and only there; plain `. bk` reloads
     # stay offline, instant and quiet -- fast-forward a clean tree.
@@ -243,13 +245,17 @@ esac
 local LOCAL="$BK_DIR/vars.local.sh"
 local BK_SET_VAR="$BK_SCRIPTS/bk-set-var"
 local BK_REMOVE_BLOCK="$BK_SCRIPTS/bk-remove-block"
+# The config template seeding vars.local.sh. Fall back to its pre-move root
+# location for checkouts that have not pulled the move yet.
+local BK_TEMPLATE="$BK_SCRIPTS/vars.template.sh"
+[ -f "$BK_TEMPLATE" ] || BK_TEMPLATE="$BK_DIR/vars.sh"
 
 # vars.local.sh is the single per-participant config + state file. Seed it from
 # the checked-in template on first run; it is git-ignored, never pushed, and
 # holds generated secrets, so keep it private.
 if [ ! -f "$LOCAL" ]; then
     echo -e "Creating your personal config file: $LOCAL"
-    cp "$BK_DIR/vars.sh" "$LOCAL"
+    cp "$BK_TEMPLATE" "$LOCAL"
     chmod 600 "$LOCAL"
 fi
 
@@ -280,8 +286,8 @@ if grep -qE '^export (BK_INITIALIZED|BK_GITHUB_USERNAME|BK_GITHUB_REPOSITORY|BK_
         -e '/^export (BK_INITIALIZED|BK_GITHUB_USERNAME|BK_GITHUB_REPOSITORY|BK_REPO_URL)=/d' "$LOCAL"
 fi
 
-dbg "Sourcing $(readlink -f "$BK_DIR/vars.sh")"
-source "$BK_DIR/vars.sh"
+dbg "Sourcing $(readlink -f "$BK_TEMPLATE")"
+source "$BK_TEMPLATE"
 dbg "Sourcing $(readlink -f "$LOCAL")"
 source "$LOCAL"
 
@@ -301,7 +307,7 @@ if [ -z "$GCP_USERNAME" ] && [ -n "$detected_account" ]; then
     "$BK_SET_VAR" "$LOCAL" GCP_USERNAME "$detected_account"
 fi
 # Fill MY_NAME from the launch command if it was provided and not already set
-# (respects a later manual edit; the comment from vars.sh stays on replace).
+# (respects a later manual edit; the template's comment stays on replace).
 if [ -z "$MY_NAME" ] && [ -n "$BK_REQ_MY_NAME" ]; then
     "$BK_SET_VAR" "$LOCAL" MY_NAME "$BK_REQ_MY_NAME"
 fi

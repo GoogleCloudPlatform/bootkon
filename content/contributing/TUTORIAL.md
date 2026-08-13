@@ -52,9 +52,10 @@ git status
 
 ## Set up your development environment
 
-`. bk` creates `vars.local.sh` from `vars.sh` on first run and auto-detects your
-`PROJECT_ID`/`GCP_USERNAME` from Cloud Shell. `vars.local.sh` is git-ignored, so
-you never risk committing your project — never edit `vars.sh` itself.
+`. bk` creates `vars.local.sh` from the template `.scripts/vars.template.sh` on
+first run and auto-detects your `PROJECT_ID`/`GCP_USERNAME` from Cloud Shell.
+`vars.local.sh` is git-ignored, so you never risk committing your project —
+never edit the template itself.
 
 To override a detected value (or set `MY_NAME`), <walkthrough-editor-open-file filePath="vars.local.sh">edit `vars.local.sh`</walkthrough-editor-open-file>, then reload:
 ```bash
@@ -62,8 +63,8 @@ To override a detected value (or set `MY_NAME`), <walkthrough-editor-open-file f
 ```
 
 It also runs on Argolis (for Google employees). `vars.local.sh` takes precedence
-over `vars.sh`, and every new terminal picks it up automatically via the block
-`bk` adds to `~/.bashrc`.
+over the template defaults, and every new terminal picks it up automatically via
+the block `bk` adds to `~/.bashrc`.
 
 ## Test a branch end-to-end
 
