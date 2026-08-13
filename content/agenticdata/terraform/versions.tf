@@ -30,5 +30,11 @@ terraform {
       source  = "hashicorp/google-beta"
       version = ">= 6.0"
     }
+    # time_sleep bridges the IAM propagation gap between the Datastream
+    # service-agent grant and the private-connection build (see main.tf).
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.9"
+    }
   }
 }

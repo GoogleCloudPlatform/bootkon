@@ -28,12 +28,6 @@ gcloud sql operations wait --timeout=unlimited \
     $(gcloud sql operations list --instance=cymbal-oltp --format='value(name)' --limit=1)
 ```
 
-Also wait for the Datastream private connection from Lab 1 to reach the `CREATED` state (around 5–10 minutes from when you kicked it off). This helper polls until it is ready — and it self-heals the one known failure mode: the very first creation can lose a race against IAM propagation for the freshly created Datastream service agent and end up `FAILED` (the console shows *"Operation failed. An unknown error occurred"*). In that case the script deletes the failed configuration and creates it again — by then the permissions have settled, and the retry goes through:
-
-```bash
-content/agenticdata/bk-wait-psc
-```
-
 ### Create the Private Service Connect endpoint
 
 Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at `10.10.0.5`, the address you reserved back in Lab 1:
@@ -45,23 +39,11 @@ gcloud compute forwarding-rules create cymbal-endpoint --region={{ REGION }} \
     --target-service-attachment=$SA_URI --allow-psc-global-access
 ```
 
-From now on, `10.10.0.5` **is** your database — for Datastream and for the jump VM below.
+From now on, `10.10.0.5` **is** your database — for Datastream (its private connection `cymbal-psc` is already plugged into your VPC) and for the jump VM.
 
-### Create the jump VM
+### The jump VM
 
-Cloud Shell lives outside your VPC and a PSC-only instance has no public IP, so you need a tiny helper: an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. Its <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file> is four lines of iptables. You will reach the VM through an **IAP tunnel** — identity-based, no IPs exposed anywhere:
-
-```bash
-gcloud compute instances create cymbal-jump --zone={{ REGION }}-a \
-    --machine-type=e2-micro --subnet=cymbal-subnet --no-address --can-ip-forward \
-    --metadata-from-file=startup-script=content/agenticdata/src/jumpvm-startup.sh
-```
-
-```bash
-gcloud compute firewall-rules create allow-iap-ingress --network=cymbal-vpc \
-    --direction=INGRESS --action=allow --rules=tcp:22,tcp:5432 \
-    --source-ranges=35.235.240.0/20
-```
+Cloud Shell lives outside your VPC and a PSC-only instance has no public IP — so your project ships with a tiny helper: `cymbal-jump`, an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. Its <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file> is four lines of iptables. You reach it through an **IAP tunnel** — identity-based, no IPs exposed anywhere.
 
 ### Open the tunnel
 

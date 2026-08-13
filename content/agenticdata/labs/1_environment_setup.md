@@ -7,7 +7,7 @@
 
 Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over **A2A** — the open *agent-to-agent* protocol that lets AI agents call each other the way HTTP lets services do it. Don't worry if that's new to you: the finale lab explains and builds it step by step.
 
-In this lab you will enable services, run the bootstrap that preps your project and stages the seed data, kick off the two slow infrastructure builds (they run in the background while you work), and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
+In this lab you will enable services, run the bootstrap that stages the seed data, kick off your operational database build (it runs in the background while you work), and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 
 One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
@@ -59,7 +59,7 @@ Your database passwords were already generated during setup and live in `vars.lo
 
 ### The network path
 
-Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC) — and the network for that is already in your project{% if ON_ARGOLIS %} (created by the prep step above){% endif %}: the VPC `cymbal-vpc` with subnet `cymbal-subnet` (`10.10.0.0/24`), the reserved address `10.10.0.5` — in Lab 2 that address becomes the door to your database — and the network attachment `cymbal-attachment`. Take a look at [VPC networks](https://console.cloud.google.com/networking/networks/list) to see them.
+Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC) — and the network for that is already in your project{% if ON_ARGOLIS %} (created by the prep step above){% endif %}: the VPC `cymbal-vpc` with subnet `cymbal-subnet` (`10.10.0.0/24`), the reserved address `10.10.0.5` — in Lab 2 that address becomes the door to your database — the network attachment `cymbal-attachment` with Datastream's private connection `cymbal-psc` already plugged into it, and a tiny jump VM (`cymbal-jump`) you will meet in Lab 2. Take a look at [VPC networks](https://console.cloud.google.com/networking/networks/list) to see the pieces.
 
 So what is this setup? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
 
@@ -93,18 +93,6 @@ A word on the flags: `cloudsql.logical_decoding=on` switches Postgres' write-ahe
 
 Learn more:
 - [Set up logical replication on Cloud SQL](https://docs.cloud.google.com/sql/docs/postgres/replication/configure-logical-replication)
-
-### Kick off Datastream private connectivity
-
-Datastream's private connection takes around 5–10 minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 waits for it to reach the `CREATED` state. (Should the console show the configuration as **Failed** in the meantime, leave it be: the very first creation sometimes loses a race against IAM propagation, and the wait step in Lab 2 repairs exactly that automatically.)
-
-```bash
-gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \
-    --display-name=cymbal-psc \
-    --network-attachment=projects/{{ PROJECT_ID }}/regions/{{ REGION }}/networkAttachments/cymbal-attachment
-```
-
-**Prefer the console?** The same thing, clickable: open [Datastream → Private connectivity configurations](https://console.cloud.google.com/datastream/private-connections) → **Create configuration**: name `cymbal-psc`, region `{{ REGION }}`, private connectivity method **PSC interfaces**, project left on `{{ PROJECT_ID }}`, network attachment `cymbal-attachment`. If the wizard offers an **Update allowlist** step, click it (a formality with our auto-accept attachment), then **Create**. And if the wizard balks at anything, the gcloud command above is the sure path.
 
 ### The seed data
 
@@ -152,4 +140,4 @@ Let's check on your database build. Open [Cloud SQL instances](https://console.c
 
 ### Success
 
-🎉 Congratulations{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your project has IAM sorted, a VPC with a door for Datastream, a database building itself in the background, half a million synthetic orders staged in Cloud Storage, and an AI co-engineer standing by in your terminal. On to the data! 🚀
+🎉 Congratulations{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your project has IAM sorted, Datastream already plugged into your VPC, a database building itself in the background, half a million synthetic orders staged in Cloud Storage, and an AI co-engineer standing by in your terminal. On to the data! 🚀

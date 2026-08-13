@@ -112,3 +112,80 @@ resource "google_compute_network_attachment" "attachment" {
   connection_preference = "ACCEPT_AUTOMATIC"
   subnetworks           = [google_compute_subnetwork.subnet.self_link]
 }
+
+# The service-agent role grant above and the private-connection build below
+# happen in the SAME apply here, so the IAM propagation race the stream kept
+# hitting (build ends FAILED when the role has not propagated yet) would be
+# back -- bridge it with a one-time pause. Created once, next to the grant;
+# later applies skip it.
+resource "time_sleep" "datastream_agent_iam" {
+  create_duration = "180s"
+  depends_on      = [google_project_iam_member.datastream_agent]
+}
+
+# Datastream's PSC-interface private connection: pure network plumbing with
+# a 5-10 minute build -- exactly the thing participants should never wait
+# on or debug. Building it at prep time removes the old Lab 1 kickoff, the
+# Lab 2 wait, and the bk-wait-psc self-healing dance entirely. If a build
+# still ends FAILED (unlucky propagation beyond the pause above): delete it
+# with `gcloud datastream private-connections delete cymbal-psc` and re-run
+# the prep.
+resource "google_datastream_private_connection" "psc" {
+  private_connection_id = "cymbal-psc"
+  display_name          = "cymbal-psc"
+  location              = var.region
+
+  psc_interface_config {
+    network_attachment = google_compute_network_attachment.attachment.id
+  }
+
+  # The endpoint-IP dependency is load-bearing: without it Terraform may
+  # build the connection before the reservation, and Datastream's bridge VM
+  # would be free to grab 10.10.0.5 as its ephemeral interface IP.
+  depends_on = [
+    time_sleep.datastream_agent_iam,
+    google_compute_address.endpoint_ip,
+  ]
+}
+
+# Jump VM + IAP firewall: Cloud Shell lives outside the VPC and the
+# PSC-only database has no public IP, so this e2-micro (no external IP
+# either) forwards port 5432 to the database endpoint -- four lines of
+# iptables in the startup script. Participants reach it through an IAP
+# tunnel (bk-tunnel), which stays a lab step: tunnels are runtime, not
+# provisioning.
+resource "google_compute_firewall" "allow_iap_ingress" {
+  name      = "allow-iap-ingress"
+  network   = google_compute_network.vpc.name
+  direction = "INGRESS"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "5432"]
+  }
+
+  # IAP's TCP forwarding source range.
+  source_ranges = ["35.235.240.0/20"]
+}
+
+resource "google_compute_instance" "jump" {
+  name           = "cymbal-jump"
+  zone           = "${var.region}-a"
+  machine_type   = "e2-micro"
+  can_ip_forward = true
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-12"
+    }
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.subnet.id
+    # No access_config block: no external IP.
+  }
+
+  metadata = {
+    startup-script = file("${path.module}/../src/jumpvm-startup.sh")
+  }
+}
