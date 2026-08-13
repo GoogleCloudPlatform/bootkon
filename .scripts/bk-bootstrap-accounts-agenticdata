@@ -1,0 +1,82 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Organizer-side account AND project prep for the AGENTICDATA stream -- a
+# fork of bk-bootstrap-accounts with the same CSV contract (username in the
+# first column; project = PREFIX + numeric suffix of the username).
+#
+# For every CSV row it runs content/agenticdata/bk-prep-project, the single
+# source of truth for the per-project prep (APIs, Datastream service agent,
+# participant roles, data-quality service account). Run it DAYS before the
+# event and no IAM/API propagation race can ever reach a participant; on
+# Argolis/self-run setups participants run bk-prep-project themselves in
+# Lab 1 instead. bk-bootstrap keeps only the per-user-home work.
+#
+# Failures print loudly -- rerun until everything is green (safe to repeat).
+
+LOCAL_CSV_FILE="$1"
+PROJECT_ID_PREFIX="$2"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
+    echo "Error: Missing required arguments."
+    echo "Usage: $(basename $0) <LOCAL_CSV_FILE> <PROJECT_ID_PREFIX>"
+    echo "Example: $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
+    echo ""
+    echo "The CSV file needs to have the username in the first column."
+    exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PREP="$SCRIPT_DIR/../content/agenticdata/bk-prep-project"
+if [ ! -x "$PREP" ]; then
+    echo "Error: $PREP not found or not executable." >&2
+    exit 1
+fi
+
+num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
+echo "Preparing $num_users agenticdata projects from the CSV file."
+echo ""
+
+FAILED_PROJECTS=()
+# Process substitution instead of a pipe: the loop must run in THIS shell so
+# the failure list survives it. The `|| [ ... ]` keeps the final row alive
+# when the file lacks a trailing newline; the \r strip guards against CRLF
+# endings from spreadsheet exports.
+while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+    USERNAME=${fields[0]%$'\r'}
+    [ -z "$USERNAME" ] && continue
+    NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+    PROJECT_ID="${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}"
+    echo "=== $USERNAME -> $PROJECT_ID"
+    if "$PREP" "$PROJECT_ID" "$USERNAME"; then
+        echo -e "${GREEN}$PROJECT_ID prepared.${NC}"
+    else
+        echo -e "${RED}$PROJECT_ID finished with errors -- see above.${NC}"
+        FAILED_PROJECTS+=("$PROJECT_ID")
+    fi
+    echo ""
+done < <(tail -n +2 "$LOCAL_CSV_FILE")
+
+if [ ${#FAILED_PROJECTS[@]} -eq 0 ]; then
+    echo "All projects prepared."
+else
+    echo -e "${RED}${#FAILED_PROJECTS[@]} project(s) had errors: ${FAILED_PROJECTS[*]}${NC}" >&2
+    echo -e "${RED}Fix the causes above and rerun this script (safe to repeat).${NC}" >&2
+    exit 1
+fi

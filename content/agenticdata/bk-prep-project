@@ -1,0 +1,163 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# One-time, per-project prep for the agenticdata stream: everything
+# project-bound that participants must not spend event time (or IAM/API
+# propagation waits) on.
+#   1. enable all stream APIs
+#   2. Datastream service identity + its service-agent role
+#   3. the participant's roles
+#   4. the Lab 4 data-quality service account + its roles
+#
+# Two callers, one source of truth:
+#   * Organizers: .scripts/bk-bootstrap-accounts-agenticdata runs it for every
+#     CSV row, days before the event:  bk-prep-project PROJECT_ID USERNAME
+#   * Argolis / self-run: no organizer, so Lab 1 has the participant run it
+#     themselves, without arguments -- PROJECT_ID/GCP_USERNAME come from the
+#     bootkon environment.
+#
+# Idempotent, safe to re-run; exits non-zero if anything failed. Every gcloud
+# call names the project explicitly, so the caller's gcloud config is never
+# consulted.
+
+set -u
+
+PROJECT="${1:-${PROJECT_ID:-}}"
+ACCOUNT="${2:-${GCP_USERNAME:-}}"
+if [ -z "$PROJECT" ] || [ -z "$ACCOUNT" ]; then
+    echo "Usage: $(basename "$0") [PROJECT_ID [USERNAME]]" >&2
+    echo "(without arguments both come from the bootkon environment:" >&2
+    echo " PROJECT_ID/GCP_USERNAME -- run '. bk' first)" >&2
+    exit 1
+fi
+
+FAILURES=0
+fail() {
+    FAILURES=$((FAILURES + 1))
+    echo "ERROR: $1 -- see the message above." >&2
+}
+
+APIS=(
+    sqladmin.googleapis.com
+    datastream.googleapis.com
+    compute.googleapis.com
+    servicenetworking.googleapis.com
+    iap.googleapis.com
+    bigquery.googleapis.com
+    bigqueryconnection.googleapis.com
+    dataplex.googleapis.com
+    datacatalog.googleapis.com
+    datalineage.googleapis.com
+    dlp.googleapis.com
+    geminidataanalytics.googleapis.com
+    cloudaicompanion.googleapis.com
+    aiplatform.googleapis.com
+    storage-component.googleapis.com
+    serviceusage.googleapis.com
+    cloudresourcemanager.googleapis.com
+    iam.googleapis.com
+    artifactregistry.googleapis.com
+)
+
+# Keep in sync with what the lab commands actually need.
+USER_ROLES=(
+    "roles/editor"                               # baseline: run the labs' commands
+    "roles/resourcemanager.projectIamAdmin"      # in-lab self-grants (Lab 9) + manual recovery
+    "roles/cloudsql.admin"                       # create/manage the Cymbal instance
+    "roles/datastream.admin"                     # profiles, private connection, stream
+    "roles/compute.admin"                        # VPC, jump VM, firewall, PSC endpoint
+    "roles/iap.tunnelResourceAccessor"           # IAP TCP tunnel to the jump VM
+    "roles/bigquery.admin"                       # datasets, jobs, connections
+    "roles/dataplex.admin"                       # Knowledge Catalog: aspects, scans, glossary
+    "roles/datalineage.admin"                    # lineage graph
+    "roles/aiplatform.user"                      # Gemini calls from ADK agents
+    "roles/geminidataanalytics.dataAgentCreator" # create + chat with data agents
+    "roles/cloudaicompanion.user"                # conversational analytics chat
+    "roles/storage.admin"                        # seed bucket
+    "roles/iam.serviceAccountAdmin"              # create service accounts
+    "roles/iam.serviceAccountUser"               # act as service accounts
+)
+
+DQ_ROLES=(
+    "roles/bigquery.jobUser"
+    "roles/bigquery.dataViewer"
+    "roles/iam.serviceAccountTokenCreator"
+    "roles/iam.serviceAccountUser"
+    "roles/storage.objectViewer"
+)
+
+echo "Preparing project $PROJECT for $ACCOUNT ..."
+
+project_number=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)' 2>/dev/null)
+if [ -z "$project_number" ]; then
+    echo "ERROR: cannot read project $PROJECT (missing, or no access)." >&2
+    exit 1
+fi
+
+# 1. APIs: one batched call. The tutorial's enable-apis step then just shows
+#    green. First enablement in a project can take a minute.
+echo "Enabling the stream APIs ..."
+gcloud services enable "${APIS[@]}" --project="$PROJECT" \
+    || fail "enabling the APIs failed"
+
+# 2. Datastream service agent: must exist and hold its role BEFORE Lab 1
+#    creates the private connection -- created lazily otherwise, and the IAM
+#    grant needs time to propagate (a fresh grant lost the race often enough
+#    to end the connection FAILED).
+gcloud beta services identity create --service=datastream.googleapis.com \
+    --project="$PROJECT" >/dev/null \
+    || fail "creating the Datastream service identity failed"
+gcloud projects add-iam-policy-binding "$PROJECT" \
+    --member="serviceAccount:service-${project_number}@gcp-sa-datastream.iam.gserviceaccount.com" \
+    --role="roles/datastream.serviceAgent" --condition=None >/dev/null \
+    || fail "granting the Datastream service-agent role failed"
+
+# 3. Participant roles. --condition=None: a conditional binding anywhere in
+#    the policy would otherwise make gcloud prompt interactively.
+for role in "${USER_ROLES[@]}"; do
+    echo "Assigning $role to $ACCOUNT ..."
+    gcloud projects add-iam-policy-binding "$PROJECT" \
+        --member="user:$ACCOUNT" --role="$role" --condition=None >/dev/null \
+        || fail "assigning $role to $ACCOUNT failed"
+done
+
+# 4. Lab 4 data-quality service account + roles (profile/quality scans run
+#    as this SA; Lab 7 reuses it as the managed-Dataform execution identity).
+DQ_SA_EMAIL="dataquality-service-account@${PROJECT}.iam.gserviceaccount.com"
+if ! gcloud iam service-accounts describe "$DQ_SA_EMAIL" --project="$PROJECT" >/dev/null 2>&1; then
+    gcloud iam service-accounts create "dataquality-service-account" \
+        --display-name="Knowledge Catalog DQ Service Account" --project="$PROJECT" \
+        || fail "creating the data-quality service account failed"
+fi
+# A freshly created SA can take a few seconds to become visible to IAM;
+# granting against it too early fails with "does not exist".
+for i in $(seq 1 15); do
+    gcloud iam service-accounts describe "$DQ_SA_EMAIL" --project="$PROJECT" >/dev/null 2>&1 && break
+    sleep 2
+done
+for role in "${DQ_ROLES[@]}"; do
+    echo "Assigning $role to $DQ_SA_EMAIL ..."
+    gcloud projects add-iam-policy-binding "$PROJECT" \
+        --member="serviceAccount:$DQ_SA_EMAIL" --role="$role" --condition=None >/dev/null \
+        || fail "assigning $role to $DQ_SA_EMAIL failed"
+done
+
+if [ "$FAILURES" -eq 0 ]; then
+    echo "Project $PROJECT prepared."
+else
+    echo "Project $PROJECT finished with $FAILURES error(s) -- fix the causes" >&2
+    echo "above and run this script again (it is safe to re-run)." >&2
+    exit 1
+fi

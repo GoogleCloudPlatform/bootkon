@@ -22,9 +22,14 @@ num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
 # Inform the user how many entries will be checked
 echo "Checking IAM roles for $num_users users from the CSV file."
 
-# Step 2: Iterate through each line in the CSV (skip header)
-tail -n +2 "$LOCAL_CSV_FILE" | while IFS=, read -r -a fields; do
-    USERNAME=${fields[0]}
+# Step 2: Iterate through each line in the CSV (skip header).
+# The `|| [ ... ]` keeps the final row alive when the file lacks a trailing
+# newline: read then fills the fields but returns non-zero, which would end
+# the loop BEFORE processing that row. The \r strip guards against CRLF
+# line endings (typical for spreadsheet CSV exports).
+tail -n +2 "$LOCAL_CSV_FILE" | while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+    USERNAME=${fields[0]%$'\r'}
+    [ -z "$USERNAME" ] && continue
     NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
     # Combine PROJECT_ID_PREFIX and extracted number
     PROJECT_ID="${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}"

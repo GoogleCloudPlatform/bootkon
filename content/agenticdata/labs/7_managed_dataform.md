@@ -27,7 +27,7 @@ Learn more:
 
 ### Set up the execution identity
 
-Who runs the pipeline at 3 a.m.? Not you — and that is the whole point of this section. Scheduled Dataform executions involve two identities: the Google-managed **Dataform service agent** (it compiles your code and orchestrates runs), and a **custom service account** that the actual BigQuery jobs run as — every repository must have one; the console won't even offer the service agent for that job. You already own a perfect candidate: `dataquality-service-account` from Lab 1's bootstrap, which holds BigQuery read and job roles. It only lacks write access.
+Who runs the pipeline at 3 a.m.? Not you — and that is the whole point of this section. Scheduled Dataform executions involve two identities: the Google-managed **Dataform service agent** (it compiles your code and orchestrates runs), and a **custom service account** that the actual BigQuery jobs run as — every repository must have one; the console won't even offer the service agent for that job. You already own a perfect candidate: `dataquality-service-account`, pre-provisioned in your project for the Lab 4 scans, which holds BigQuery read and job roles. It only lacks write access.
 
 IAM comes *first* in this lab for the same reason the Datastream service agent came first in `bk-bootstrap`: grants take a few minutes to propagate, and doing them now means they're live by the time you execute. Enable the service and materialize the service agent:
 

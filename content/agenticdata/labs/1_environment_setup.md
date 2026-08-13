@@ -37,9 +37,19 @@ Along the way you will spot **Prefer the console?** notes: optional UI routes fo
   artifactregistry.googleapis.com">
 </walkthrough-enable-apis>
 
-### Assign permissions
+{% if ON_ARGOLIS %}
+### Prepare your project (Argolis)
 
-Execute the following script. It installs Python dependencies, grants IAM roles, creates a service account for data-quality scans, generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. It runs for about four minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
+At an event, the organizers provision every project days ahead — on Argolis you are your own organizer, so run the prep yourself first. It enables the stream APIs, grants your roles, sets up the Datastream service agent, and creates the data-quality service account (idempotent, safe to re-run):
+
+```bash
+content/agenticdata/bk-prep-project
+```
+{% endif %}
+
+### Run the bootstrap
+
+Execute the following script. It installs Python dependencies, generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. (Everything project-bound — APIs, IAM roles, service accounts — {% if ON_ARGOLIS %}was covered by the prep step above{% else %}was already provisioned for your event project ahead of time; that's why the API step above was instantly green{% endif %}.) It runs for about three minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
@@ -156,7 +166,7 @@ agy **asks before it acts** — approve its file edits as they come, and anythin
 Your first prompt. Paste this into agy:
 
 ```bash
-What does content/agenticdata/bk-bootstrap do? Summarize the IAM roles it grants and explain why a separate data-quality service account is created.
+What does content/agenticdata/bk-bootstrap do? Explain how the seed data generation stays deterministic and why identical data matters for this workshop.
 ```
 
 Read the answer — this is the pattern for the whole afternoon: you stay in command, agy does the reading and writing, and you verify.

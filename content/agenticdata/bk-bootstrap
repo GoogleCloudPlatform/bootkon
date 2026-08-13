@@ -1,16 +1,24 @@
 #!/bin/bash
-# Bootstraps the Agentic Data Bootkon stream: Python deps, APIs, IAM,
-# service accounts, the seed data (generated and staged in GCS), and the
-# agy pre-configuration.
+# Bootstraps the Agentic Data Bootkon stream on PARTICIPANT time: Python
+# deps, the seed data (generated and staged in GCS), and the agy
+# pre-configuration.
+#
+# Everything project-bound (APIs, the Datastream service agent, the
+# participant's roles, the Lab 4 data-quality service account) lives in
+# content/agenticdata/bk-prep-project, which the ORGANIZER runs for every
+# project days ahead (via .scripts/bk-bootstrap-accounts-agenticdata) -- so
+# no IAM/API propagation race can reach a participant, and this script needs
+# no setIamPolicy. On Argolis/self-run, Lab 1 has the participant run
+# bk-prep-project themselves, right before this script. The tutorial's
+# enable-apis step stays as a green no-op verification.
 #
 # It deliberately does NOT create the Cloud SQL instance or any networking:
 # those commands live inline in the labs, so the connectivity variant can be
 # swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
 #
 # Error handling: every step is checked and counted. The script keeps going
-# so one flaky IAM call does not abort the remaining setup, but it only
-# claims success when NOTHING failed -- a silent failure here used to
-# resurface an hour later as a cryptic PERMISSION_DENIED in Lab 1.
+# so one flaky call does not abort the remaining setup, but it only
+# claims success when NOTHING failed.
 
 # PROJECT_NUMBER is set by `. bk` only after successful project validation --
 # and it is exactly what the service-agent emails below are built from.
@@ -32,52 +40,8 @@ step_failed() {
     echo "ERROR: $1 -- see the message above." >&2
 }
 
-# The Datastream service agent must exist and hold its service-agent role
-# BEFORE Lab 1 creates the private connection: on a fresh project the agent
-# is created lazily, and `private-connections create` then fails with
-# PERMISSION_DENIED on the network attachment (verified live). The IAM grant
-# also needs minutes to propagate, and enforcement is not queryable --
-# bk-init already fired all three calls silently in the background at setup
-# time (the real head start); this block is the LOUD, idempotent re-assert,
-# kept first so even a failed background prep still gets maximum
-# propagation time before the create. Residual races are healed by
-# bk-wait-psc in Lab 2. Keep the errors here loud.
-echo "Preparing the Datastream service agent (Lab 1 depends on it) ..."
-gcloud services enable datastream.googleapis.com \
-    || step_failed "enabling the Datastream API failed"
-gcloud beta services identity create --service=datastream.googleapis.com \
-    --project="$PROJECT_ID" >/dev/null \
-    || step_failed "creating the Datastream service identity failed"
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
-    --role="roles/datastream.serviceAgent" --condition=None >/dev/null \
-    || step_failed "granting the Datastream service-agent role failed"
-
 pip install -r content/agenticdata/requirements.txt \
     || step_failed "installing the Python dependencies (pip) failed"
-
-echo "Enabling APIs (idempotent; the tutorial enables these too) ..."
-gcloud services enable \
-    sqladmin.googleapis.com \
-    datastream.googleapis.com \
-    compute.googleapis.com \
-    servicenetworking.googleapis.com \
-    iap.googleapis.com \
-    bigquery.googleapis.com \
-    bigqueryconnection.googleapis.com \
-    dataplex.googleapis.com \
-    datacatalog.googleapis.com \
-    datalineage.googleapis.com \
-    dlp.googleapis.com \
-    geminidataanalytics.googleapis.com \
-    cloudaicompanion.googleapis.com \
-    aiplatform.googleapis.com \
-    storage-component.googleapis.com \
-    serviceusage.googleapis.com \
-    cloudresourcemanager.googleapis.com \
-    iam.googleapis.com \
-    artifactregistry.googleapis.com \
-    || step_failed "enabling the APIs failed"
 
 # Seed data: deterministic synthetic CSVs (the pinned faker from the pip
 # install above is what guarantees identical rows for every participant),
@@ -105,73 +69,10 @@ fi
 gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
     || step_failed "uploading the seed data failed"
 
-# Knowledge Catalog data-quality service account: profile/quality scans in
-# Lab 4 run as this SA (custom execution identity). Creation is idempotent:
-# re-running the bootstrap is the natural novice recovery and must not greet
-# them with an unexplained 'already exists' error.
-DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"
-DQ_SCAN_SA_EMAIL="${DQ_SCAN_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
-if ! gcloud iam service-accounts describe "$DQ_SCAN_SA_EMAIL" >/dev/null 2>&1; then
-    gcloud iam service-accounts create "$DQ_SCAN_SERVICE_ACCOUNT" \
-        --display-name="Knowledge Catalog DQ Service Account" \
-        || step_failed "creating the data-quality service account failed"
-fi
-# A freshly created SA can take a few seconds to become visible to IAM;
-# granting against it too early fails with "does not exist".
-for i in $(seq 1 15); do
-    gcloud iam service-accounts describe "$DQ_SCAN_SA_EMAIL" >/dev/null 2>&1 && break
-    sleep 2
-done
-
-# Roles for the participant. Sandbox users are typically project owners
-# already; the explicit list keeps the stream portable to other setups.
-# --condition=None: a conditional binding anywhere in the project's policy
-# would otherwise make gcloud stop and prompt interactively -- mid-bootstrap,
-# once per role, with the actual question hidden by the stdout redirect.
-declare -a user_roles=(
-    "roles/cloudsql.admin"                      # create/manage the Cymbal instance
-    "roles/datastream.admin"                    # profiles, private connection, stream
-    "roles/compute.admin"                       # VPC, jump VM, firewall, PSC endpoint
-    "roles/iap.tunnelResourceAccessor"          # IAP TCP tunnel to the jump VM
-    "roles/bigquery.admin"                      # datasets, jobs, connections
-    "roles/dataplex.admin"                      # Knowledge Catalog: aspects, scans, glossary
-    "roles/datalineage.admin"                   # lineage graph
-    "roles/aiplatform.user"                     # Gemini calls from ADK agents
-    "roles/geminidataanalytics.dataAgentCreator" # create + chat with data agents
-    "roles/cloudaicompanion.user"               # conversational analytics chat
-    "roles/storage.admin"                       # seed bucket
-    "roles/iam.serviceAccountAdmin"             # create service accounts
-    "roles/iam.serviceAccountUser"              # act as service accounts
-)
-
-for role in "${user_roles[@]}"; do
-    echo "Assigning role $role to $GCP_USERNAME in project $PROJECT_ID..."
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="user:$GCP_USERNAME" --role="$role" --condition=None >>/dev/null \
-        || step_failed "assigning $role to $GCP_USERNAME failed"
-done
-
-# Roles for the data-quality service account.
-declare -a dataquality_roles=(
-    "roles/bigquery.jobUser"
-    "roles/bigquery.dataViewer"
-    "roles/iam.serviceAccountTokenCreator"
-    "roles/iam.serviceAccountUser"
-    "roles/storage.objectViewer"
-)
-
-for role in "${dataquality_roles[@]}"; do
-    echo "Assigning role $role to $DQ_SCAN_SA_EMAIL in project $PROJECT_ID..."
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="serviceAccount:$DQ_SCAN_SA_EMAIL" --role="$role" --condition=None >>/dev/null \
-        || step_failed "assigning $role to $DQ_SCAN_SA_EMAIL failed"
-done
-
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
 # are NOT written here -- they are created by content/agenticdata/bk-init, which
 # `. bk` runs at initialization, before the first tutorial render. This script
-# keeps only the heavy, visible work: APIs, IAM, service accounts, pip, seed
-# data, agy.
+# keeps only the per-user work: pip, seed data, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
 # Seedable: theme and the trusted workshop folders (suppresses the theme and

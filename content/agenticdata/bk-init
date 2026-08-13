@@ -15,15 +15,14 @@ set -eu
 LOCAL="$BK_DIR/vars.local.sh"
 SET_VAR="$BK_DIR/.scripts/bk-set-var"
 
-# One-time, fire-and-forget: prepare the Datastream service agent NOW, at
-# setup time, instead of first thing in bk-bootstrap (Lab 1). Its IAM role is
-# the slowest-propagating piece the stream depends on -- Lab 1's
-# private-connections create lost the propagation race often enough to end up
-# FAILED. Kicked off here, propagation gets a 10-20 minute head start before
-# anything uses it. Backgrounded and silent to keep `. bk` instant (contract
-# above), guarded to run once per project; bk-bootstrap re-asserts all of it
-# loudly and idempotently in Lab 1, so a silent failure here costs nothing --
-# and Lab 2's bk-wait-psc self-heals the residual race either way.
+# One-time, fire-and-forget: prepare the Datastream service agent at setup
+# time. On event projects this is a no-op -- the organizer pre-provisioned it
+# days ahead via .scripts/bk-bootstrap-accounts-agenticdata -- but on
+# self-run/Argolis projects it is the only prep there is, and its IAM role is
+# the slowest-propagating piece the stream depends on (Lab 1's
+# private-connections create lost that race often enough to end up FAILED).
+# Backgrounded and silent to keep `. bk` instant (contract above), guarded to
+# run once per project; Lab 2's bk-wait-psc self-heals the residual race.
 if [ "${BK_DS_AGENT_PREP:-}" != "$PROJECT_ID" ]; then
     "$SET_VAR" --comment "Internal: project the background Datastream agent prep ran for" "$LOCAL" BK_DS_AGENT_PREP "$PROJECT_ID"
     (
