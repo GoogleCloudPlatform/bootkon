@@ -170,8 +170,9 @@ done
 # menu offers Google OAuth or Google Cloud project auth, with no settings key
 # to preselect either (the earlier Gemini-CLI-style auth/permissions keys were
 # dead config). Lab 1 walks participants through the one-time login, using the
-# Google Cloud project option so usage bills to the event project (read from
-# GOOGLE_CLOUD_PROJECT, which bk keeps aligned with PROJECT_ID).
+# Google Cloud project option so usage bills to the event project: agy reports
+# a missing Gemini Enterprise license (expected -- we use the plain project /
+# Vertex path, not GE) and participants type PROJECT_ID at its prompt.
 # Tool approvals follow agy's toolPermission model; the default
 # (request-review) is deliberately left in place, so agy asks before it acts
 # and the review-what-the-agent-does habit stays intact.
