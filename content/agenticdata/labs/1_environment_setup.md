@@ -135,7 +135,7 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 
 ### Meet your co-engineer
 
-`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (theme, trusted workshop folders). One thing it cannot do for you is sign in — that is a one-time step you do now. **Maximize the terminal first** so the whole sign-in dialog fits on screen, then start agy from the repository root (you are already there):
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (trusted workshop folders). One thing it cannot do for you is sign in — that is a one-time step you do now. **Maximize the terminal first** so the whole sign-in dialog fits on screen, then start agy from the repository root (you are already there):
 
 ```bash
 agy
