@@ -128,13 +128,13 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 
 ### Meet your co-engineer
 
-`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (theme, trusted workshop folders). One thing it cannot do for you is sign in — agy authenticates with your **Google account**, not with your Cloud Shell credentials. Start it from the repository root (you are already there):
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (theme, trusted workshop folders). One thing it cannot do for you is sign in — that is a one-time step you do now. **Maximize the terminal first** so the whole sign-in dialog fits on screen, then start agy from the repository root (you are already there):
 
 ```bash
 agy
 ```
 
-On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option: agy then authenticates through your event project (`{{ PROJECT_ID }}`, read from the environment), which is where today's usage belongs. If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac) and sign in as `{{ GCP_USERNAME }}`. Back in the terminal, move down to the token field with **Shift+Down-Arrow** and paste the confirmation code there. Accept the Terms of Service if prompted. This is a one-time step: every later `agy` start lands straight at the prompt.
+On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option: agy then authenticates through your event project (`{{ PROJECT_ID }}`, read from the environment), which is where today's usage belongs. If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
 
 agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
 
