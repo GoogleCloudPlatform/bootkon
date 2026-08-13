@@ -97,13 +97,19 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 
 ### Meet your co-engineer
 
-`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured it: your project (`{{ PROJECT_ID }}`), the location, and the workshop folders it may work in. **Maximize the terminal first** so any sign-in dialog fits on screen, then start agy from the repository root (you are already there):
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (project, location, trusted workshop folders). One thing it cannot do for you is sign in — that is a one-time step you do now. **Maximize the terminal first** so the whole sign-in dialog fits on screen, then start agy from the repository root (you are already there):
 
 ```bash
 agy
 ```
 
-The first start is a one-time handshake: accept the Terms of Service if prompted, and if a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. (Should agy still ask how you want to sign in, choose **Google Cloud project** — your project `{{ PROJECT_ID }}` is already configured.) Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are in.
+On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option. agy will tell you your account has **no license for Gemini Enterprise** — that is expected, we don't use Gemini Enterprise today: if it asks for a project, enter your event project ID (it may already be pre-filled from the configuration):
+
+```bash
+{{ PROJECT_ID }}
+```
+
+If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
 
 agy is configured to work **without per-command approval prompts** today, so authoring flows uninterrupted — which makes reviewing what it did (with `/diff`) genuinely *your* job. You direct, it types, you verify.
 

@@ -94,15 +94,15 @@ gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
 # Tool approvals follow agy's toolPermission model; the default
 # (request-review) is deliberately left in place, so agy asks before it acts
 # and the review-what-the-agent-does habit stays intact.
-# The gcp block pre-answers the first-run sign-in: a completed login
-# persists exactly {"gcp": {"project", "location"}} in settings.json
-# (verified 2026-08-13 by diffing a logged-in devstar home), so seeding it
-# skips the auth menu, the Gemini-Enterprise notice, and the project/location
-# prompts. Only the per-account OAuth token cannot be seeded -- a login URL
-# may still appear once. toolPermission always-proceed drops the per-command
-# approval prompts (event-time decision: reviewing with /diff stays the
-# participant's job; Lab 10's read-only co-responder constrains agy through
-# its prompt instead).
+# The gcp block mirrors what a completed login persists in settings.json
+# ({"gcp": {"project", "location"}}, verified 2026-08-13 by diffing a
+# logged-in devstar home). It does NOT skip the sign-in dialog (tested: the
+# auth menu still appears -- it is tied to the missing per-account OAuth
+# token, which cannot be seeded), but it pre-fills project/location, and
+# Lab 1 walks through the dialog. toolPermission always-proceed drops the
+# per-command approval prompts (event-time decision: reviewing with /diff
+# stays the participant's job; Lab 10's read-only co-responder constrains
+# agy through its prompt instead).
 AGY_DIR=~/.gemini/antigravity-cli
 if [ ! -f "$AGY_DIR/settings.json" ]; then
     echo "Pre-configuring Antigravity CLI (agy) ..."
