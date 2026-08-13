@@ -75,13 +75,38 @@ terraform -chdir="$TF_DIR" init -input=false -reconfigure \
     -backend-config="bucket=$BUCKET" -backend-config="prefix=bootkon-prep" >/dev/null \
     || { echo "ERROR: terraform init for $PROJECT failed." >&2; exit 1; }
 
-if terraform -chdir="$TF_DIR" apply -input=false -auto-approve \
-    -var "project_id=$PROJECT" -var "username=$ACCOUNT" -var "region=$REGION"; then
-    echo "Project $PROJECT prepared."
-else
-    echo "ERROR: terraform apply for $PROJECT failed -- see above. Re-running is" >&2
-    echo "safe. A 409/alreadyExists usually means the project was prepped by the" >&2
-    echo "old gcloud-based flow: use a fresh project, or import the existing" >&2
-    echo "resources into the state." >&2
-    exit 1
+tf_apply() {
+    terraform -chdir="$TF_DIR" apply -input=false -auto-approve \
+        -var "project_id=$PROJECT" -var "username=$ACCOUNT" -var "region=$REGION"
+}
+
+if ! tf_apply; then
+    # The one known flaky failure: the Datastream private connection loses
+    # the IAM propagation race despite the time_sleep buffer and ends up
+    # FAILED ("Failed to create PrivateConnection. An unknown error
+    # occurred"). The proven remedy is delete + retry: by now the role has
+    # long propagated, and the retry reliably succeeds (the time_sleep is
+    # already in the state, so the second apply goes straight to the
+    # create). Anything else stays a hard error.
+    psc_state="$(gcloud datastream private-connections describe cymbal-psc \
+        --location="$REGION" --project="$PROJECT" --format='value(state)' 2>/dev/null || true)"
+    if [ "$psc_state" = "FAILED" ] || [ "$psc_state" = "FAILED_TO_DELETE" ]; then
+        echo "Private connection ended $psc_state (IAM propagation race) -- deleting it and retrying once ..."
+        gcloud datastream private-connections delete cymbal-psc \
+            --location="$REGION" --project="$PROJECT" --quiet || true
+        # Deletion is asynchronous; wait until it is really gone, otherwise
+        # the re-create collides with the name.
+        while gcloud datastream private-connections describe cymbal-psc \
+            --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; do
+            sleep 10
+        done
+        tf_apply || { echo "ERROR: retry apply for $PROJECT failed -- see above." >&2; exit 1; }
+    else
+        echo "ERROR: terraform apply for $PROJECT failed -- see above. Re-running is" >&2
+        echo "safe. A 409/alreadyExists usually means the project was prepped by the" >&2
+        echo "old gcloud-based flow: use a fresh project, or import the existing" >&2
+        echo "resources into the state." >&2
+        exit 1
+    fi
 fi
+echo "Project $PROJECT prepared."
