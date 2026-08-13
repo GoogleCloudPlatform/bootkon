@@ -51,6 +51,18 @@ pip install -q --no-warn-conflicts --disable-pip-version-check \
     -r content/agenticdata/requirements.txt \
     || step_failed "installing the Python dependencies (pip) failed"
 
+# The Dataform CLI for Lab 3 (open-source npm package; pinned to the major
+# the labs are written against). npm blocks dependency lifecycle scripts by
+# default nowadays; protobufjs (a @dataform/cli dependency) needs its
+# postinstall, so allow exactly that one (verified live). loglevel=error
+# keeps npm's funding/audit chatter out of the bootstrap output; real
+# failures still print.
+echo "Installing the Dataform CLI ..."
+npm config set allow-scripts=protobufjs --location=user \
+    || step_failed "configuring npm (allow-scripts) failed"
+npm install -g @dataform/cli@3 --no-fund --no-audit --loglevel=error \
+    || step_failed "installing the Dataform CLI (npm) failed"
+
 # Seed data: deterministic synthetic CSVs (the pinned faker from the pip
 # install above is what guarantees identical rows for every participant),
 # staged in GCS for Lab 2's server-side import. The .complete marker is
@@ -80,7 +92,7 @@ gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
 # are NOT written here -- they are created by content/agenticdata/bk-init, which
 # `. bk` runs at initialization, before the first tutorial render. This script
-# keeps only the per-user work: pip, seed data, agy.
+# keeps only the per-user work: pip, the Dataform CLI, seed data, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
 # Seedable: theme and the trusted workshop folders (suppresses the theme and

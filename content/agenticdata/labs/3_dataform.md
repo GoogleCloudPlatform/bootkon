@@ -25,13 +25,7 @@ Learn more:
 
 ### Set up the project
 
-Install the CLI (takes about a minute):
-
-```bash
-npm install -g @dataform/cli@3
-```
-
-The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). **This folder is your home for the rest of this lab** — change into it once, point the project at yours, and set up credentials:
+The Dataform CLI is already on your machine — the Lab 1 bootstrap installed it. The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). **This folder is your home for the rest of this lab** — change into it once, point the project at yours, and set up credentials:
 
 ```bash
 cd ~/bootkon/content/agenticdata/src/dataform

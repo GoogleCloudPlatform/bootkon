@@ -51,7 +51,7 @@ content/agenticdata/bk-prep-project
 
 ### Run the bootstrap
 
-Execute the following script. It installs Python dependencies, generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. (Everything project-bound — APIs, IAM roles, service accounts — {% if ON_ARGOLIS %}was covered by the prep step above{% else %}was already provisioned for your event project ahead of time; that's why the API step above was instantly green{% endif %}.) It runs for about three minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
+Execute the following script. It installs Python dependencies and the Dataform CLI (you'll meet it in Lab 3), generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. (Everything project-bound — APIs, IAM roles, service accounts — {% if ON_ARGOLIS %}was covered by the prep step above{% else %}was already provisioned for your event project ahead of time; that's why the API step above was instantly green{% endif %}.) It runs for about three minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
