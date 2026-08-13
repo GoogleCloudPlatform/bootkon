@@ -17,14 +17,15 @@
 # fork of bk-bootstrap-accounts with the same CSV contract (username in the
 # first column; project = PREFIX + numeric suffix of the username).
 #
-# For every CSV row it runs content/agenticdata/bk-prep-project, the single
-# source of truth for the per-project prep (APIs, Datastream service agent,
-# participant roles, data-quality service account). Run it DAYS before the
-# event and no IAM/API propagation race can ever reach a participant; on
-# Argolis/self-run setups participants run bk-prep-project themselves in
-# Lab 1 instead. bk-bootstrap keeps only the per-user-home work.
+# For every CSV row it runs content/agenticdata/bk-prep-project (the single
+# per-project entry point, Terraform-backed with per-project state), IN
+# PARALLEL: the first project runs alone to warm the Terraform plugin cache,
+# then BK_PREP_PARALLEL workers (default 8) fan out over the rest. Per-
+# project output goes to a log directory; the console shows one line per
+# project plus a red/green summary. Run it DAYS before the event and no
+# IAM/API propagation race can ever reach a participant.
 #
-# Failures print loudly -- rerun until everything is green (safe to repeat).
+# Rerun-safe: re-running preps only what is missing (idempotent applies).
 
 LOCAL_CSV_FILE="$1"
 PROJECT_ID_PREFIX="$2"
@@ -39,6 +40,7 @@ if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
     echo "Example: $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
     echo ""
     echo "The CSV file needs to have the username in the first column."
+    echo "Parallelism: BK_PREP_PARALLEL=<n> (default 8)."
     exit 1
 fi
 
@@ -49,34 +51,60 @@ if [ ! -x "$PREP" ]; then
     exit 1
 fi
 
-num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
-echo "Preparing $num_users agenticdata projects from the CSV file."
-echo ""
+PARALLEL="${BK_PREP_PARALLEL:-8}"
+LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-prep-logs.XXXXXX")"
 
-FAILED_PROJECTS=()
-# Process substitution instead of a pipe: the loop must run in THIS shell so
-# the failure list survives it. The `|| [ ... ]` keeps the final row alive
-# when the file lacks a trailing newline; the \r strip guards against CRLF
-# endings from spreadsheet exports.
+# Collect "username project" pairs first. The `|| [ ... ]` keeps the final
+# row alive when the file lacks a trailing newline; the \r strip guards
+# against CRLF endings from spreadsheet exports.
+ROWS=()
 while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
     USERNAME=${fields[0]%$'\r'}
     [ -z "$USERNAME" ] && continue
     NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
-    PROJECT_ID="${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}"
-    echo "=== $USERNAME -> $PROJECT_ID"
-    if "$PREP" "$PROJECT_ID" "$USERNAME"; then
-        echo -e "${GREEN}$PROJECT_ID prepared.${NC}"
-    else
-        echo -e "${RED}$PROJECT_ID finished with errors -- see above.${NC}"
-        FAILED_PROJECTS+=("$PROJECT_ID")
-    fi
-    echo ""
+    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
 done < <(tail -n +2 "$LOCAL_CSV_FILE")
 
-if [ ${#FAILED_PROJECTS[@]} -eq 0 ]; then
+if [ ${#ROWS[@]} -eq 0 ]; then
+    echo "No usernames found in $LOCAL_CSV_FILE."
+    exit 1
+fi
+echo "Preparing ${#ROWS[@]} agenticdata project(s), up to $PARALLEL in parallel."
+echo "Per-project logs: $LOG_DIR"
+echo ""
+
+run_one() {
+    local username="$1" project="$2"
+    if "$PREP" "$project" "$username" >"$LOG_DIR/$project.log" 2>&1; then
+        echo -e "${GREEN}$project prepared${NC} ($username)"
+    else
+        touch "$LOG_DIR/$project.failed"
+        echo -e "${RED}$project FAILED${NC} ($username) -- log: $LOG_DIR/$project.log"
+        return 1
+    fi
+}
+export -f run_one
+export PREP LOG_DIR RED GREEN NC
+
+# First project alone: warms the shared Terraform plugin cache, so the
+# parallel wave below does not race the provider download.
+set -- ${ROWS[0]}
+run_one "$1" "$2"
+if [ ${#ROWS[@]} -gt 1 ]; then
+    printf '%s\n' "${ROWS[@]:1}" | xargs -P "$PARALLEL" -L1 bash -c 'run_one "$@"' _
+fi
+
+echo ""
+FAILED=("$LOG_DIR"/*.failed)
+if [ ! -e "${FAILED[0]}" ]; then
     echo "All projects prepared."
 else
-    echo -e "${RED}${#FAILED_PROJECTS[@]} project(s) had errors: ${FAILED_PROJECTS[*]}${NC}" >&2
-    echo -e "${RED}Fix the causes above and rerun this script (safe to repeat).${NC}" >&2
+    names=()
+    for f in "${FAILED[@]}"; do
+        f="$(basename "$f")"
+        names+=("${f%.failed}")
+    done
+    echo -e "${RED}${#names[@]} project(s) had errors: ${names[*]}${NC}" >&2
+    echo -e "${RED}Check the logs in $LOG_DIR, fix the causes, and rerun this script (safe to repeat).${NC}" >&2
     exit 1
 fi

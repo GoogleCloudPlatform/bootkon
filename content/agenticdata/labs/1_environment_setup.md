@@ -57,36 +57,11 @@ content/agenticdata/bk-bootstrap
 
 Your database passwords were already generated during setup and live in `vars.local.sh` — the commands below use them as `$BK_DB_PASSWORD`, and **every terminal picks them up automatically**.
 
-### Create the network path
+### The network path
 
-Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC). First, create a VPC and a subnet:
+Our database will have **no public IP**. Instead, Datastream will reach it through Private Service Connect (PSC) — and the network for that is already in your project{% if ON_ARGOLIS %} (created by the prep step above){% endif %}: the VPC `cymbal-vpc` with subnet `cymbal-subnet` (`10.10.0.0/24`), the reserved address `10.10.0.5` — in Lab 2 that address becomes the door to your database — and the network attachment `cymbal-attachment`. Take a look at [VPC networks](https://console.cloud.google.com/networking/networks/list) to see them.
 
-```bash
-gcloud compute networks create cymbal-vpc --subnet-mode=custom
-```
-
-```bash
-gcloud compute networks subnets create cymbal-subnet \
-    --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
-```
-
-Reserve `10.10.0.5` right away — in Lab 2 this address becomes the door to your database. Reserving it **now** matters: Datastream's private connection (kicked off below) places a network interface into this same subnet and grabs a free IP for it — reserving first guarantees it cannot take the one your database endpoint needs:
-
-```bash
-gcloud compute addresses create cymbal-endpoint-ip --region={{ REGION }} \
-    --subnet=cymbal-subnet --addresses=10.10.0.5
-```
-
-Datastream connects into your VPC through a **network attachment** — the entry door for its PSC interface:
-
-```bash
-gcloud compute network-attachments create cymbal-attachment --region={{ REGION }} \
-    --connection-preference=ACCEPT_AUTOMATIC --subnets=cymbal-subnet
-```
-
-Note: `ACCEPT_AUTOMATIC` keeps this workshop simple. In production you would use `ACCEPT_MANUAL` with a `--producer-accept-list`, discovering the Datastream tenant project via `gcloud datastream private-connections create --validate-only`.
-
-So what did you just build? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** you created is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
+So what is this setup? **Private Service Connect** is Google Cloud's way of exposing a service across VPC boundaries without peering entire networks or using public IPs: the producer (here: your Cloud SQL instance) publishes a *service attachment*, and consumers plug an *endpoint* into it — traffic stays on Google's backbone, and each side only sees the single socket it was given. The **network attachment** is the reverse construct: it lets a Google-managed producer (Datastream) place a network interface *into* your VPC. You will connect both halves in Lab 2.
 
 Learn more:
 - [Private Service Connect](https://docs.cloud.google.com/vpc/docs/private-service-connect)

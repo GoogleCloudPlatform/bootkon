@@ -19,3 +19,8 @@ pipeline.json
 .df-credentials.json
 content/agenticdata/seed_data/
 seed_data/
+
+# Terraform working dirs and state (the lock file IS committed)
+.terraform/
+*.tfstate
+*.tfstate.*
