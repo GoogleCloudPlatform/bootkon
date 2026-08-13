@@ -63,6 +63,19 @@ npm config set allow-scripts=protobufjs --location=user \
 npm install -g @dataform/cli@3 --no-fund --no-audit --loglevel=error \
     || step_failed "installing the Dataform CLI (npm) failed"
 
+# Pre-wire Lab 3's Dataform project: render workflow_settings.yaml from the
+# committed template (both the rendered file and the credentials are
+# git-ignored, so the checkout stays clean and mid-event content fixes can
+# still fast-forward pull) -- the lab then starts at the authoring, not at
+# plumbing. Overwriting on re-runs is deliberate: it heals a broken edit.
+echo "Configuring the Dataform project ..."
+sed "s/PROJECT_ID_PLACEHOLDER/${PROJECT_ID}/" \
+    content/agenticdata/src/dataform/workflow_settings.template.yaml \
+    > content/agenticdata/src/dataform/workflow_settings.yaml \
+    || step_failed "writing workflow_settings.yaml failed"
+echo "{\"projectId\": \"${PROJECT_ID}\", \"location\": \"US\"}" > content/agenticdata/src/dataform/.df-credentials.json \
+    || step_failed "writing the Dataform credentials file failed"
+
 # Seed data: deterministic synthetic CSVs (the pinned faker from the pip
 # install above is what guarantees identical rows for every participant),
 # staged in GCS for Lab 2's server-side import. The .complete marker is

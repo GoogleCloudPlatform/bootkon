@@ -25,15 +25,13 @@ Learn more:
 
 ### Set up the project
 
-The Dataform CLI is already on your machine — the Lab 1 bootstrap installed it. The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). **This folder is your home for the rest of this lab** — change into it once, point the project at yours, and set up credentials:
+The Dataform CLI is already on your machine, and the project is pre-wired — the Lab 1 bootstrap installed the CLI, pointed the settings at your project, and wrote the credentials file. The starter project ships with the repository — you work on it directly in `content/agenticdata/src/dataform` (settings + bronze source declarations only; the models are agy's job). **This folder is your home for the rest of this lab** — change into it once:
 
 ```bash
 cd ~/bootkon/content/agenticdata/src/dataform
-sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" workflow_settings.yaml
-echo "{\"projectId\": \"{{ PROJECT_ID }}\", \"location\": \"US\"}" > .df-credentials.json
 ```
 
-The credentials file tells the CLI to use your logged-in identity (Application Default Credentials) against BigQuery — no keys involved. Check that the `sed` worked by opening <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/workflow_settings.yaml">workflow_settings.yaml</walkthrough-editor-open-file> — `defaultProject` should now be `{{ PROJECT_ID }}`. Then have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/definitions/sources.js">sources.js</walkthrough-editor-open-file>: it declares the six bronze tables so every model can reference them with `${ref(...)}`, which is what builds the dependency graph — and, later, your lineage.
+Two files are worth a look before you brief anyone. <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/workflow_settings.yaml">workflow_settings.yaml</walkthrough-editor-open-file> (generated for you from the template by the bootstrap) — `defaultProject` should read `{{ PROJECT_ID }}`, and the git-ignored `.df-credentials.json` next to it tells the CLI to use your logged-in identity (Application Default Credentials) against BigQuery — no keys involved. And <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/definitions/sources.js">sources.js</walkthrough-editor-open-file>: it declares the six bronze tables so every model can reference them with `${ref(...)}`, which is what builds the dependency graph — and, later, your lineage.
 
 ### Brief your co-engineer
 

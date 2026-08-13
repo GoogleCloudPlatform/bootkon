@@ -1,9 +1,0 @@
-# Cymbal medallion pipeline -- Dataform Core project settings.
-# PROJECT_ID_PLACEHOLDER is replaced in the lab:
-#   sed -i "s/PROJECT_ID_PLACEHOLDER/$PROJECT_ID/" workflow_settings.yaml
-# Keep dataformCoreVersion aligned with the pinned @dataform/cli major version.
-defaultProject: PROJECT_ID_PLACEHOLDER
-defaultLocation: US
-defaultDataset: cymbal_silver
-defaultAssertionDataset: cymbal_assertions
-dataformCoreVersion: 3.0.0

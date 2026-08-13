@@ -1,0 +1,10 @@
+# Cymbal medallion pipeline -- Dataform Core project settings TEMPLATE.
+# bk-bootstrap renders it to workflow_settings.yaml (git-ignored) with
+# PROJECT_ID_PLACEHOLDER filled in -- the checkout stays clean that way, so
+# mid-event content fixes can still fast-forward pull.
+# Keep dataformCoreVersion aligned with the pinned @dataform/cli major version.
+defaultProject: PROJECT_ID_PLACEHOLDER
+defaultLocation: US
+defaultDataset: cymbal_silver
+defaultAssertionDataset: cymbal_assertions
+dataformCoreVersion: 3.0.0
