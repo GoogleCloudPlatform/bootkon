@@ -149,7 +149,7 @@ if [ ! -f "$BK_DIR/vars.local.sh" ]; then
     echo -e "       /\__/\ \__O (__"
     echo -e "      (--/\--)    \__/      Setting you up in project ${YELLOW}${PROJECT_ID}${NC}."
     echo -e "      _)(  )(_              (Wrong project? Switch it in the selector at the"
-    echo -e '      `---''---`'"              top of this window and paste the command again.)"
+    echo -e '      `---''---`'"              top, restart Cloud Shell, and paste it again.)"
     echo
     if [ -z "$BK_REQ_MY_NAME" ] && [ -t 0 ]; then
         read -r -p "What should I call you? (first name, or press Enter to skip) " BK_REQ_MY_NAME
@@ -378,7 +378,8 @@ if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
     else
         err "Your account has no access to project $PROJECT_ID."
         err "Pick your event project in the project selector at the top of the"
-        err "Cloud Shell window, then run '. bk' again."
+        err "Cloud Shell window, then close Cloud Shell completely, open it"
+        err "again, and run '. bk'."
     fi
     err "Afterwards, type bk-start to open the tutorial."
     return 1

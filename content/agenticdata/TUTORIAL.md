@@ -44,7 +44,9 @@ If both are correct, you are done — press the `START` button below to get star
 terminal to reopen them.)
 
 Wrong project? Switch to your event project in the Cloud Shell project
-selector at the top of the window, then refresh this page:
+selector at the top of the window, then close Cloud Shell completely and
+open it again (the running session does not pick up the new project).
+Afterwards, refresh this page:
 
 ```bash
 . bk && bk-start
