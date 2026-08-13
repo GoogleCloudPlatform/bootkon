@@ -16,6 +16,12 @@
 # and it is exactly what the service-agent emails below are built from.
 [[ -z "$PROJECT_NUMBER" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
 
+# Pin gcloud to the persisted project for every command below: Cloud Shell
+# ties the gcloud config to the project picker and may leave it unset ("The
+# required property [project] is not currently set"), while PROJECT_ID from
+# vars.local.sh is always there. The env var takes priority over the config.
+export CLOUDSDK_CORE_PROJECT="${PROJECT_ID:?PROJECT_ID is not set. Run '. bk' or open a new terminal.}"
+
 # The lab invokes this script by relative path from the repo root, but a fresh
 # tab starts in $HOME -- pin the cwd so the relative paths below always work.
 cd "$BK_DIR" || { echo "ERROR: could not enter $BK_DIR -- please run '. bk' first." >&2; exit 1; }

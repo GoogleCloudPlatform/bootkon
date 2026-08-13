@@ -375,6 +375,10 @@ if [ -f "\$BK_DIR/vars.local.sh" ]; then
         echo "bootkon: open it in the editor, fix the marked line, then run: . bk" >&2
     fi
 fi
+# gcloud takes the project from this env var with priority over its config --
+# Cloud Shell ties the config to the project picker and may blank it, so pin
+# every terminal to the persisted project instead.
+[ -n "\$PROJECT_ID" ] && export CLOUDSDK_CORE_PROJECT="\$PROJECT_ID"
 # <<< bootkon <<<
 EOF
 
@@ -387,6 +391,11 @@ local _active_project="$(gcloud config get-value project 2>/dev/null || true)"
 if [ "$_active_project" != "$PROJECT_ID" ]; then
     gcloud config set project "$PROJECT_ID" --quiet 2>/dev/null || true
 fi
+# Belt to the config's suspenders: the env var overrides the config, so THIS
+# session is pinned even if Cloud Shell blanks the config again (it ties the
+# config to the project picker). New terminals get the same export from the
+# ~/.bashrc block.
+export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
 
 # Validate the project now (it is guaranteed non-empty: checked before the
 # clone) -- this also triggers the "Authorize Cloud Shell" popup at setup
