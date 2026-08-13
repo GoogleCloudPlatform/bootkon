@@ -93,9 +93,15 @@ terraform -chdir="$TF_DIR" init -input=false -reconfigure \
     -backend-config="bucket=$BUCKET" -backend-config="prefix=bootkon-prep" >/dev/null \
     || { echo "ERROR: terraform init for $PROJECT failed." >&2; exit 1; }
 
+# The apply output is captured (across the retry too) to detect whether THIS
+# run freshly created the SQL instance -- only then is it parked below.
+APPLY_LOG="$TF_DATA_DIR/last-apply.log"
+: > "$APPLY_LOG"
 tf_apply() {
     terraform -chdir="$TF_DIR" "$1" -input=false -auto-approve \
-        -var "project_id=$PROJECT" -var "username=$ACCOUNT" -var "region=$REGION"
+        -var "project_id=$PROJECT" -var "username=$ACCOUNT" -var "region=$REGION" \
+        2>&1 | tee -a "$APPLY_LOG"
+    return "${PIPESTATUS[0]}"
 }
 
 if [ "$MODE" = "destroy" ]; then
@@ -141,4 +147,15 @@ if ! tf_apply apply; then
         exit 1
     fi
 fi
+
+# Park a FRESHLY built instance (the API refuses to create one stopped):
+# storage-only cost until Lab 1 wakes it. Gated on this run's apply output,
+# so a re-prep never stops an instance the participant already started.
+if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG"; then
+    echo "Parking the freshly built cymbal-oltp (stopped until Lab 1 wakes it) ..."
+    gcloud sql instances patch cymbal-oltp --activation-policy=NEVER \
+        --project="$PROJECT" --quiet >/dev/null 2>&1 \
+        || echo "WARNING: could not park cymbal-oltp -- it stays running (~\$1.70/day)." >&2
+fi
+
 echo "Project $PROJECT prepared in $((SECONDS/60))m$((SECONDS%60))s."

@@ -194,13 +194,17 @@ resource "google_compute_instance" "jump" {
 # enabled at creation time (the CDC prerequisite -- set here so the instance
 # boots with it and never needs a flag-change restart), PSC instead of a
 # public IP, and a deliberately small machine (CDC reads the log, it does
-# not stress the database). Created STOPPED (activation_policy NEVER): the
-# prep can then run days ahead at storage-only cost (~$0.06/day instead of
-# ~$1.70/day); Lab 1 has the participant start the instance and take
-# ownership by setting their own BK_DB_PASSWORD. The ignore_changes below
-# is load-bearing -- without it a later re-prep would stop a started
-# instance mid-event. This is the slowest build of the prep (10-15
-# minutes); it runs in parallel with the private connection above.
+# not stress the database). The instance is PARKED STOPPED between prep and
+# event (storage-only cost, ~$0.06/day instead of ~$1.70/day; Lab 1 wakes
+# it and the participant takes ownership with their own BK_DB_PASSWORD) --
+# but the API refuses to CREATE an instance with activation_policy NEVER
+# ("This operation is not valid for this instance", verified live), so it
+# is created running and bk-prep-project stops it right after a fresh
+# creation. The ignore_changes below is load-bearing twice over: without
+# it a re-apply would flip the parked instance back to ALWAYS (config
+# default) or, before Lab 1, a drifted plan could stop a started one.
+# This is the slowest build of the prep (10-15 minutes); it runs in
+# parallel with the private connection above.
 resource "random_password" "sql_root" {
   length  = 24
   special = false
@@ -218,7 +222,6 @@ resource "google_sql_database_instance" "oltp" {
     tier              = "db-custom-1-3840"
     disk_size         = 10
     availability_type = "ZONAL"
-    activation_policy = "NEVER"
 
     database_flags {
       name  = "cloudsql.logical_decoding"
@@ -239,7 +242,8 @@ resource "google_sql_database_instance" "oltp" {
   }
 
   lifecycle {
-    # Lab 1 flips the instance to ALWAYS; never flip it back on re-applies.
+    # The wrapper parks the instance (NEVER) after creation, Lab 1 wakes it
+    # (ALWAYS); re-applies must never touch the policy in either direction.
     ignore_changes = [settings[0].activation_policy]
   }
 
