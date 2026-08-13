@@ -111,7 +111,7 @@ On the first run, agy asks how you want to sign in — choose the **Google Cloud
 
 If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
 
-agy is configured to work **without per-command approval prompts** today, so authoring flows uninterrupted — which makes reviewing what it did (with `/diff`) genuinely *your* job. You direct, it types, you verify.
+The everyday commands agy needs today (file exploration, `dataform compile`, Python checks) are **pre-approved**, so authoring flows uninterrupted — but anything that would touch your cloud resources still asks you first. That split is deliberate: agy types, you review (with `/diff`), and the cloud stays your call.
 
 ### Let agy explain what just happened
 
