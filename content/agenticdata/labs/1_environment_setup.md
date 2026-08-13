@@ -128,15 +128,15 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 
 ### Meet your co-engineer
 
-`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` just pre-configured it for you: it signs in with your ambient Cloud Shell credentials and reads your project (`{{ PROJECT_ID }}`) and `global` location from the environment — so there is no login wizard to click through. Start it from the repository root (you are already there):
+`agy` (Antigravity CLI) is already installed in Cloud Shell, and `bk-bootstrap` pre-configured its basics (theme, trusted workshop folders). One thing it cannot do for you is sign in — agy authenticates with your **Google account**, not with your Cloud Shell credentials. Start it from the repository root (you are already there):
 
 ```bash
 agy
 ```
 
-On a very first run it may ask you to accept the Terms of Service — do so if prompted; otherwise you land straight at the agy prompt.
+On the first run, choose **Google OAuth** when asked how to sign in: agy prints a login URL — open it, sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code back into the terminal. Accept the Terms of Service if prompted. This is a one-time step: every later `agy` start lands straight at the prompt.
 
-`bk-bootstrap` also tuned agy's permissions for you: it **auto-approves file edits** in the workshop folders (so authoring flows without a prompt on every file), but still **asks before running any command** — so you stay in control of anything that touches your cloud resources. Reviewing what agy did (with `/diff`) stays your job.
+agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
 
 ### Let agy explain what just happened
 

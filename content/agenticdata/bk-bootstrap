@@ -164,44 +164,27 @@ done
 # keeps only the heavy, visible work: APIs, IAM, service accounts, pip, seed
 # data, agy.
 
-# Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell
-# and authenticates with the ambient Cloud Shell credentials (ADC); it reads
-# the project from GOOGLE_CLOUD_PROJECT (Cloud Shell sets it to the active
-# project) and the location from GOOGLE_CLOUD_LOCATION (written above). Seeding
-# settings.json suppresses the first-run wizard's
-# auth, theme and workspace-trust prompts so the labs start clean.
+# Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
+# Seedable: theme and the trusted workshop folders (suppresses the theme and
+# workspace-trust prompts). NOT seedable: authentication -- agy signs in with a
+# Google account via OAuth (login URL + code; there is no ADC/cloud-shell auth
+# type, and the earlier Gemini-CLI-style auth/permissions keys were dead
+# config), so Lab 1 walks participants through the one-time login on the first
+# `agy` start. Tool approvals follow agy's toolPermission model; the default
+# (request-review) is deliberately left in place, so agy asks before it acts
+# and the review-what-the-agent-does habit stays intact.
 AGY_DIR=~/.gemini/antigravity-cli
 if [ ! -f "$AGY_DIR/settings.json" ]; then
     echo "Pre-configuring Antigravity CLI (agy) ..."
     mkdir -p "$AGY_DIR"
-    # permissions.allow auto-approves the read/write file tools so agy can
-    # author the Dataform models and agents without a prompt on every file.
-    # Shell execution is deliberately NOT in the allow list: agy still asks
-    # before running any command (e.g. `dataform compile`, and especially any
-    # gcloud/bq/rm) -- so the review-what-the-agent-does habit stays intact.
-    # (Tool names follow the Gemini CLI schema agy inherits; verify them via
-    # /permissions in a smoke test and adjust if a name differs.)
     cat > "$AGY_DIR/settings.json" <<JSON
 {
   "colorScheme": "dark",
-  "security": { "auth": { "selectedType": "cloud-shell" } },
-  "selectedAuthType": "cloud-shell",
   "trustedWorkspaces": [
     "$BK_DIR",
     "$BK_DIR/content/agenticdata/src/dataform",
     "$BK_DIR/content/agenticdata/src/adk"
-  ],
-  "permissions": {
-    "allow": [
-      "read_file",
-      "read_many_files",
-      "list_directory",
-      "glob",
-      "search_file_content",
-      "write_file",
-      "replace"
-    ]
-  }
+  ]
 }
 JSON
 else
