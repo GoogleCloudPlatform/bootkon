@@ -147,7 +147,7 @@ On the first run, agy asks how you want to sign in — choose the **Google Cloud
 {{ PROJECT_ID }}
 ```
 
-If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
+If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted and choose the Google Cloud Location `global`. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
 
 agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
 
