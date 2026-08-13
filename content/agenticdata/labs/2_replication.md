@@ -58,8 +58,6 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
 
 Open <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/schema.sql">schema.sql</walkthrough-editor-open-file> — notice every table has a primary key (Datastream's merge mode needs them) and there are deliberately no foreign keys.
 
-**Prefer the console?** The SQL steps of this lab also work in **Cloud SQL Studio**, the query editor built into the console — as a replacement for the psql commands, not on top of them (running the same DDL twice just earns you an *already exists* error). Open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio), sign in to database `cymbal` as user `postgres` with password `{{ BK_DB_PASSWORD }}`, paste the contents of `schema.sql` into the editor and hit **Run**. Studio replaces your keyboard, not your tunnel — keep terminal 2 open either way: the simulator below and the Lab 6 concierge go through it. (And if Studio refuses to connect to your PSC-only instance, no drama — the psql path works everywhere.)
-
 Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel. First, look up the instance's service account (every Cloud SQL instance acts as its own Google-managed identity):
 
 ```bash
@@ -83,7 +81,17 @@ for t in customers products orders order_items payments reviews; do
 done
 ```
 
-This takes about two to three minutes for all six tables. While it runs, read the next section — but don't execute it yet.
+This takes about two to three minutes for all six tables. While it runs, read ahead — but execute the next sections only once the import finished.
+
+### Verify in the console
+
+Time to see your data through the console's eyes: open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio), sign in to database `cymbal` as user `postgres` with password `{{ BK_DB_PASSWORD }}`, and run:
+
+```sql
+SELECT COUNT(*) AS total_orders FROM cymbal.orders;
+```
+
+Half a million orders — Cymbal's production history, now living in **your** database. Expand the table tree on the left for the other five tables. (Studio is the console's window into the instance; your tunnel stays the pipe for everything else today.)
 
 ### Prepare logical replication
 
@@ -95,23 +103,6 @@ Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/d
 PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
     -v ds_password="{{ BK_DS_PASSWORD }}" \
     -f content/agenticdata/src/datastream/replication_setup.sql
-```
-
-**Prefer the console?** If you took the Cloud SQL Studio route, run the same statements there **instead of** the psql command above (it's `replication_setup.sql` with the psql variable replaced by your generated Datastream password) — first this batch:
-
-```sql
-ALTER USER postgres WITH REPLICATION;
-CREATE USER datastream_user WITH REPLICATION IN ROLE cloudsqlsuperuser LOGIN PASSWORD '{{ BK_DS_PASSWORD }}';
-GRANT USAGE ON SCHEMA cymbal TO datastream_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA cymbal TO datastream_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA cymbal GRANT SELECT ON TABLES TO datastream_user;
-CREATE PUBLICATION cymbal_pub FOR ALL TABLES;
-```
-
-Then — still in Studio, and only if you skipped the psql command — create the replication slot as its **own** run (slot creation refuses to share a transaction with writes, and being a `SELECT`, it returns a row: your visible confirmation):
-
-```sql
-SELECT PG_CREATE_LOGICAL_REPLICATION_SLOT('cymbal_slot', 'pgoutput');
 ```
 
 ### Create the bronze dataset
@@ -245,7 +236,7 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
     -c "UPDATE cymbal.customers SET country = 'Iceland', updated_at = now() WHERE customer_id = 42;"
 ```
 
-(Cloud SQL Studio works for this `UPDATE` too, if that's been your route.)
+(Cloud SQL Studio works for this `UPDATE` too, if you still have it open from the verify step.)
 
 And in BigQuery (give it a minute or two):
 
