@@ -60,12 +60,22 @@ Open <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/sch
 
 **Prefer the console?** The SQL steps of this lab also work in **Cloud SQL Studio**, the query editor built into the console — as a replacement for the psql commands, not on top of them (running the same DDL twice just earns you an *already exists* error). Open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio), sign in to database `cymbal` as user `postgres` with password `{{ BK_DB_PASSWORD }}`, paste the contents of `schema.sql` into the editor and hit **Run**. Studio replaces your keyboard, not your tunnel — keep terminal 2 open either way: the simulator below and the Lab 6 concierge go through it. (And if Studio refuses to connect to your PSC-only instance, no drama — the psql path works everywhere.)
 
-Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel:
+Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel. First, look up the instance's service account (every Cloud SQL instance acts as its own Google-managed identity):
 
 ```bash
 SQL_SA=$(gcloud sql instances describe cymbal-oltp --format="value(serviceAccountEmailAddress)")
+```
+
+Allow that identity to read your seed bucket:
+
+```bash
 gcloud storage buckets add-iam-policy-binding gs://{{ PROJECT_ID }}-bucket \
     --member=serviceAccount:$SQL_SA --role=roles/storage.objectAdmin
+```
+
+Then import all six tables:
+
+```bash
 for t in customers products orders order_items payments reviews; do
     echo "Importing $t ..."
     gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv \

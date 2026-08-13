@@ -8,3 +8,8 @@ google-adk[a2a]==2.3.0
 # at runtime (starlette/sse-starlette) -- verified live in the smoke test.
 a2a-sdk[http-server]==0.3.26
 google-cloud-geminidataanalytics==0.13.1
+# gcloud's IAP tunnel (bk-tunnel, open all event) nags "consider installing
+# NumPy" on every start and transfers faster with it -- install it once here.
+# (2.2.x on purpose: newest series to still support Python 3.10-3.13, so the
+# pin works regardless of the Cloud Shell image's python3.)
+numpy==2.2.6
