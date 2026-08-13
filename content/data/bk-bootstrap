@@ -6,7 +6,12 @@
 # any work (the pip install used to run before this check).
 [[ -z "$PROJECT_NUMBER" ]] && echo "Bootkon has not been initialized. Please follow the tutorial and run '. bk'" && exit 1
 
-pip install -r content/data/requirements.txt
+# Quiet pip: --no-warn-conflicts silences the scary resolver-conflict block
+# (pre-installed Cloud Shell packages conflict outside our pinned closure --
+# harmless, but it reads like an error), --disable-pip-version-check drops
+# the new-pip-release nag, -q the already-satisfied noise. Failures still print.
+echo "Installing the Python dependencies ..."
+pip install -q --no-warn-conflicts --disable-pip-version-check -r content/data/requirements.txt
 
 # Create Knowledge Catalog DQ Service Account first here to avoid potential timing issues during role assignment later
 DQ_SCAN_SERVICE_ACCOUNT="dataquality-service-account"

@@ -40,7 +40,15 @@ step_failed() {
     echo "ERROR: $1 -- see the message above." >&2
 }
 
-pip install -r content/agenticdata/requirements.txt \
+# Quiet pip: --no-warn-conflicts silences the scary resolver-conflict block
+# (pre-installed Cloud Shell packages conflict outside our pinned closure --
+# harmless, but it reads like an error and reliably generated "is this ok?"
+# questions), --disable-pip-version-check drops the new-pip-release nag, and
+# -q hides the requirement-already-satisfied noise on re-runs. Real install
+# failures still print.
+echo "Installing the Python dependencies ..."
+pip install -q --no-warn-conflicts --disable-pip-version-check \
+    -r content/agenticdata/requirements.txt \
     || step_failed "installing the Python dependencies (pip) failed"
 
 # Seed data: deterministic synthetic CSVs (the pinned faker from the pip

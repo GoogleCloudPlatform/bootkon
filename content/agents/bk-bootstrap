@@ -1,3 +1,8 @@
 #!/bin/bash
 
-pip install -r content/agents/requirements.txt
+# Quiet pip: --no-warn-conflicts silences the scary resolver-conflict block
+# (pre-installed Cloud Shell packages conflict outside our pinned closure --
+# harmless, but it reads like an error), --disable-pip-version-check drops
+# the new-pip-release nag, -q the already-satisfied noise. Failures still print.
+echo "Installing the Python dependencies ..."
+pip install -q --no-warn-conflicts --disable-pip-version-check -r content/agents/requirements.txt
