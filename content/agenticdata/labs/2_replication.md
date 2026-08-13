@@ -81,7 +81,7 @@ This takes about two to three minutes for all six tables. While it runs, read ah
 
 ### Verify in the console
 
-Time to see your data through the console's eyes: open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio), sign in to database `cymbal` as user `postgres` with password `{{ BK_DB_PASSWORD }}`, and run:
+Time to see your data through the console's eyes: open [Cloud SQL Studio](https://console.cloud.google.com/sql/instances/cymbal-oltp/studio) and sign in as user `postgres` with password `{{ BK_DB_PASSWORD }}` — and in the **Database** field, replace the preselected `postgres` with `cymbal` (signing into the wrong database is exactly what a *"relation cymbal.orders does not exist"* later means). Then run:
 
 ```sql
 SELECT COUNT(*) AS total_orders FROM cymbal.orders;
@@ -103,56 +103,17 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
 
 ### Create the bronze dataset
 
-Both paths below land the CDC data here, so create the destination dataset first:
+This is where the CDC data will land, so create the destination dataset first:
 
 ```bash
 bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
 ```
 
-**Prefer the console?** In [BigQuery](https://console.cloud.google.com/bigquery), click the three-dot menu next to your project → **Create dataset**: ID `cymbal_bronze`, location type **Multi-region** → `US`. Same thing — `bq` is just the keyboard-shaped door into BigQuery.
+Verify it in the console: open [BigQuery](https://console.cloud.google.com/bigquery) and expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> — there sits `cymbal_bronze`, empty and waiting. In a few minutes, Datastream will fill it.
 
-### Provision Datastream: pick your path
+### Provision Datastream
 
-Now you create two **connection profiles** (a PostgreSQL source and a BigQuery destination) and the **CDC stream**. There are two equivalent ways — **pick one**, then continue at *Watch it flow*:
-
-- **Path A — Console**: click through the Datastream UI, guided by spotlights. Good if you like seeing the wizard and every option. **Unsure? Take this one.**
-- **Path B — Command line**: `gcloud`, with agy authoring the stream config. Faster and scriptable.
-
-***
-
-#### Path A — Console (UI)
-
-**Create the source connection profile.**
-
-1. Open [Datastream → Connection profiles](https://console.cloud.google.com/datastream/connection-profiles) and click <walkthrough-spotlight-pointer locator="semantic({button 'Create profile'})">Create profile</walkthrough-spotlight-pointer>.
-2. Choose the <walkthrough-spotlight-pointer locator="text('PostgreSQL')">PostgreSQL</walkthrough-spotlight-pointer> profile type.
-3. Fill in:
-    - Connection profile name: `cymbal-postgres-profile`
-    - Region: `{{ REGION }}`
-    - Hostname or IP: `10.10.0.5` (the PSC endpoint — Datastream private connections don't resolve DNS, so use the IP)
-    - Port: `5432`, Username: `datastream_user`, Password: `{{ BK_DS_PASSWORD }}`, Database: `cymbal`
-4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>, choose **Private connectivity** and select `cymbal-psc`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
-
-**Create the destination connection profile.**
-
-5. Back on Connection profiles, click <walkthrough-spotlight-pointer locator="semantic({button 'Create profile'})">Create profile</walkthrough-spotlight-pointer> again and choose <walkthrough-spotlight-pointer locator="text('BigQuery')">BigQuery</walkthrough-spotlight-pointer>.
-6. Name it `cymbal-bq-profile`, region `{{ REGION }}`, then <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
-
-**Create and start the stream.**
-
-7. Go to [Datastream → Streams](https://console.cloud.google.com/datastream/streams) and click <walkthrough-spotlight-pointer locator="semantic({button 'Create stream'})">Create stream</walkthrough-spotlight-pointer>.
-8. Stream name `cymbal-cdc-stream`; source type **PostgreSQL**, destination type **BigQuery**. Work through the wizard with <walkthrough-spotlight-pointer locator="semantic({button 'Continue'})">Continue</walkthrough-spotlight-pointer>:
-    - **Source**: select `cymbal-postgres-profile`. Run the connectivity test.
-    - **Configure source**: include the `cymbal` schema (all tables); set **Publication** to `cymbal_pub` and **Replication slot** to `cymbal_slot`.
-    - **Destination**: select `cymbal-bq-profile`.
-    - **Configure destination**: choose *Single dataset for all schemas* → `cymbal_bronze`; set the **staleness limit** to `0` seconds.
-9. Run the validation, then click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>, and finally <walkthrough-spotlight-pointer locator="semantic({button 'Create & start'})">Create & start</walkthrough-spotlight-pointer> (or open the stream and press **Start**) with a full backfill.
-
-Skip Path B and continue at **Watch it flow**.
-
-***
-
-#### Path B — Command line (gcloud)
+Now you create two **connection profiles** (a PostgreSQL source and a BigQuery destination) and the **CDC stream**.
 
 Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
 
@@ -197,9 +158,7 @@ gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
     --state=RUNNING --update-mask=state
 ```
 
-***
-
-Whichever path you took, Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill. The stream reaches **Running** after about two minutes, and the seed data lands in BigQuery roughly a minute later.
+Datastream now validates everything (logical decoding, slot, publication, permissions, connectivity) and starts the backfill. The stream reaches **Running** after about two minutes, and the seed data lands in BigQuery roughly a minute later.
 
 Two design choices in the destination config are worth understanding: the stream runs in **merge mode**, meaning every change event is upserted into the BigQuery table (via the Storage Write API's CDC support), so bronze always mirrors the *current state* of Postgres — the alternative, *append-only*, would keep every event as its own row, giving you a full change history instead. And `dataFreshness: "0s"` tells BigQuery to apply pending changes at query time rather than on a schedule — that's what makes the live demo below feel instant.
 
