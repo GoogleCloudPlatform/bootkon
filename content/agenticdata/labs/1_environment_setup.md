@@ -60,6 +60,13 @@ gcloud compute networks subnets create cymbal-subnet \
     --network=cymbal-vpc --region={{ REGION }} --range=10.10.0.0/24
 ```
 
+Reserve `10.10.0.5` right away — in Lab 2 this address becomes the door to your database. Reserving it **now** matters: Datastream's private connection (kicked off below) places a network interface into this same subnet and grabs a free IP for it — reserving first guarantees it cannot take the one your database endpoint needs:
+
+```bash
+gcloud compute addresses create cymbal-endpoint-ip --region={{ REGION }} \
+    --subnet=cymbal-subnet --addresses=10.10.0.5
+```
+
 Datastream connects into your VPC through a **network attachment** — the entry door for its PSC interface:
 
 ```bash

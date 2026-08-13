@@ -36,12 +36,10 @@ content/agenticdata/bk-wait-psc
 
 ### Create the Private Service Connect endpoint
 
-Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at the reserved IP `10.10.0.5`:
+Your instance exposes a **service attachment** — a private socket other networks can plug into. Create an endpoint for it in your VPC at `10.10.0.5`, the address you reserved back in Lab 1:
 
 ```bash
 SA_URI=$(gcloud sql instances describe cymbal-oltp --format="value(pscServiceAttachmentLink)")
-gcloud compute addresses create cymbal-endpoint-ip --region={{ REGION }} \
-    --subnet=cymbal-subnet --addresses=10.10.0.5
 gcloud compute forwarding-rules create cymbal-endpoint --region={{ REGION }} \
     --address=cymbal-endpoint-ip --network=cymbal-vpc \
     --target-service-attachment=$SA_URI --allow-psc-global-access
