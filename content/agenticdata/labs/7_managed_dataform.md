@@ -54,12 +54,7 @@ gcloud projects add-iam-policy-binding {{ PROJECT_ID }} \
 And let the Dataform service agent *act as* that account — it executes your workflows by minting short-lived tokens for it:
 
 ```bash
-for role in roles/iam.serviceAccountTokenCreator roles/iam.serviceAccountUser; do
-    gcloud iam service-accounts add-iam-policy-binding \
-        dataquality-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com \
-        --member=serviceAccount:service-{{ PROJECT_NUMBER }}@gcp-sa-dataform.iam.gserviceaccount.com \
-        --role=$role
-done
+for role in roles/iam.serviceAccountTokenCreator roles/iam.serviceAccountUser; do gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com --member=serviceAccount:service-{{ PROJECT_NUMBER }}@gcp-sa-dataform.iam.gserviceaccount.com --role=$role; done
 ```
 
 That impersonation chain — service agent → token → execution account → BigQuery job — is exactly how your pipeline will run without your credentials anywhere in the loop. ([Control access with IAM](https://docs.cloud.google.com/dataform/docs/access-control))

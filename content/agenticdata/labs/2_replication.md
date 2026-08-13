@@ -71,14 +71,10 @@ gcloud storage buckets add-iam-policy-binding gs://{{ PROJECT_ID }}-bucket \
     --member=serviceAccount:$SQL_SA --role=roles/storage.objectAdmin
 ```
 
-Then import all six tables:
+Then import all six tables (one loop, one line — each import reports itself):
 
 ```bash
-for t in customers products orders order_items payments reviews; do
-    echo "Importing $t ..."
-    gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv \
-        --database=cymbal --table=cymbal.${t} --quiet
-done
+for t in customers products orders order_items payments reviews; do gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv --database=cymbal --table=cymbal.${t} --quiet; done
 ```
 
 This takes about two to three minutes for all six tables. While it runs, read ahead — but execute the next sections only once the import finished.
