@@ -109,7 +109,7 @@ This is where the CDC data will land, so create the destination dataset first:
 bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
 ```
 
-Verify it in the console: open [BigQuery](https://console.cloud.google.com/bigquery) and expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> — there sits `cymbal_bronze`, empty and waiting. In a few minutes, Datastream will fill it.
+Verify it in the console: open [BigQuery](https://console.cloud.google.com/bigquery), expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> and open its **Datasets** entry — there sits `cymbal_bronze`, empty and waiting. In a few minutes, Datastream will fill it.
 
 ### Provision Datastream
 
@@ -177,7 +177,7 @@ cd ~/bootkon
 python3 content/agenticdata/src/datagen/simulate.py
 ```
 
-Leave it running. Go to [BigQuery](https://console.cloud.google.com/bigquery), expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> → `cymbal_bronze`, and run this query a few times (use the editor, **not** table preview — preview lags behind CDC):
+Leave it running. Go to [BigQuery](https://console.cloud.google.com/bigquery), expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> → **Datasets** → `cymbal_bronze`, and run this query a few times (use the editor, **not** table preview — preview lags behind CDC):
 
 ```sql
 SELECT MAX(order_id) AS latest_order, COUNT(*) AS total_orders
