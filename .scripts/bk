@@ -106,14 +106,20 @@ export BK_REPO_URL="https://github.com/${BK_REPO}.git"
 # BK_DIR (e.g. contributors juggling several checkouts) is honored.
 export BK_DIR="${BK_DIR:-$HOME/bootkon}"
 
-# A Google Cloud project must be selected in the Cloud Shell project picker before
-# we do anything -- every lab needs it and PROJECT_ID is derived live from it.
-# Fail fast HERE, before cloning or opening the editor, instead of setting up a
-# project-less dead end. (DEVSHELL_PROJECT_ID / GOOGLE_CLOUD_PROJECT are empty when
-# no project is selected -- and a session started without a project does NOT pick
-# up a later picker selection: only a fresh Cloud Shell session gets the values,
-# hence the restart instruction below.)
-export PROJECT_ID="${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}"
+# A Google Cloud project must be known before we do anything -- every lab needs
+# it. PROJECT_ID is persisted in vars.local.sh (a manual edit there wins); only
+# on the very first run is it auto-detected from the Cloud Shell project picker,
+# because the live environment has proven flaky (DEVSHELL_PROJECT_ID /
+# GOOGLE_CLOUD_PROJECT are empty when no project is selected, and a session
+# started without a project does NOT pick up a later picker selection: only a
+# fresh Cloud Shell session gets the values -- hence the restart instruction
+# below). Fail fast HERE, before cloning or opening the editor, instead of
+# setting up a project-less dead end.
+local _persisted_project=""
+if [ -f "$BK_DIR/vars.local.sh" ]; then
+    _persisted_project="$(PROJECT_ID=""; source "$BK_DIR/vars.local.sh" 2>/dev/null; printf '%s' "$PROJECT_ID")"
+fi
+export PROJECT_ID="${_persisted_project:-${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}}"
 [ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID=""
 if [ -z "$PROJECT_ID" ]; then
     err 'No Google Cloud project is selected.'
@@ -123,6 +129,8 @@ if [ -z "$PROJECT_ID" ]; then
     err 'the newly selected project).'
     return 1
 fi
+# Stash it: the vars.sh/vars.local.sh sourcing below resets PROJECT_ID.
+local BK_REQ_PROJECT="$PROJECT_ID"
 
 # ── Interactive first-run onboarding ──────────────────────────────────────
 # On the very first launch (no vars.local.sh yet) the robot greets UP FRONT
@@ -148,8 +156,8 @@ if [ ! -f "$BK_DIR/vars.local.sh" ]; then
     echo -e "       \ }{ /\ )_ / _\      ---------------------------------------"
     echo -e "       /\__/\ \__O (__"
     echo -e "      (--/\--)    \__/      Setting you up in project ${YELLOW}${PROJECT_ID}${NC}."
-    echo -e "      _)(  )(_              (Wrong project? Switch it in the selector at the"
-    echo -e '      `---''---`'"              top, restart Cloud Shell, and paste it again.)"
+    echo -e "      _)(  )(_              (Wrong project? Edit PROJECT_ID in"
+    echo -e '      `---''---`'"              bootkon/vars.local.sh, then run: . bk)"
     echo
     if [ -z "$BK_REQ_MY_NAME" ] && [ -t 0 ]; then
         read -r -p "What should I call you? (first name, or press Enter to skip) " BK_REQ_MY_NAME
@@ -277,6 +285,15 @@ source "$BK_DIR/vars.sh"
 dbg "Sourcing $(readlink -f "$LOCAL")"
 source "$LOCAL"
 
+# PROJECT_ID: like GCP_USERNAME below, autodetect once and persist, filling only
+# if still empty (a manual edit in vars.local.sh wins). BK_REQ_PROJECT is the
+# value validated up front -- from the file on re-runs, from the picker on the
+# first one. Once written, every new terminal and every later run reads it from
+# the file instead of the flaky live environment.
+if [ -z "$PROJECT_ID" ]; then
+    "$BK_SET_VAR" --comment "Your Google Cloud project (auto-detected on first run)" "$LOCAL" PROJECT_ID "$BK_REQ_PROJECT"
+fi
+
 # GCP_USERNAME: autodetect once, filling only if still empty (a manual edit wins).
 local detected_account="$(gcloud config get-value account 2>/dev/null || true)"
 [ "$detected_account" = "(unset)" ] && detected_account=""
@@ -290,14 +307,6 @@ if [ -z "$MY_NAME" ] && [ -n "$BK_REQ_MY_NAME" ]; then
 fi
 # Reload so this shell sees any freshly detected values.
 source "$LOCAL"
-
-# Re-assert the live PROJECT_ID after the source: an older vars.local.sh may still
-# carry a persisted PROJECT_ID line that would otherwise clobber the value we
-# derived (and validated) up front. It stays live from the picker -- never written
-# to vars.local.sh, nothing to edit, nothing to go stale.
-PROJECT_ID="${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}"
-[ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID=""
-export PROJECT_ID
 
 # Derive the repo identity AFTER the last source (so the persisted values can't
 # clobber it) and from the checkout's own origin remote, so BK_REPO and the
@@ -360,16 +369,24 @@ if [ -f "\$BK_DIR/vars.local.sh" ]; then
         echo "bootkon: open it in the editor, fix the marked line, then run: . bk" >&2
     fi
 fi
-export PROJECT_ID="\${DEVSHELL_PROJECT_ID:-\$GOOGLE_CLOUD_PROJECT}"  # live from Cloud Shell
 # <<< bootkon <<<
 EOF
 
-# The project is guaranteed selected (checked before the clone). Validate it now
-# -- this also triggers the "Authorize Cloud Shell" popup at setup rather than
-# mid-lab. gcloud already points at the picker's project, so no `config set`.
-# On failure, disambiguate the cause (auth vs. wrong project) so the
-# participant gets exactly ONE instruction -- and always say how to get the
-# tutorial afterwards, because on this path it was never opened.
+# Point the gcloud CLI at PROJECT_ID: the project is persisted in vars.local.sh,
+# so the picker no longer drives it -- align gcloud's active project so plain
+# gcloud/bq calls in the labs hit PROJECT_ID. (Cloud Shell derives
+# DEVSHELL_PROJECT_ID / GOOGLE_CLOUD_PROJECT from this config, so new sessions
+# follow along.)
+local _active_project="$(gcloud config get-value project 2>/dev/null || true)"
+if [ "$_active_project" != "$PROJECT_ID" ]; then
+    gcloud config set project "$PROJECT_ID" --quiet 2>/dev/null || true
+fi
+
+# Validate the project now (it is guaranteed non-empty: checked before the
+# clone) -- this also triggers the "Authorize Cloud Shell" popup at setup
+# rather than mid-lab. On failure, disambiguate the cause (auth vs. wrong
+# project) so the participant gets exactly ONE instruction -- and always say
+# how to get the tutorial afterwards, because on this path it was never opened.
 if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
     if ! gcloud auth print-access-token >/dev/null 2>&1; then
         err "Your Cloud Shell session is not authorized (this happens after clicking"
@@ -377,19 +394,18 @@ if ! gcloud projects get-iam-policy "$PROJECT_ID" --quiet >/dev/null 2>&1; then
         err "Run '. bk' again and click 'Authorize' this time."
     else
         err "Your account has no access to project $PROJECT_ID."
-        err "Pick your event project in the project selector at the top of the"
-        err "Cloud Shell window, then close Cloud Shell completely, open it"
-        err "again, and run '. bk'."
+        err "Open $BK_DIR/vars.local.sh in the editor, set PROJECT_ID to your"
+        err "event project, save, then run '. bk' again."
     fi
     err "Afterwards, type bk-start to open the tutorial."
     return 1
 fi
 
 # agy and the google-genai/Vertex SDKs read GOOGLE_CLOUD_PROJECT, and the
-# agenticdata stream deliberately does not pin it. Cloud Shell refreshes the
-# variable on every new prompt, but THIS shell still holds the pre-switch
-# value right after a project change -- align it with the project we just
-# validated so SDK calls in this very session hit the right project.
+# agenticdata stream deliberately does not pin it. Cloud Shell refreshes it
+# from the active gcloud config on every new prompt, but THIS shell may still
+# hold a pre-switch value -- align it with the project we just validated so
+# SDK calls in this very session hit the right project.
 if [ -n "${GOOGLE_CLOUD_PROJECT:-}" ] && [ "$GOOGLE_CLOUD_PROJECT" != "$PROJECT_ID" ]; then
     export GOOGLE_CLOUD_PROJECT="$PROJECT_ID"
 fi

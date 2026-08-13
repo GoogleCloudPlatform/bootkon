@@ -18,9 +18,12 @@
 # Your (first) name, shown in the tutorial greeting. Optional. Example: Ada
 export MY_NAME=""
 
+# Your Google Cloud project. Leave empty to auto-detect it once from the Cloud
+# Shell project picker on first run. To switch projects later, edit this value
+# in vars.local.sh and run: . bk
+export PROJECT_ID=""
+
 # Your Google Cloud account. Leave empty to auto-detect from Cloud Shell.
-# (PROJECT_ID is NOT set here: bk derives it live from the Cloud Shell project
-#  picker. To use a different project, switch it in the picker.)
 # Example: devstar3110@gcplab.me
 export GCP_USERNAME=""
 
