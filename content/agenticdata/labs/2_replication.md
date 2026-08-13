@@ -19,6 +19,8 @@ Learn more:
 
 ### Wait for the database
 
+Lab 1 left agy standing by in your terminal — but the commands in this lab are **shell commands**, so exit agy first by typing `/quit` (you will call your co-engineer back for the authoring step later in this lab).
+
 If the Lab 1 build already finished, this returns instantly — otherwise it waits for the create operation to complete:
 
 ```bash
@@ -210,8 +212,8 @@ gcloud datastream connection-profiles create cymbal-bq-profile --location={{ REG
 
 The stream itself is defined by two JSON files that ship with the repository — you work on them directly in `content/agenticdata/src/datastream/` (the shipped destination config still contains a placeholder). Writing API-correct configuration is authoring work — agy's job. In your agy session (started from `~/bootkon`), run:
 
-```
-/goal Rewrite content/agenticdata/src/datastream/source_config.json and content/agenticdata/src/datastream/destination_config.json for `gcloud datastream streams create`. The PostgreSQL source uses publication "cymbal_pub", replication slot "cymbal_slot", and should include all tables of the "cymbal" schema. The BigQuery destination writes every table into the single dataset "{{ PROJECT_ID }}:cymbal_bronze" with a data freshness of 0 seconds. Use the exact JSON field names of the Datastream v1 API (publication, replicationSlot, includeObjects/postgresqlSchemas, singleTargetDataset/datasetId, dataFreshness).
+```bash
+/goal Rewrite content/agenticdata/src/datastream/source_config.json and content/agenticdata/src/datastream/destination_config.json for gcloud datastream streams create. The PostgreSQL source uses publication "cymbal_pub", replication slot "cymbal_slot", and should include all tables of the "cymbal" schema. The BigQuery destination writes every table into the single dataset "{{ PROJECT_ID }}:cymbal_bronze" with a data freshness of 0 seconds. Use the exact JSON field names of the Datastream v1 API (publication, replicationSlot, includeObjects/postgresqlSchemas, singleTargetDataset/datasetId, dataFreshness).
 ```
 
 **Review what agy wrote**: open <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/source_config.json">source_config.json</walkthrough-editor-open-file> and <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/destination_config.json">destination_config.json</walkthrough-editor-open-file>. If agy went off-script, git has your back — restore the shipped files and fill in the placeholder yourself:
@@ -221,7 +223,7 @@ git -C ~/bootkon restore content/agenticdata/src/datastream/
 sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" content/agenticdata/src/datastream/destination_config.json
 ```
 
-Create the stream (with a full backfill of the seed data), then flip it to `RUNNING`:
+The next commands are for the **shell again, not for agy** — exit agy with `/quit` first. Then create the stream (with a full backfill of the seed data) and flip it to `RUNNING`:
 
 ```bash
 gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \

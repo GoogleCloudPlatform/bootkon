@@ -53,8 +53,8 @@ agy
 
 And hand over the brief:
 
-```
-/goal Read AGENTS.md and build the complete silver and gold layers it specifies. Run `dataform compile` yourself and fix any errors until the project compiles cleanly.
+```bash
+/goal Read AGENTS.md and build the complete silver and gold layers it specifies. Run dataform compile yourself and fix any errors until the project compiles cleanly.
 ```
 
 Watch agy work: it will create the `.sqlx` files, run `dataform compile`, read the errors, and fix its own code. Review the result with `/diff` before accepting.

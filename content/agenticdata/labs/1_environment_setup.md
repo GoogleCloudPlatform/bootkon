@@ -134,7 +134,13 @@ Six files, about 111 MB in total — half a million orders plus the customers, p
 agy
 ```
 
-On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option: agy then authenticates through your event project (`{{ PROJECT_ID }}`, read from the environment), which is where today's usage belongs. If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
+On the first run, agy asks how you want to sign in — choose the **Google Cloud project** option. agy will tell you your account has **no license for Gemini Enterprise** — that is expected, we don't use Gemini Enterprise today: simply enter your event project ID when asked, so the usage bills to your project:
+
+```bash
+{{ PROJECT_ID }}
+```
+
+If a login URL appears, open it with **Ctrl+Click** (Cmd+Click on a Mac), sign in as `{{ GCP_USERNAME }}`, and paste the confirmation code into the token field back in the terminal. Accept the Terms of Service if prompted. Every later `agy` start lands straight at the prompt — restore the terminal to its usual size once you are signed in.
 
 agy **asks before it acts** — approve its file edits as they come, and anything that would touch your cloud resources stays your call. Reviewing what agy did (with `/diff`) is your job too.
 
@@ -142,7 +148,7 @@ agy **asks before it acts** — approve its file edits as they come, and anythin
 
 Your first prompt. Paste this into agy:
 
-```
+```bash
 What does content/agenticdata/bk-bootstrap do? Summarize the IAM roles it grants and explain why a separate data-quality service account is created.
 ```
 

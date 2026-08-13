@@ -136,13 +136,13 @@ Now the piece that replaces your keyboard: under <walkthrough-spotlight-pointer 
 
 While the clock runs, ask your co-engineer to cement the concept. In your agy session (terminal 1):
 
-```
+```bash
 Explain the managed Dataform model like I run data platforms for a living: what exactly is frozen in a compilation result, why does re-executing the same compilation result still pick up new bronze rows, and when would I schedule release compilations more often than daily?
 ```
 
 ### Trigger the first run
 
-The scheduler is armed, but a demo shouldn't wait for a clock. Trigger the workflow configuration yourself — with the *same API call the scheduler makes* at :00, :15, :30 and :45:
+The scheduler is armed, but a demo shouldn't wait for a clock. Exit agy with `/quit`, then trigger the workflow configuration yourself — with the *same API call the scheduler makes* at :00, :15, :30 and :45:
 
 ```bash
 curl -s -X POST \
