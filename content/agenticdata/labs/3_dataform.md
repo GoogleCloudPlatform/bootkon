@@ -82,7 +82,7 @@ Each run also executes the **assertions** — data tests that fail the run if th
 Open [BigQuery](https://console.cloud.google.com/bigquery) and expand your project:
 
 1. You now have three medallion datasets: `cymbal_bronze`, <walkthrough-spotlight-pointer locator="text('cymbal_silver')">cymbal_silver</walkthrough-spotlight-pointer> and <walkthrough-spotlight-pointer locator="text('cymbal_gold')">cymbal_gold</walkthrough-spotlight-pointer> (plus `cymbal_assertions` — the test results).
-2. Click `stg_customers` and check the row count in <walkthrough-spotlight-pointer locator="semantic({tab 'Details'})">Details</walkthrough-spotlight-pointer> — fewer rows than bronze `cymbal_customers`: the duplicates and invalid emails are gone.
+2. Open `cymbal_silver` → `stg_customers` and check the row count in <walkthrough-spotlight-pointer locator="semantic({tab 'Details'})">Details</walkthrough-spotlight-pointer> — fewer rows than `cymbal_bronze` → `cymbal_customers`: the duplicates and invalid emails are gone.
 3. Query the flaw you'll never see again:
 
 ```sql
@@ -93,8 +93,7 @@ SELECT 'silver', COUNT(*)
 FROM `{{ PROJECT_ID }}.cymbal_silver.stg_orders` WHERE status = 'shiped'
 ```
 
-4. The payoff: open `fct_daily_revenue` and click the <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. The bronze→silver→gold graph you see was **not configured by anyone** — BigQuery reports [data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage) automatically from the jobs the Dataform CLI just ran, following the `${ref(...)}` dependencies agy wrote.
-5. Curious what the CLI actually did? Open <walkthrough-spotlight-pointer locator="text('Job history')">Job history</walkthrough-spotlight-pointer> at the bottom of the BigQuery page: every model and every assertion from `dataform run` is a regular BigQuery job under your identity — click one to see the exact SQL it executed. No magic, no hidden service.
+4. The payoff: open `cymbal_gold` → `fct_daily_revenue` and click the <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. The bronze→silver→gold graph you see was **not configured by anyone** — BigQuery reports [data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage) automatically from the jobs the Dataform CLI just ran, following the `${ref(...)}` dependencies agy wrote. (Lineage is assembled asynchronously from the job metadata — if you only see a single box right after the run, give it a few minutes and refresh.)
 
 One more thing: your simulator (terminal 3) is still writing to Postgres, and Datastream keeps updating bronze. Re-run `dataform run` at any time and the whole medallion refreshes with the latest data.
 
