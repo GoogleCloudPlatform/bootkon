@@ -438,9 +438,10 @@ export PROJECT_NUMBER
 # Optional per-stream init hook: content/$BK_STREAM/bk-init. Runs on every `. bk`
 # once the project is validated -- and, crucially, BEFORE the first tutorial
 # render, so stream secrets already exist when the labs are rendered. Contract:
-# idempotent (write via `bk-set-var --if-empty`), local-only and instant (no
-# gcloud calls); heavy, visible GCP work belongs in the participant-run
-# bk-bootstrap instead. Streams without a hook simply skip this.
+# idempotent (write via `bk-set-var --if-empty`), local-only and instant --
+# any remote prep must be silent, backgrounded and guarded (fire-and-forget);
+# heavy, visible GCP work belongs in the participant-run bk-bootstrap
+# instead. Streams without a hook simply skip this.
 if [ -x "$BK_DIR/content/$BK_STREAM/bk-init" ]; then
     if ! "$BK_DIR/content/$BK_STREAM/bk-init"; then
         err "The $BK_STREAM stream's init script (content/$BK_STREAM/bk-init) failed."

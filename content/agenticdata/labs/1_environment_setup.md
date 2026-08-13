@@ -104,7 +104,7 @@ Learn more:
 
 ### Kick off Datastream private connectivity
 
-Datastream's private connection takes around 5–10 minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 verifies it reached the `CREATED` state:
+Datastream's private connection takes around 5–10 minutes to build, so kick it off now too. The command returns right away and the build continues in the background — Lab 2 waits for it to reach the `CREATED` state. (Should the console show the configuration as **Failed** in the meantime, leave it be: the very first creation sometimes loses a race against IAM propagation, and the wait step in Lab 2 repairs exactly that automatically.)
 
 ```bash
 gcloud datastream private-connections create cymbal-psc --location={{ REGION }} \

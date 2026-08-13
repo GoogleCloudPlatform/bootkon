@@ -30,9 +30,12 @@ step_failed() {
 # BEFORE Lab 1 creates the private connection: on a fresh project the agent
 # is created lazily, and `private-connections create` then fails with
 # PERMISSION_DENIED on the network attachment (verified live). The IAM grant
-# also needs a few minutes to propagate -- doing this FIRST, before the
-# pip install and the role loop below, buys that time for free. This block
-# is the reason this script exists: keep its errors loud.
+# also needs minutes to propagate, and enforcement is not queryable --
+# bk-init already fired all three calls silently in the background at setup
+# time (the real head start); this block is the LOUD, idempotent re-assert,
+# kept first so even a failed background prep still gets maximum
+# propagation time before the create. Residual races are healed by
+# bk-wait-psc in Lab 2. Keep the errors here loud.
 echo "Preparing the Datastream service agent (Lab 1 depends on it) ..."
 gcloud services enable datastream.googleapis.com \
     || step_failed "enabling the Datastream API failed"

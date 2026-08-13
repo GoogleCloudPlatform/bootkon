@@ -6,12 +6,35 @@
 # Contract (see .scripts/bk): idempotent, local-only, instant. Secrets are
 # written once (--if-empty); deterministic runtime config is upserted. Heavy,
 # visible GCP work (APIs, IAM, service accounts, pip) lives in bk-bootstrap,
-# which participants run in Lab 1.
+# which participants run in Lab 1. One sanctioned exception below: a silent,
+# backgrounded one-time prep of the Datastream service agent, which costs the
+# caller nothing and buys IAM propagation a long head start.
 
 set -eu
 
 LOCAL="$BK_DIR/vars.local.sh"
 SET_VAR="$BK_DIR/.scripts/bk-set-var"
+
+# One-time, fire-and-forget: prepare the Datastream service agent NOW, at
+# setup time, instead of first thing in bk-bootstrap (Lab 1). Its IAM role is
+# the slowest-propagating piece the stream depends on -- Lab 1's
+# private-connections create lost the propagation race often enough to end up
+# FAILED. Kicked off here, propagation gets a 10-20 minute head start before
+# anything uses it. Backgrounded and silent to keep `. bk` instant (contract
+# above), guarded to run once per project; bk-bootstrap re-asserts all of it
+# loudly and idempotently in Lab 1, so a silent failure here costs nothing --
+# and Lab 2's bk-wait-psc self-heals the residual race either way.
+if [ "${BK_DS_AGENT_PREP:-}" != "$PROJECT_ID" ]; then
+    "$SET_VAR" --comment "Internal: project the background Datastream agent prep ran for" "$LOCAL" BK_DS_AGENT_PREP "$PROJECT_ID"
+    (
+        gcloud services enable datastream.googleapis.com >/dev/null 2>&1 &&
+        gcloud beta services identity create --service=datastream.googleapis.com \
+            --project="$PROJECT_ID" >/dev/null 2>&1 &&
+        gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
+            --role="roles/datastream.serviceAgent" --condition=None >/dev/null 2>&1
+    ) &
+fi
 
 # Generated once: Lab 1 creates the Cloud SQL instance with BK_DB_PASSWORD and
 # Lab 2 the Datastream connection profile with BK_DS_PASSWORD.

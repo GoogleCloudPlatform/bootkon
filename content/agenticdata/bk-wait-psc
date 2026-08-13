@@ -1,0 +1,62 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Waits until the Datastream private connection (cymbal-psc, kicked off in
+# Lab 1) reaches CREATED -- and heals its one known failure mode: the very
+# first creation can lose a race against IAM propagation for the freshly
+# created Datastream service agent and end up FAILED (the console shows
+# "Operation failed. An unknown error occurred"). In that case the failed
+# configuration is deleted and created again; by then the permissions have
+# settled and the retry reliably succeeds. Safe to re-run at any time.
+
+set -u
+: "${PROJECT_ID:?PROJECT_ID is not set. Run '. bk' or open a new terminal.}"
+: "${REGION:?REGION is not set. Run '. bk' or open a new terminal.}"
+
+NAME=cymbal-psc
+ATTACHMENT="projects/${PROJECT_ID}/regions/${REGION}/networkAttachments/cymbal-attachment"
+
+while true; do
+    state="$(gcloud datastream private-connections describe "$NAME" \
+        --location="$REGION" --format='value(state)' 2>/dev/null || true)"
+    case "$state" in
+        CREATED)
+            echo "Private connection $NAME is CREATED."
+            exit 0
+            ;;
+        FAILED*)
+            echo "Private connection is $state -- the first create lost the IAM race."
+            echo "Deleting the failed configuration and retrying ..."
+            gcloud datastream private-connections delete "$NAME" \
+                --location="$REGION" --quiet || true
+            # Deletion is asynchronous too: wait until it is really gone,
+            # otherwise the re-create collides with the name.
+            while gcloud datastream private-connections describe "$NAME" \
+                --location="$REGION" --format='value(state)' >/dev/null 2>&1; do
+                sleep 10
+            done
+            ;;
+        "")
+            echo "Private connection $NAME not found -- creating it ..."
+            gcloud datastream private-connections create "$NAME" \
+                --location="$REGION" --display-name="$NAME" \
+                --network-attachment="$ATTACHMENT" || true
+            ;;
+        *)
+            echo "Private connection is $state -- waiting (the build takes 5-10 minutes) ..."
+            ;;
+    esac
+    sleep 20
+done

@@ -28,13 +28,11 @@ gcloud sql operations wait --timeout=unlimited \
     $(gcloud sql operations list --instance=cymbal-oltp --format='value(name)' --limit=1)
 ```
 
-Also confirm the Datastream private connection from Lab 1 reached the `CREATED` state (it takes around 5–10 minutes from when you kicked it off — if it still shows `CREATING`, wait a moment and re-run):
+Also wait for the Datastream private connection from Lab 1 to reach the `CREATED` state (around 5–10 minutes from when you kicked it off). This helper polls until it is ready — and it self-heals the one known failure mode: the very first creation can lose a race against IAM propagation for the freshly created Datastream service agent and end up `FAILED` (the console shows *"Operation failed. An unknown error occurred"*). In that case the script deletes the failed configuration and creates it again — by then the permissions have settled, and the retry goes through:
 
 ```bash
-gcloud datastream private-connections describe cymbal-psc --location={{ REGION }} --format='value(state)'
+content/agenticdata/bk-wait-psc
 ```
-
-❗ If this prints `NOT_FOUND` or `FAILED`, the creation lost a race against IAM propagation for the freshly created Datastream service agent. No harm done — just re-run the `gcloud datastream private-connections create` command from Lab 1 (delete the failed one first if `FAILED`), and it will go through.
 
 ### Create the Private Service Connect endpoint
 
