@@ -43,6 +43,3 @@ the fork. Three caveats:
    clone does bk self-correct from the checkout's origin).
 2. The fork must be **public**: the tutorial pane fetches images through
    unauthenticated `?raw=true` blob URLs, which 404 on a private fork.
-3. A few upstream references are hardcoded and are NOT redirected by forking,
-   e.g. `.scripts/bk-legacy-download` always fetches the data-stream dataset
-   from `fhirschmann/bootkon-data`.
