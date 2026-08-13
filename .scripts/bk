@@ -110,13 +110,17 @@ export BK_DIR="${BK_DIR:-$HOME/bootkon}"
 # we do anything -- every lab needs it and PROJECT_ID is derived live from it.
 # Fail fast HERE, before cloning or opening the editor, instead of setting up a
 # project-less dead end. (DEVSHELL_PROJECT_ID / GOOGLE_CLOUD_PROJECT are empty when
-# no project is selected; Cloud Shell refreshes them on every prompt.)
+# no project is selected -- and a session started without a project does NOT pick
+# up a later picker selection: only a fresh Cloud Shell session gets the values,
+# hence the restart instruction below.)
 export PROJECT_ID="${DEVSHELL_PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}}"
 [ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID=""
 if [ -z "$PROJECT_ID" ]; then
     err 'No Google Cloud project is selected.'
     err 'Pick your event project in the project selector at the top of the Cloud'
-    err 'Shell window, then paste the setup command again.'
+    err 'Shell window. Then close Cloud Shell completely, open it again, and'
+    err 'paste the setup command again (the running session does not pick up'
+    err 'the newly selected project).'
     return 1
 fi
 
