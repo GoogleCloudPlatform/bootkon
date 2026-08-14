@@ -97,6 +97,19 @@ else
     fi
 fi
 
+# Terraform's engine needs these two meta-APIs before it can even plan --
+# data.google_project and the IAM writes go through Cloud Resource Manager,
+# which is DISABLED on a fresh project, and terraform cannot enable the API
+# it needs to talk (seen live: "Cloud Resource Manager API has not been used
+# in project ... before or it is disabled"). gcloud can: it goes through
+# Service Usage, which is on by default. Every other API is then enabled BY
+# terraform. The enable also gets propagation time while init downloads the
+# providers.
+echo "Enabling the Resource Manager / Service Usage APIs ..."
+gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
+    --project="$PROJECT" \
+    || { echo "ERROR: enabling the bootstrap APIs failed." >&2; exit 1; }
+
 # Isolate parallel runs: each project gets its own working dir; the provider
 # plugin cache is shared (the organizer loop warms it with a serial first
 # run before fanning out).
