@@ -72,12 +72,18 @@ Learn more:
 
 ### Take ownership of your database
 
-Cymbal's production order database is already running: `cymbal-oltp`, PostgreSQL on Cloud SQL — with **logical decoding** enabled at creation time (Postgres emits every committed change in logical form; the prerequisite for CDC, set at birth so the instance never needs a flag-change restart), **Private Service Connect** instead of a public IP (its endpoint is the `10.10.0.5` from above), and a deliberately small machine (`db-custom-1-3840`) — CDC reads the log, it does not stress the database.
+Cymbal's production order database is already built: `cymbal-oltp`, PostgreSQL on Cloud SQL — with **logical decoding** enabled at creation time (Postgres emits every committed change in logical form; the prerequisite for CDC, set at birth so the instance never needs a flag-change restart), **Private Service Connect** instead of a public IP (its endpoint is the `10.10.0.5` from above), and a deliberately small machine (`db-custom-1-3840`) — CDC reads the log, it does not stress the database.
 
-It was provisioned with a throwaway root password, so make it yours — set the `postgres` password to your generated `$BK_DB_PASSWORD`:
+It was parked **stopped** until the event, and your bootkon setup already sent the wake-up call in the background — by now it should be running. It came with a throwaway root password, so make it yours — set the `postgres` password to your generated `$BK_DB_PASSWORD`:
 
 ```bash
 gcloud sql users set-password postgres --instance=cymbal-oltp --password=$BK_DB_PASSWORD
+```
+
+❗ Only if this fails with *"instance is not running"*: the background wake-up hasn't finished (or was missed) — start the instance yourself (takes a minute or two), then re-run the command above:
+
+```bash
+gcloud sql instances patch cymbal-oltp --activation-policy=ALWAYS
 ```
 
 Learn more:

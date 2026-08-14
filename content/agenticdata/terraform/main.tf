@@ -194,17 +194,18 @@ resource "google_compute_instance" "jump" {
 # enabled at creation time (the CDC prerequisite -- set here so the instance
 # boots with it and never needs a flag-change restart), PSC instead of a
 # public IP, and a deliberately small machine (CDC reads the log, it does
-# not stress the database). The instance RUNS from prep time
-# (~$1.70/day/project -- run the prep close to the event); parking it
-# stopped between prep and event was tried and disabled again, because
-# waking it at the start of Lab 1 took too long (the commented-out park
-# step lives in bk-prep-project; the API refuses to CREATE an instance
-# stopped -- "This operation is not valid for this instance", verified
-# live). Lab 1 has the participant take ownership by setting their own
-# BK_DB_PASSWORD. ignore_changes stays as a guard so a re-apply never
-# flips the activation policy either way. This is the slowest build of
-# the prep (10-15 minutes); it runs in parallel with the private
-# connection above.
+# not stress the database). The instance is PARKED STOPPED between prep
+# and event: the API refuses to CREATE it stopped ("This operation is not
+# valid for this instance", verified live), so it is created running and
+# bk-prep-project parks it right after a fresh creation (storage-only
+# cost, ~$0.06/day instead of ~$1.70/day). The participant's `. bk` setup
+# (bk-init) wakes it silently in the background -- the 1-2 minute start
+# overlaps with onboarding and bootstrap, and Lab 1 carries a visible
+# backup start. The ignore_changes below is load-bearing in both
+# directions: a re-apply must neither wake a parked instance (config
+# default ALWAYS) nor stop a woken one. This is the slowest build of the
+# prep (10-15 minutes); it runs in parallel with the private connection
+# above.
 resource "random_password" "sql_root" {
   length  = 24
   special = false

@@ -34,6 +34,20 @@ if [ "${BK_DS_AGENT_PREP:-}" != "$PROJECT_ID" ]; then
     ) &
 fi
 
+# One-time, fire-and-forget: wake the pre-provisioned Cloud SQL instance.
+# bk-prep-project parks it stopped after building it (storage-only cost
+# until the event); starting takes 1-2 minutes, so kick it off HERE in the
+# background, at the participant's very first `. bk` -- it overlaps with the
+# onboarding and the Lab 1 bootstrap, and by the take-ownership step the
+# instance is up. Lab 1 carries a visible backup start for the rare case
+# this silent wake failed. On self-run/Argolis (instance not parked or not
+# created yet) the patch is a harmless no-op or silent failure.
+if [ "${BK_SQL_WOKEN:-}" != "$PROJECT_ID" ]; then
+    "$SET_VAR" --comment "Internal: project whose cymbal-oltp was woken at setup" "$LOCAL" BK_SQL_WOKEN "$PROJECT_ID"
+    (gcloud sql instances patch cymbal-oltp --activation-policy=ALWAYS \
+        --project="$PROJECT_ID" --quiet >/dev/null 2>&1) &
+fi
+
 # Generated once: Lab 1 sets BK_DB_PASSWORD as the postgres password on the
 # pre-provisioned Cloud SQL instance; Lab 2 creates the Datastream connection
 # profile with BK_DS_PASSWORD.
