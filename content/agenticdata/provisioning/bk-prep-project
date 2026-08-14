@@ -135,19 +135,40 @@ tf_apply() {
         2>&1 | tee -a "$APPLY_LOG"
     return "${PIPESTATUS[0]}"
 }
-# Run apply/destroy; on a stale-lock failure, force-unlock and retry once.
+# Run apply/destroy; on a lock failure, tell an ACTIVE run apart from a
+# STALE lock. Breaking the lock is only safe when the holder is dead -- a
+# second prep started against the same project must back off instead of
+# sabotaging the first (a lock younger than the 60-minute build timeout
+# means someone is genuinely working).
 tf_run() {
     tf_apply "$1" && return 0
     if grep -q "Error acquiring the state lock" "$APPLY_LOG"; then
+        local lock_age
+        lock_age="$(lock_age_seconds)"
+        if [ -n "$lock_age" ] && [ "$lock_age" -lt 3600 ]; then
+            echo "ERROR: another prep is ALREADY RUNNING against $PROJECT (state lock" >&2
+            echo "held for ${lock_age}s). Not interfering -- check progress with" >&2
+            echo "bk-verify-fleet; a dead run's lock self-heals after an hour." >&2
+            return 1
+        fi
         local lock_id
         lock_id=$(grep -oE 'ID:[[:space:]]*[0-9]+' "$APPLY_LOG" | tail -1 | grep -oE '[0-9]+')
         if [ -n "$lock_id" ]; then
-            echo "Breaking a stale terraform state lock ($lock_id) and retrying ..."
+            echo "Breaking a stale terraform state lock ($lock_id, age ${lock_age:-unknown}s) and retrying ..."
             terraform -chdir="$TF_DIR" force-unlock -force "$lock_id" >/dev/null 2>&1 || true
             tf_apply "$1" && return 0
         fi
     fi
     return 1
+}
+
+# Age of the GCS state lock object in seconds (empty if unreadable).
+lock_age_seconds() {
+    local created
+    created="$(gcloud storage objects describe "gs://$BUCKET/bootkon-prep/default.tflock" \
+        --format='value(timeCreated)' 2>/dev/null)"
+    [ -z "$created" ] && return 0
+    python3 -c "import sys,datetime; t=datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')); print(int((datetime.datetime.now(datetime.timezone.utc)-t).total_seconds()))" "$created" 2>/dev/null
 }
 
 # Import one resource into the state if it is not there yet; a missing remote

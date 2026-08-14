@@ -30,8 +30,9 @@
 
 # --cloud-build: instead of running the preps locally (xargs), submit ONE
 # Cloud Build per participant project (cloudbuild.yaml wraps the very same
-# bk-prep-project) and watch them. The laptop only submits; the builds run
-# inside the projects as their bootkon-provisioner service account.
+# bk-prep-project) and return -- the builds run server-side inside the
+# projects as their bootkon-provisioner service account; progress and
+# readiness are bk-verify-fleet's job.
 # Flags are accepted at any position; unknown flags are hard errors -- a
 # silently ignored --cloud-build once sent a run down the local path.
 MODE=local
@@ -156,54 +157,44 @@ if [ "$MODE" = "cloudbuild" ]; then
     fi
 
     # Pass 2: one async build per project; the submit uploads the checkout as
-    # source (respecting .gitignore) and returns immediately.
+    # source (respecting .gitignore) and returns immediately. No watch: the
+    # builds run server-side, and bk-verify-fleet is the progress/readiness
+    # view.
     BUILDS=()
+    SUBMIT_FAILED=()
     for row in "${ROWS[@]}"; do
         set -- $row; USERNAME=$1; P=$2
         case " ${SKIP[*]-} " in *" $P "*) continue ;; esac
+        # A build already running against this project means someone (or a
+        # previous invocation) is mid-prep -- a double submit would only end
+        # in the second build backing off on the state lock. Skip it.
+        if [ -n "$(gcloud builds list --project="$P" \
+            --filter='status=WORKING OR status=QUEUED' --format='value(id)' --limit=1 2>/dev/null)" ]; then
+            echo "$P: a build is already running -- skipping (watch it with bk-verify-fleet)."
+            continue
+        fi
         echo "=== pass 2: $P (submitting the build)"
         id=$(gcloud builds submit --project="$P" --async --quiet \
             --config="$REPO_ROOT/content/agenticdata/provisioning/cloudbuild.yaml" \
             --substitutions=_USERNAME="$USERNAME" \
             --format='value(id)' "$REPO_ROOT") \
             && BUILDS+=("$P:$id") \
-            || echo -e "${RED}$P: build submit failed.${NC}" >&2
+            || { echo -e "${RED}$P: build submit failed.${NC}" >&2; SUBMIT_FAILED+=("$P"); }
     done
     echo ""
 
-    if [ ${#BUILDS[@]} -eq 0 ]; then
-        echo -e "${RED}No builds submitted.${NC}" >&2
-        exit 1
+    if [ ${#BUILDS[@]} -gt 0 ]; then
+        echo -e "${GREEN}Provisioning is now running inside the ${#BUILDS[@]} participant project(s)${NC}"
+        echo "(15-25 minutes each, fully server-side -- this terminal is done)."
+        echo "Watch progress and check readiness any time with:"
+        echo ""
+        echo "  $SCRIPT_DIR/bk-verify-fleet \"$LOCAL_CSV_FILE\" \"$PROJECT_ID_PREFIX\""
+        echo ""
+        echo "(raw build status: gcloud builds list --project=<project>)"
     fi
-    echo "${#BUILDS[@]} build(s) running. Watching every 30s (Ctrl-C is safe -- the"
-    echo "builds keep running; check later with: gcloud builds list --project=<p>)."
-    PENDING=("${BUILDS[@]}")
-    FAILED=()
-    while [ ${#PENDING[@]} -gt 0 ]; do
-        sleep 30
-        NEXT=()
-        for e in "${PENDING[@]}"; do
-            P=${e%%:*}; id=${e#*:}
-            st=$(gcloud builds describe "$id" --project="$P" --format='value(status)' 2>/dev/null)
-            case "$st" in
-                SUCCESS)
-                    echo -e "${GREEN}$P prepared.${NC}" ;;
-                FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
-                    echo -e "${RED}$P FAILED ($st) -- log: gcloud builds log $id --project=$P${NC}"
-                    FAILED+=("$P") ;;
-                *)
-                    NEXT+=("$e") ;;
-            esac
-        done
-        PENDING=()
-        [ ${#NEXT[@]} -gt 0 ] && PENDING=("${NEXT[@]}")
-    done
-    echo ""
-    if [ ${#FAILED[@]} -eq 0 ] && [ ${#SKIP[@]} -eq 0 ]; then
-        echo "All projects prepared."
-    else
+    if [ ${#SKIP[@]} -gt 0 ] || [ ${#SUBMIT_FAILED[@]} -gt 0 ]; then
         [ ${#SKIP[@]} -gt 0 ] && echo -e "${RED}Skipped in pass 1: ${SKIP[*]}${NC}" >&2
-        [ ${#FAILED[@]} -gt 0 ] && echo -e "${RED}Failed builds: ${FAILED[*]}${NC}" >&2
+        [ ${#SUBMIT_FAILED[@]} -gt 0 ] && echo -e "${RED}Submit failed: ${SUBMIT_FAILED[*]}${NC}" >&2
         echo -e "${RED}Fix the causes and rerun with --cloud-build (safe to repeat).${NC}" >&2
         exit 1
     fi
