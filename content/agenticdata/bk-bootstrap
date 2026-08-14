@@ -5,16 +5,16 @@
 #
 # Everything project-bound (APIs, the Datastream service agent, the
 # participant's roles, the Lab 4 data-quality service account) lives in
-# content/agenticdata/bk-prep-project, which the ORGANIZER runs for every
-# project days ahead (via content/agenticdata/bk-bootstrap-accounts) -- so
+# content/agenticdata/provisioning/bk-prep-project, which the ORGANIZER runs for every
+# project days ahead (via content/agenticdata/provisioning/bk-bootstrap-accounts) -- so
 # no IAM/API propagation race can reach a participant, and this script needs
 # no setIamPolicy. On Argolis/self-run, Lab 1 has the participant run
 # bk-prep-project themselves, right before this script. The tutorial's
 # enable-apis step stays as a green no-op verification.
 #
-# It deliberately does NOT create the Cloud SQL instance or any networking:
-# those commands live inline in the labs, so the connectivity variant can be
-# swapped by applying option1-vpc-peering-proxy.diff to the lab markdown.
+# It creates NO cloud infrastructure at all -- networking, Cloud SQL and the
+# Datastream private connection live in provisioning/terraform. (The old
+# option1-vpc-peering-proxy.diff predates that split and no longer applies.)
 #
 # Error handling: every step is checked and counted. The script keeps going
 # so one flaky call does not abort the remaining setup, but it only
@@ -103,22 +103,11 @@ gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
     || step_failed "uploading the seed data failed"
 
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
-# are NOT written here -- they are created by content/agenticdata/bk-init, which
+# are NOT written here -- they are created by content/agenticdata/provisioning/bk-init, which
 # `. bk` runs at initialization, before the first tutorial render. This script
 # keeps only the per-user work: pip, the Dataform CLI, seed data, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
-# Seedable: theme and the trusted workshop folders (suppresses the theme and
-# workspace-trust prompts). NOT seedable: authentication -- agy's first-run
-# menu offers Google OAuth or Google Cloud project auth, with no settings key
-# to preselect either (the earlier Gemini-CLI-style auth/permissions keys were
-# dead config). Lab 1 walks participants through the one-time login, using the
-# Google Cloud project option so usage bills to the event project: agy reports
-# a missing Gemini Enterprise license (expected -- we use the plain project /
-# Vertex path, not GE) and participants type PROJECT_ID at its prompt.
-# Tool approvals follow agy's toolPermission model; the default
-# (request-review) is deliberately left in place, so agy asks before it acts
-# and the review-what-the-agent-does habit stays intact.
 # Every key below mirrors OBSERVED persisted state (2026-08-13, diffed from
 # a logged-in devstar home) -- documentation-guessed keys kept turning out
 # to be dead config that agy drops on its next settings rewrite (RIP

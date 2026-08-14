@@ -95,7 +95,7 @@ if [ ${#ROWS[@]} -eq 0 ]; then
 fi
 
 if [ "$MODE" = "cloudbuild" ]; then
-    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
     echo "Preparing ${#ROWS[@]} agenticdata project(s) via Cloud Build (one build each)."
     echo ""
 
@@ -131,7 +131,7 @@ if [ "$MODE" = "cloudbuild" ]; then
         case " ${SKIP[*]-} " in *" $P "*) continue ;; esac
         echo "=== pass 2: $P (submitting the build)"
         id=$(gcloud builds submit --project="$P" --async --quiet \
-            --config="$REPO_ROOT/content/agenticdata/cloudbuild.yaml" \
+            --config="$REPO_ROOT/content/agenticdata/provisioning/cloudbuild.yaml" \
             --substitutions=_USERNAME="$USERNAME" \
             --format='value(id)' "$REPO_ROOT") \
             && BUILDS+=("$P:$id") \

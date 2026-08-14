@@ -453,9 +453,11 @@ export PROJECT_NUMBER
 # any remote prep must be silent, backgrounded and guarded (fire-and-forget);
 # heavy, visible GCP work belongs in the participant-run bk-bootstrap
 # instead. Streams without a hook simply skip this.
-if [ -x "$BK_DIR/content/$BK_STREAM/bk-init" ]; then
-    if ! "$BK_DIR/content/$BK_STREAM/bk-init"; then
-        err "The $BK_STREAM stream's init script (content/$BK_STREAM/bk-init) failed."
+local BK_INIT="$BK_DIR/content/$BK_STREAM/provisioning/bk-init"
+[ -x "$BK_INIT" ] || BK_INIT="$BK_DIR/content/$BK_STREAM/bk-init"  # pre-move layout
+if [ -x "$BK_INIT" ]; then
+    if ! "$BK_INIT"; then
+        err "The $BK_STREAM stream's init script ($BK_INIT) failed."
         err "Please run '. bk' again; if it keeps failing, ask the event staff."
         return 1
     fi

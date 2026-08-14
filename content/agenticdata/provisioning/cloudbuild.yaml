@@ -36,4 +36,4 @@ steps:
     entrypoint: bash
     args:
       - -c
-      - ./content/agenticdata/bk-prep-project "$PROJECT_ID" "${_USERNAME}"
+      - ./content/agenticdata/provisioning/bk-prep-project "$PROJECT_ID" "${_USERNAME}"
