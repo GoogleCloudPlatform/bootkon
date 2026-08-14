@@ -24,7 +24,7 @@
 #
 # Callers, all through this one interface:
 #   * single project:  bk-prep-project PROJECT_ID USERNAME
-#   * organizers:      content/agenticdata/bk-bootstrap-accounts runs it for
+#   * organizers:      content/agenticdata/provisioning/bk-prep-fleet runs it for
 #                      every CSV row (in parallel), days before the event
 #   * Argolis/self-run: Lab 1 has the participant run it without arguments --
 #                      PROJECT_ID/GCP_USERNAME come from the bootkon

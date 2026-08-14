@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Organizer-side account AND project prep for the AGENTICDATA stream -- a
-# fork of bk-bootstrap-accounts with the same CSV contract (username in the
-# first column; project = PREFIX + numeric suffix of the username).
+# Organizer-side fleet prep for the AGENTICDATA stream: preps every
+# participant project from the accounts CSV (username in the first column;
+# project = PREFIX + numeric suffix of the username -- the same contract as
+# the other streams' bk-bootstrap-accounts).
 #
 # For every CSV row it runs content/agenticdata/bk-prep-project (the single
 # per-project entry point, Terraform-backed with per-project state), IN

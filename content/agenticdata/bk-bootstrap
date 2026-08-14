@@ -6,7 +6,7 @@
 # Everything project-bound (APIs, the Datastream service agent, the
 # participant's roles, the Lab 4 data-quality service account) lives in
 # content/agenticdata/provisioning/bk-prep-project, which the ORGANIZER runs for every
-# project days ahead (via content/agenticdata/provisioning/bk-bootstrap-accounts) -- so
+# project days ahead (via content/agenticdata/provisioning/bk-prep-fleet) -- so
 # no IAM/API propagation race can reach a participant, and this script needs
 # no setIamPolicy. On Argolis/self-run, Lab 1 has the participant run
 # bk-prep-project themselves, right before this script. The tutorial's

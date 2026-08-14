@@ -18,7 +18,7 @@
 # submitter. One build per participant project means no shared concurrency
 # limit and per-project quota isolation.
 #
-# Submitted by `content/agenticdata/bk-bootstrap-accounts --cloud-build`,
+# Submitted by `content/agenticdata/provisioning/bk-prep-fleet --cloud-build`,
 # which first creates the bootkon-provisioner service account (owner) that
 # this build runs as. bk-prep-project self-installs its pinned terraform, so
 # the plain cloud-sdk image suffices. CLOUD_LOGGING_ONLY is mandatory when a
