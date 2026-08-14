@@ -27,6 +27,16 @@
 #
 # Rerun-safe: re-running preps only what is missing (idempotent applies).
 
+# --cloud-build: instead of running the preps locally (xargs), submit ONE
+# Cloud Build per participant project (cloudbuild.yaml wraps the very same
+# bk-prep-project) and watch them. The laptop only submits; the builds run
+# inside the projects as their bootkon-provisioner service account.
+MODE=local
+if [ "${1:-}" = "--cloud-build" ]; then
+    MODE=cloudbuild
+    shift
+fi
+
 LOCAL_CSV_FILE="$1"
 PROJECT_ID_PREFIX="$2"
 
@@ -36,11 +46,15 @@ NC='\033[0m'
 
 if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
     echo "Error: Missing required arguments."
-    echo "Usage: $(basename $0) <LOCAL_CSV_FILE> <PROJECT_ID_PREFIX>"
-    echo "Example: $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
+    echo "Usage: $(basename $0) [--cloud-build] <CSV_FILE|USERNAME> <PROJECT_ID_PREFIX>"
+    echo "Examples:"
+    echo "  $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
+    echo "  $(basename $0) --cloud-build devstar1234@gcplab.me \"bootkon-dt25test-\"   # single account"
     echo ""
-    echo "The CSV file needs to have the username in the first column."
-    echo "Parallelism: BK_PREP_PARALLEL=<n> (default 8)."
+    echo "The CSV file needs to have the username in the first column; passing a"
+    echo "single username instead runs the identical pipeline for just that account."
+    echo "Local mode parallelism: BK_PREP_PARALLEL=<n> (default 8)."
+    echo "--cloud-build submits one build per project instead (fully parallel)."
     exit 1
 fi
 
@@ -54,21 +68,116 @@ fi
 PARALLEL="${BK_PREP_PARALLEL:-8}"
 LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-prep-logs.XXXXXX")"
 
-# Collect "username project" pairs first. The `|| [ ... ]` keeps the final
-# row alive when the file lacks a trailing newline; the \r strip guards
-# against CRLF endings from spreadsheet exports.
+# Collect "username project" pairs first. A username instead of a CSV file
+# runs the identical pipeline for that single account (handy for testing).
+# The `|| [ ... ]` keeps the final row alive when the file lacks a trailing
+# newline; the \r strip guards against CRLF endings from spreadsheet exports.
 ROWS=()
-while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
-    USERNAME=${fields[0]%$'\r'}
-    [ -z "$USERNAME" ] && continue
+if [ ! -f "$LOCAL_CSV_FILE" ] && [[ "$LOCAL_CSV_FILE" == *@* ]]; then
+    USERNAME="$LOCAL_CSV_FILE"
     NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
     ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
-done < <(tail -n +2 "$LOCAL_CSV_FILE")
+elif [ ! -f "$LOCAL_CSV_FILE" ]; then
+    echo "Error: $LOCAL_CSV_FILE is neither a file nor a username (user@domain)." >&2
+    exit 1
+else
+    while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+        USERNAME=${fields[0]%$'\r'}
+        [ -z "$USERNAME" ] && continue
+        NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+    done < <(tail -n +2 "$LOCAL_CSV_FILE")
+fi
 
 if [ ${#ROWS[@]} -eq 0 ]; then
     echo "No usernames found in $LOCAL_CSV_FILE."
     exit 1
 fi
+
+if [ "$MODE" = "cloudbuild" ]; then
+    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    echo "Preparing ${#ROWS[@]} agenticdata project(s) via Cloud Build (one build each)."
+    echo ""
+
+    # Pass 1: enable Cloud Build and create the owner service account the
+    # build runs as. Deliberately a SEPARATE pass over all rows: by the time
+    # pass 2 submits the builds, the owner grants have had the whole loop to
+    # propagate.
+    SKIP=()
+    for row in "${ROWS[@]}"; do
+        set -- $row; USERNAME=$1; P=$2
+        echo "=== pass 1: $P (Cloud Build API + provisioner SA)"
+        SA="bootkon-provisioner@${P}.iam.gserviceaccount.com"
+        if ! gcloud services enable cloudbuild.googleapis.com --project="$P"; then
+            echo -e "${RED}$P: enabling Cloud Build failed -- skipping this project.${NC}" >&2
+            SKIP+=("$P"); continue
+        fi
+        if ! gcloud iam service-accounts describe "$SA" --project="$P" >/dev/null 2>&1; then
+            gcloud iam service-accounts create bootkon-provisioner --project="$P" \
+                --display-name="Bootkon prep (runs the Cloud Build prep)" \
+                || { echo -e "${RED}$P: creating the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); continue; }
+        fi
+        gcloud projects add-iam-policy-binding "$P" \
+            --member="serviceAccount:$SA" --role="roles/owner" --condition=None >/dev/null \
+            || { echo -e "${RED}$P: granting owner to the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); }
+    done
+    echo ""
+
+    # Pass 2: one async build per project; the submit uploads the checkout as
+    # source (respecting .gitignore) and returns immediately.
+    BUILDS=()
+    for row in "${ROWS[@]}"; do
+        set -- $row; USERNAME=$1; P=$2
+        case " ${SKIP[*]-} " in *" $P "*) continue ;; esac
+        echo "=== pass 2: $P (submitting the build)"
+        id=$(gcloud builds submit --project="$P" --async --quiet \
+            --config="$REPO_ROOT/content/agenticdata/cloudbuild.yaml" \
+            --substitutions=_USERNAME="$USERNAME" \
+            --format='value(id)' "$REPO_ROOT") \
+            && BUILDS+=("$P:$id") \
+            || echo -e "${RED}$P: build submit failed.${NC}" >&2
+    done
+    echo ""
+
+    if [ ${#BUILDS[@]} -eq 0 ]; then
+        echo -e "${RED}No builds submitted.${NC}" >&2
+        exit 1
+    fi
+    echo "${#BUILDS[@]} build(s) running. Watching every 30s (Ctrl-C is safe -- the"
+    echo "builds keep running; check later with: gcloud builds list --project=<p>)."
+    PENDING=("${BUILDS[@]}")
+    FAILED=()
+    while [ ${#PENDING[@]} -gt 0 ]; do
+        sleep 30
+        NEXT=()
+        for e in "${PENDING[@]}"; do
+            P=${e%%:*}; id=${e#*:}
+            st=$(gcloud builds describe "$id" --project="$P" --format='value(status)' 2>/dev/null)
+            case "$st" in
+                SUCCESS)
+                    echo -e "${GREEN}$P prepared.${NC}" ;;
+                FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                    echo -e "${RED}$P FAILED ($st) -- log: gcloud builds log $id --project=$P${NC}"
+                    FAILED+=("$P") ;;
+                *)
+                    NEXT+=("$e") ;;
+            esac
+        done
+        PENDING=()
+        [ ${#NEXT[@]} -gt 0 ] && PENDING=("${NEXT[@]}")
+    done
+    echo ""
+    if [ ${#FAILED[@]} -eq 0 ] && [ ${#SKIP[@]} -eq 0 ]; then
+        echo "All projects prepared."
+    else
+        [ ${#SKIP[@]} -gt 0 ] && echo -e "${RED}Skipped in pass 1: ${SKIP[*]}${NC}" >&2
+        [ ${#FAILED[@]} -gt 0 ] && echo -e "${RED}Failed builds: ${FAILED[*]}${NC}" >&2
+        echo -e "${RED}Fix the causes and rerun with --cloud-build (safe to repeat).${NC}" >&2
+        exit 1
+    fi
+    exit 0
+fi
+
 echo "Preparing ${#ROWS[@]} agenticdata project(s), up to $PARALLEL in parallel."
 echo "Per-project logs: $LOG_DIR"
 echo ""

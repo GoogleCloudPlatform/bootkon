@@ -1,0 +1,39 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Runs the agenticdata per-project prep (bk-prep-project) INSIDE the very
+# project the build executes in: $PROJECT_ID is Cloud Build's built-in
+# substitution, so every build preps itself -- only _USERNAME comes from the
+# submitter. One build per participant project means no shared concurrency
+# limit and per-project quota isolation.
+#
+# Submitted by `content/agenticdata/bk-bootstrap-accounts --cloud-build`,
+# which first creates the bootkon-provisioner service account (owner) that
+# this build runs as. bk-prep-project self-installs its pinned terraform, so
+# the plain cloud-sdk image suffices. CLOUD_LOGGING_ONLY is mandatory when a
+# build runs as a custom service account; the timeout covers the 15-25
+# minute prep (Cloud Build's default would cut it off at 10).
+
+timeout: 3600s
+options:
+  logging: CLOUD_LOGGING_ONLY
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/bootkon-provisioner@$PROJECT_ID.iam.gserviceaccount.com
+substitutions:
+  _USERNAME: ""
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - ./content/agenticdata/bk-prep-project "$PROJECT_ID" "${_USERNAME}"
