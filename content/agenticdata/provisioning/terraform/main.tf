@@ -186,7 +186,7 @@ resource "google_compute_instance" "jump" {
   }
 
   metadata = {
-    startup-script = file("${path.module}/../src/jumpvm-startup.sh")
+    startup-script = file("${path.module}/../../src/jumpvm-startup.sh")
   }
 }
 
