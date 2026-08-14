@@ -1,0 +1,204 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# READ-ONLY readiness check for prepped agenticdata projects -- the
+# counterpart to bk-prep-fleet: same CSV contract (username in the first
+# column; project = PREFIX + numeric suffix), or a single username instead
+# of a CSV. For every project it verifies what bk-prep-project should have
+# left behind: the load-bearing APIs, the participant's roles, the
+# Datastream service agent, the data-quality service account, the network
+# path, the private connection (CREATED), the jump VM, the PSC endpoint and
+# the Cloud SQL instance (parked or woken both count as ready). One green
+# line per healthy project; failing checks list red, and the exit code says
+# whether the fleet is event-ready. Changes nothing, safe to run any time.
+#
+# Usage: bk-verify-fleet <CSV_FILE|USERNAME> <PROJECT_ID_PREFIX>
+# Parallelism: BK_PREP_PARALLEL=<n> (default 8).
+
+LOCAL_CSV_FILE="$1"
+PROJECT_ID_PREFIX="$2"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
+    echo "Usage: $(basename $0) <CSV_FILE|USERNAME> <PROJECT_ID_PREFIX>"
+    echo "Examples:"
+    echo "  $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
+    echo "  $(basename $0) devstar1234@gcplab.me \"bootkon-dt25test-\"   # single account"
+    exit 1
+fi
+
+REGION="${REGION:-us-central1}"
+PARALLEL="${BK_PREP_PARALLEL:-8}"
+STATUS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-verify.XXXXXX")"
+
+# Same row collection as bk-prep-fleet (single username or CSV; final-row
+# and CRLF guards included).
+ROWS=()
+if [ ! -f "$LOCAL_CSV_FILE" ] && [[ "$LOCAL_CSV_FILE" == *@* ]]; then
+    USERNAME="$LOCAL_CSV_FILE"
+    NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+elif [ ! -f "$LOCAL_CSV_FILE" ]; then
+    echo "Error: $LOCAL_CSV_FILE is neither a file nor a username (user@domain)." >&2
+    exit 1
+else
+    while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+        USERNAME=${fields[0]%$'\r'}
+        [ -z "$USERNAME" ] && continue
+        NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+    done < <(tail -n +2 "$LOCAL_CSV_FILE")
+fi
+if [ ${#ROWS[@]} -eq 0 ]; then
+    echo "No usernames found in $LOCAL_CSV_FILE."
+    exit 1
+fi
+echo "Verifying ${#ROWS[@]} agenticdata project(s), up to $PARALLEL in parallel ..."
+echo ""
+
+verify_one() {
+    local username="$1" project="$2"
+    local fails=() passes=()
+
+    exists() {  # LABEL cmd... -- resource must describe cleanly
+        local label="$1"; shift
+        if "$@" >/dev/null 2>&1; then passes+=("$label"); else fails+=("$label"); fi
+    }
+
+    # Is a prep currently running against this project? Two signals: an
+    # active Cloud Build (the fleet's cloud-build mode) or a held terraform
+    # state lock in the project's state bucket (any runner).
+    local running=""
+    local build_id
+    build_id="$(gcloud builds list --project="$project" \
+        --filter='status=WORKING OR status=QUEUED' --format='value(id)' --limit=1 2>/dev/null)"
+    [ -n "$build_id" ] && running="cloud build $build_id"
+    if [ -z "$running" ] && gcloud storage ls "gs://${project}-tfstate/bootkon-prep/default.tflock" >/dev/null 2>&1; then
+        running="terraform holds the state lock"
+    fi
+
+    exists "VPC cymbal-vpc" \
+        gcloud compute networks describe cymbal-vpc --project="$project"
+    exists "subnet cymbal-subnet" \
+        gcloud compute networks subnets describe cymbal-subnet --region="$REGION" --project="$project"
+    exists "reserved endpoint IP (cymbal-endpoint-ip)" \
+        gcloud compute addresses describe cymbal-endpoint-ip --region="$REGION" --project="$project"
+    exists "network attachment cymbal-attachment" \
+        gcloud compute network-attachments describe cymbal-attachment --region="$REGION" --project="$project"
+    exists "firewall allow-iap-ingress" \
+        gcloud compute firewall-rules describe allow-iap-ingress --project="$project"
+    exists "jump VM cymbal-jump" \
+        gcloud compute instances describe cymbal-jump --zone="${REGION}-a" --project="$project"
+    exists "PSC endpoint cymbal-endpoint" \
+        gcloud compute forwarding-rules describe cymbal-endpoint --region="$REGION" --project="$project"
+    exists "data-quality service account" \
+        gcloud iam service-accounts describe "dataquality-service-account@${project}.iam.gserviceaccount.com" --project="$project"
+
+    local psc_state
+    psc_state="$(gcloud datastream private-connections describe cymbal-psc \
+        --location="$REGION" --project="$project" --format='value(state)' 2>/dev/null)"
+    if [ "$psc_state" = "CREATED" ]; then
+        passes+=("private connection cymbal-psc")
+    else
+        fails+=("private connection cymbal-psc (state: ${psc_state:-missing})")
+    fi
+
+    local sql_state sql_policy
+    sql_state="$(gcloud sql instances describe cymbal-oltp --project="$project" \
+        --format='value(state)' 2>/dev/null)"
+    sql_policy="$(gcloud sql instances describe cymbal-oltp --project="$project" \
+        --format='value(settings.activationPolicy)' 2>/dev/null)"
+    if [ "$sql_state" = "RUNNABLE" ]; then
+        passes+=("Cloud SQL cymbal-oltp (${sql_policy:-?})")
+    else
+        fails+=("Cloud SQL cymbal-oltp (state: ${sql_state:-missing})")
+    fi
+
+    # The labs' gateway APIs -- one enabled-services call, spot-checked.
+    local enabled api
+    enabled="$(gcloud services list --enabled --project="$project" --format='value(config.name)' 2>/dev/null)"
+    for api in datastream.googleapis.com sqladmin.googleapis.com compute.googleapis.com \
+        bigquery.googleapis.com dataplex.googleapis.com aiplatform.googleapis.com \
+        geminidataanalytics.googleapis.com; do
+        if grep -qxF "$api" <<< "$enabled"; then passes+=("API $api"); else fails+=("API $api"); fi
+    done
+
+    # The participant's roles and the Datastream service agent, from one
+    # policy read.
+    local policy pn
+    policy="$(gcloud projects get-iam-policy "$project" \
+        --flatten="bindings[].members" --format='value(bindings.role,bindings.members)' 2>/dev/null)"
+    local role
+    for role in roles/editor roles/resourcemanager.projectIamAdmin roles/datastream.admin \
+        roles/bigquery.admin roles/dataplex.admin; do
+        if grep -qE "^${role}[[:space:]]+user:${username}$" <<< "$policy"; then
+            passes+=("role $role")
+        else
+            fails+=("role $role for $username")
+        fi
+    done
+    pn="$(gcloud projects describe "$project" --format='value(projectNumber)' 2>/dev/null)"
+    if grep -qE "^roles/datastream.serviceAgent[[:space:]]+serviceAccount:service-${pn}@gcp-sa-datastream" <<< "$policy"; then
+        passes+=("Datastream service agent role")
+    else
+        fails+=("Datastream service agent role")
+    fi
+
+    # Ready: one green line. Prep still running: yellow, with the component
+    # split so you can watch it fill up. Failed and idle: red with both
+    # lists -- what is there, what is missing.
+    local f
+    if [ ${#fails[@]} -eq 0 ]; then
+        echo -e "${GREEN}$project ready${NC} ($username; SQL ${sql_policy:-?})"
+    elif [ -n "$running" ]; then
+        touch "$STATUS_DIR/$project.running"
+        echo -e "${YELLOW}$project PREP IN PROGRESS${NC} ($running) -- ${#passes[@]} of $(( ${#passes[@]} + ${#fails[@]} )) checks green:"
+        for f in "${fails[@]}"; do echo -e "${YELLOW}    pending: $f${NC}"; done
+    else
+        touch "$STATUS_DIR/$project.failed"
+        echo -e "${RED}$project NOT ready${NC} ($username):"
+        for f in "${passes[@]}"; do echo -e "${GREEN}    ok:      $f${NC}"; done
+        for f in "${fails[@]}"; do echo -e "${RED}    missing: $f${NC}"; done
+    fi
+}
+export -f verify_one
+export STATUS_DIR REGION RED GREEN YELLOW NC
+
+printf '%s\n' "${ROWS[@]}" | xargs -P "$PARALLEL" -L1 bash -c 'verify_one "$@"' _
+
+echo ""
+FAILED=("$STATUS_DIR"/*.failed)
+RUNNING=("$STATUS_DIR"/*.running)
+if [ ! -e "${FAILED[0]}" ] && [ ! -e "${RUNNING[0]}" ]; then
+    echo "All projects ready."
+else
+    if [ -e "${RUNNING[0]}" ]; then
+        names=()
+        for f in "${RUNNING[@]}"; do f="$(basename "$f")"; names+=("${f%.running}"); done
+        echo -e "${YELLOW}${#names[@]} project(s) still provisioning: ${names[*]}${NC}"
+        echo -e "${YELLOW}Verify again in a few minutes.${NC}"
+    fi
+    if [ -e "${FAILED[0]}" ]; then
+        names=()
+        for f in "${FAILED[@]}"; do f="$(basename "$f")"; names+=("${f%.failed}"); done
+        echo -e "${RED}${#names[@]} project(s) not ready: ${names[*]}${NC}" >&2
+        echo -e "${RED}Re-run bk-prep-fleet for them (safe to repeat), then verify again.${NC}" >&2
+    fi
+    exit 1
+fi
