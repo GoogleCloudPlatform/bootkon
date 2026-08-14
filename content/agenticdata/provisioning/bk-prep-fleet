@@ -134,9 +134,19 @@ if [ "$MODE" = "cloudbuild" ]; then
                 --display-name="Bootkon prep (runs the Cloud Build prep)" \
                 || { echo -e "${RED}$P: creating the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); continue; }
         fi
-        gcloud projects add-iam-policy-binding "$P" \
-            --member="serviceAccount:$SA" --role="roles/owner" --condition=None >/dev/null \
-            || { echo -e "${RED}$P: granting owner to the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); continue; }
+        # A freshly created SA can take seconds to become visible to IAM --
+        # granting against it too early fails with "service account ... does
+        # not exist" (seen live). Retry instead of failing the project.
+        granted=""
+        for _try in 1 2 3 4 5 6; do
+            if gcloud projects add-iam-policy-binding "$P" \
+                --member="serviceAccount:$SA" --role="roles/owner" --condition=None >/dev/null 2>&1; then
+                granted=1
+                break
+            fi
+            sleep 5
+        done
+        [ -z "$granted" ] && { echo -e "${RED}$P: granting owner to the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); continue; }
         # Submitting a build that runs as a custom SA requires actAs on it.
         # Owner-ish organizer identities have that; a devstar (editor +
         # projectIamAdmin) does not -- but CAN self-grant the project-level
