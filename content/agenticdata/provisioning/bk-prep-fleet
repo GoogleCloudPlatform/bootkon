@@ -135,9 +135,25 @@ if [ "$MODE" = "cloudbuild" ]; then
         fi
         gcloud projects add-iam-policy-binding "$P" \
             --member="serviceAccount:$SA" --role="roles/owner" --condition=None >/dev/null \
-            || { echo -e "${RED}$P: granting owner to the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); }
+            || { echo -e "${RED}$P: granting owner to the provisioner SA failed -- skipping.${NC}" >&2; SKIP+=("$P"); continue; }
+        # Submitting a build that runs as a custom SA requires actAs on it.
+        # Owner-ish organizer identities have that; a devstar (editor +
+        # projectIamAdmin) does not -- but CAN self-grant the project-level
+        # serviceAccountUser role, which covers actAs on the provisioner SA.
+        CALLER="$(gcloud config get-value account 2>/dev/null)"
+        [ -n "$CALLER" ] && gcloud projects add-iam-policy-binding "$P" \
+            --member="user:$CALLER" --role="roles/iam.serviceAccountUser" --condition=None >/dev/null \
+            || echo "NOTE: could not grant serviceAccountUser to $CALLER on $P (fine for owner identities)."
     done
     echo ""
+
+    # With only a handful of rows, seconds pass between the grants above and
+    # the submits below -- give IAM a moment; big CSVs age the grants through
+    # sheer loop length.
+    if [ ${#ROWS[@]} -le 3 ]; then
+        echo "Letting the IAM grants propagate (30s) ..."
+        sleep 30
+    fi
 
     # Pass 2: one async build per project; the submit uploads the checkout as
     # source (respecting .gitignore) and returns immediately.
