@@ -124,11 +124,15 @@ verify_one() {
         --format='value(state)' 2>/dev/null)"
     sql_policy="$(gcloud sql instances describe cymbal-oltp --project="$project" \
         --format='value(settings.activationPolicy)' 2>/dev/null)"
-    if [ "$sql_state" = "RUNNABLE" ]; then
-        passes+=("Cloud SQL cymbal-oltp (${sql_policy:-?})")
-    else
-        fails+=("Cloud SQL cymbal-oltp (state: ${sql_state:-missing})")
-    fi
+    # Parked (STOPPED / activation policy NEVER) is the DESIRED pre-event
+    # state -- the participant's `. bk` wakes the instance. Both parked and
+    # running count as ready; the state/policy is shown for orientation.
+    case "$sql_state" in
+        RUNNABLE|STOPPED)
+            passes+=("Cloud SQL cymbal-oltp ($sql_state, ${sql_policy:-?})") ;;
+        *)
+            fails+=("Cloud SQL cymbal-oltp (state: ${sql_state:-missing})") ;;
+    esac
 
     # The labs' gateway APIs -- one enabled-services call, spot-checked.
     local enabled api
@@ -165,7 +169,7 @@ verify_one() {
     # lists -- what is there, what is missing.
     local f
     if [ ${#fails[@]} -eq 0 ]; then
-        echo -e "${GREEN}$project ready${NC} ($username; SQL ${sql_policy:-?})"
+        echo -e "${GREEN}$project ready${NC} ($username; SQL ${sql_state:-?}/${sql_policy:-?})"
     elif [ -n "$running" ]; then
         touch "$STATUS_DIR/$project.running"
         echo -e "${YELLOW}$project PREP IN PROGRESS${NC} ($running) -- ${#passes[@]} of $(( ${#passes[@]} + ${#fails[@]} )) checks green:"
