@@ -73,29 +73,10 @@ REGION="${REGION:-us-central1}"
 
 TF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/terraform"
 
-# Terraform is NOT preinstalled in Cloud Shell (nor in the Cloud Build
-# image) -- self-install a pinned version into ~/.local/bin when missing, so
-# this one script runs identically on the organizer laptop, in Cloud Shell
-# (Argolis) and inside Cloud Build. The single pin here also keeps the
-# state's terraform_version consistent across all runners (state written by
-# a newer terraform is unreadable to older ones). python3 -m zipfile instead
-# of unzip: available everywhere gcloud is; it drops the exec bit, hence the
-# chmod.
-TF_VERSION="1.15.8"
-if ! command -v terraform >/dev/null 2>&1; then
-    tf_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-    tf_arch="$(uname -m)"
-    case "$tf_arch" in x86_64) tf_arch=amd64 ;; aarch64|arm64) tf_arch=arm64 ;; esac
-    echo "Installing Terraform ${TF_VERSION} (${tf_os}_${tf_arch}) into ~/.local/bin ..."
-    mkdir -p "$HOME/.local/bin"
-    curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_${tf_os}_${tf_arch}.zip" \
-        -o "${TMPDIR:-/tmp}/terraform.zip" \
-        || { echo "ERROR: downloading terraform failed." >&2; exit 1; }
-    python3 -m zipfile -e "${TMPDIR:-/tmp}/terraform.zip" "$HOME/.local/bin/" \
-        || { echo "ERROR: extracting terraform failed." >&2; exit 1; }
-    chmod +x "$HOME/.local/bin/terraform"
-    export PATH="$HOME/.local/bin:$PATH"
-fi
+# Terraform availability + version pin live in the shared ensure-terraform
+# helper (sourced, so it can extend PATH); bk-prep-fleet sources the same
+# file before its local fan-out.
+. "$(dirname "${BASH_SOURCE[0]}")/ensure-terraform" || exit 1
 
 # Per-project state bucket, inside the project it describes -- the state
 # dies with the sandbox, and no cross-project access is ever needed.

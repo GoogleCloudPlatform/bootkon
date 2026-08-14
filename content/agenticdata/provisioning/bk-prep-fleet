@@ -32,14 +32,23 @@
 # Cloud Build per participant project (cloudbuild.yaml wraps the very same
 # bk-prep-project) and watch them. The laptop only submits; the builds run
 # inside the projects as their bootkon-provisioner service account.
+# Flags are accepted at any position; unknown flags are hard errors -- a
+# silently ignored --cloud-build once sent a run down the local path.
 MODE=local
-if [ "${1:-}" = "--cloud-build" ]; then
-    MODE=cloudbuild
-    shift
+POSITIONAL=()
+for arg in "$@"; do
+    case "$arg" in
+        --cloud-build) MODE=cloudbuild ;;
+        --*) echo "Error: unknown flag '$arg'." >&2; exit 1 ;;
+        *) POSITIONAL+=("${arg}") ;;
+    esac
+done
+LOCAL_CSV_FILE="${POSITIONAL[0]:-}"
+PROJECT_ID_PREFIX="${POSITIONAL[1]:-}"
+if [ ${#POSITIONAL[@]} -gt 2 ]; then
+    echo "Error: unexpected extra argument '${POSITIONAL[2]}'." >&2
+    exit 1
 fi
-
-LOCAL_CSV_FILE="$1"
-PROJECT_ID_PREFIX="$2"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -57,6 +66,12 @@ if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
     echo "Local mode parallelism: BK_PREP_PARALLEL=<n> (default 8)."
     echo "--cloud-build submits one build per project instead (fully parallel)."
     exit 1
+fi
+
+if [ "$MODE" = "cloudbuild" ]; then
+    echo "Mode: Cloud Build (one build per project; nothing runs on this machine)."
+else
+    echo "Mode: local (the preps run right here; pass --cloud-build for the build fan-out)."
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -178,6 +193,12 @@ if [ "$MODE" = "cloudbuild" ]; then
     fi
     exit 0
 fi
+
+# Local mode runs terraform right here -- make sure it exists ONCE, up
+# front, instead of eight parallel workers racing the self-install. (The
+# cloud-build mode above never reaches this: terraform runs inside the
+# builds there.)
+. "$SCRIPT_DIR/ensure-terraform" || exit 1
 
 echo "Preparing ${#ROWS[@]} agenticdata project(s), up to $PARALLEL in parallel."
 echo "Per-project logs: $LOG_DIR"
