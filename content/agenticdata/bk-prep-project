@@ -52,12 +52,21 @@ if [ "${1:-}" = "--destroy" ]; then
     shift
 fi
 
-PROJECT="${1:-${PROJECT_ID:-}}"
-ACCOUNT="${2:-${GCP_USERNAME:-}}"
+# Arguments work in either order: the one containing @ is the username, the
+# other the project id (fixes the swapped-arguments trap vs. the accounts
+# script). Whatever is missing falls back to the bootkon environment.
+PROJECT=""
+ACCOUNT=""
+for arg in "${1:-}" "${2:-}"; do
+    [ -z "$arg" ] && continue
+    if [[ "$arg" == *@* ]]; then ACCOUNT="$arg"; else PROJECT="$arg"; fi
+done
+PROJECT="${PROJECT:-${PROJECT_ID:-}}"
+ACCOUNT="${ACCOUNT:-${GCP_USERNAME:-}}"
 if [ -z "$PROJECT" ] || [ -z "$ACCOUNT" ]; then
-    echo "Usage: $(basename "$0") [--destroy] [PROJECT_ID [USERNAME]]" >&2
-    echo "(without arguments both come from the bootkon environment:" >&2
-    echo " PROJECT_ID/GCP_USERNAME -- run '. bk' first)" >&2
+    echo "Usage: $(basename "$0") [--destroy] [PROJECT_ID] [USERNAME]" >&2
+    echo "(arguments accepted in any order; whatever is missing comes from the" >&2
+    echo " bootkon environment: PROJECT_ID/GCP_USERNAME -- run '. bk' first)" >&2
     exit 1
 fi
 REGION="${REGION:-us-central1}"
