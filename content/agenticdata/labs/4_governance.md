@@ -5,7 +5,7 @@
 <walkthrough-tutorial-difficulty difficulty="2"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>
 
-You have a working medallion — now make it *trustworthy*. In this lab you govern it with **Knowledge Catalog** (formerly Dataplex Universal Catalog): label the tiers so everyone can find the right data, measure quality automatically, lock down PII, and give business terms a home. In Lab 5 an AI agent becomes a consumer of exactly this governed layer — governance is what keeps agents grounded.
+You have a working medallion — now make it *trustworthy*. In this lab you govern it with **Knowledge Catalog** (formerly Dataplex): label the tiers so everyone can find the right data, measure quality automatically, lock down PII, and give business terms a home. In Lab 5 an AI agent becomes a consumer of exactly this governed layer — governance is what keeps agents grounded.
 
 This lab is console-first: you built everything with code so far; now see how the platform describes itself.
 
