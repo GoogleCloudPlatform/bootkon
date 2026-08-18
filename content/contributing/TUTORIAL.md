@@ -73,7 +73,7 @@ To try your branch the way a participant would — a clean clone and the full
 the URL. The stream READMEs hard-code `main`, so you must swap it out:
 
 ```bash
-BK_BRANCH=<your-branch> BK_STREAM=<stream> BK_REPO=<user>/bootkon; . <(wget -qO- https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/.scripts/bk)
+BK_BRANCH=<your-branch> BK_STREAM=<stream> BK_REPO=<user>/bootkon; . <(curl -fsSL https://raw.githubusercontent.com/${BK_REPO}/${BK_BRANCH}/.scripts/bk)
 ```
 
 `bk` clones the branch into `~/bootkon`. If `~/bootkon` already exists (your dev
