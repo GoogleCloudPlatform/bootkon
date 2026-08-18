@@ -81,7 +81,7 @@ Each run also executes the **assertions** — data tests that fail the run if th
 
 Open [BigQuery](https://console.cloud.google.com/bigquery) and expand your project:
 
-1. You now have three medallion datasets: `cymbal_bronze`, <walkthrough-spotlight-pointer locator="text('cymbal_silver')">cymbal_silver</walkthrough-spotlight-pointer> and <walkthrough-spotlight-pointer locator="text('cymbal_gold')">cymbal_gold</walkthrough-spotlight-pointer> (plus `cymbal_assertions` — the test results).
+1. You now have three medallion datasets: <walkthrough-spotlight-pointer locator="text('cymbal_bronze')">cymbal_bronze</walkthrough-spotlight-pointer> , <walkthrough-spotlight-pointer locator="text('cymbal_silver')">cymbal_silver</walkthrough-spotlight-pointer> and <walkthrough-spotlight-pointer locator="text('cymbal_gold')">cymbal_gold</walkthrough-spotlight-pointer> (plus <walkthrough-spotlight-pointer locator="text('cymbal_assertions')">cymbal_assertions</walkthrough-spotlight-pointer> — the test results).
 2. Open `cymbal_silver` → `stg_customers` and check the row count in <walkthrough-spotlight-pointer locator="semantic({tab 'Details'})">Details</walkthrough-spotlight-pointer> — fewer rows than `cymbal_bronze` → `cymbal_customers`: the duplicates and invalid emails are gone.
 3. Query the flaw you'll never see again:
 
