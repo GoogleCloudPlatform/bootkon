@@ -129,7 +129,13 @@ Now the piece that replaces your keyboard: under <walkthrough-spotlight-pointer 
 
 ❗ The schedule fires at the next quarter-hour boundary — which may well land after this lab ends. Don't wait for it; the next section triggers the run right now, and the ticks keep coming all event long either way.
 
-While the clock runs, ask your co-engineer to cement the concept. In your agy session (terminal 1):
+While the clock runs, ask your co-engineer to cement the concept. Start agy in terminal 1:
+
+```bash
+cd ~/bootkon && agy
+```
+
+And ask:
 
 ```bash
 Explain the managed Dataform model like I run data platforms for a living: what exactly is frozen in a compilation result, why does re-executing the same compilation result still pick up new bronze rows, and when would I schedule release compilations more often than daily?

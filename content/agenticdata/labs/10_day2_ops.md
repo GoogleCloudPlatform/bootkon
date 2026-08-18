@@ -55,7 +55,13 @@ The repository ships a finished dashboard as reference, so clear the stage first
 rm content/agenticdata/src/optional/day2_ops/dashboard.json
 ```
 
-Start `agy` from `~/bootkon` and hand over the brief:
+Start agy:
+
+```bash
+cd ~/bootkon && agy
+```
+
+And hand over the brief:
 
 ```bash
 /goal Read content/agenticdata/src/optional/day2_ops/AGENTS.md and create content/agenticdata/src/optional/day2_ops/dashboard.json exactly as it specifies: valid Cloud Monitoring Dashboard API JSON, six widgets in the given order, the exact metric types from the brief, and the 120-second threshold line on the freshness chart. No comments, no trailing commas.
@@ -125,13 +131,19 @@ What about your pager? Be honest about physics: metric ingestion plus alert eval
 
 ### Diagnose with your co-responder
 
-You know *that* it's broken. An on-call needs *why*. This is investigation, not authoring — so agy joins as a **read-only co-responder**: the prompt below explicitly instructs it to propose each command and wait for your go before running anything. That's the incident-response pattern worth taking home: the human authorizes, the agent investigates — and here the constraint lives in the *instructions*, exactly where you'd pin it for a production runbook agent. Back in terminal 1, start `agy` (from `~/bootkon`) and paste the symptom:
+You know *that* it's broken. An on-call needs *why*. This is investigation, not authoring — so agy joins as a **read-only co-responder**: the prompt below explicitly instructs it to propose each command and wait for your go before running anything. That's the incident-response pattern worth taking home: the human authorizes, the agent investigates — and here the constraint lives in the *instructions*, exactly where you'd pin it for a production runbook agent. Back in terminal 1, start agy:
+
+```bash
+cd ~/bootkon && agy
+```
+
+And paste the symptom:
 
 ```bash
 Our BigQuery bronze dataset stopped receiving new rows a few minutes ago, and data freshness on the Datastream stream cymbal-cdc-stream (location us-central1) keeps climbing. The source Postgres itself is healthy and still taking writes. Investigate the Datastream side with read-only commands only (gcloud datastream streams describe, gcloud logging read) and tell me your diagnosis. Ask me before each command, and do not change anything.
 ```
 
-Approve each command as it comes and read the output together with agy. If agy meanders, these two are the heart of the matter — run them yourself:
+Approve each command as it comes and read the output together with agy. If agy meanders, these two are the heart of the matter — exit agy with `/quit` and run them yourself:
 
 ```bash
 gcloud datastream streams describe cymbal-cdc-stream --location={{ REGION }} \
@@ -145,7 +157,11 @@ gcloud logging read 'resource.type="datastream.googleapis.com/Stream" severity>=
 
 Somewhere in that output sits the confession, in classic Postgres phrasing: `role "datastream_user" is not permitted to log in`. The replication user — the identity Datastream has used since Lab 2 — can't connect. Production traffic (user `postgres`) was never touched; only the replication lane was closed.
 
-Diagnosis in hand, you've earned the right to read the crime scene. Open <walkthrough-editor-open-file filePath="content/agenticdata/src/optional/day2_ops/chaos.sh">chaos.sh</walkthrough-editor-open-file> — yes, *now* — and let agy narrate:
+Diagnosis in hand, you've earned the right to read the crime scene. Open <walkthrough-editor-open-file filePath="content/agenticdata/src/optional/day2_ops/chaos.sh">chaos.sh</walkthrough-editor-open-file> — yes, *now* — and let agy narrate. Start it again if you left it for the commands above:
+
+```bash
+cd ~/bootkon && agy
+```
 
 ```bash
 Read content/agenticdata/src/optional/day2_ops/chaos.sh and explain, statement by statement, how it broke replication -- and why the simulator kept writing happily the whole time.

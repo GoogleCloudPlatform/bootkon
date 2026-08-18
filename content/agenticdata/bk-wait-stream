@@ -1,0 +1,54 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Waits until the Datastream stream has finished being created, i.e. until
+# it reports NOT_STARTED and can be flipped to RUNNING. Creating a stream
+# takes a few minutes, and the console already lists it as "Not started"
+# while the create operation is still finalizing -- an update issued then
+# answers "The resource is being created". This poll is the lab's way of
+# hitting the right moment without anyone having to retry by hand.
+#
+# It also exists because the equivalent one-line shell loop cannot be
+# pasted with the Cloud Shell insert button ("auto-populate contained
+# invalid characters") -- a lab command must stay a plain, paste-safe line.
+#
+# Usage: bk-wait-stream [STREAM_NAME]   (default: cymbal-cdc-stream)
+
+set -u
+: "${REGION:?REGION is not set. Run '. bk' or open a new terminal.}"
+
+NAME="${1:-cymbal-cdc-stream}"
+
+while true; do
+    state="$(gcloud datastream streams describe "$NAME" \
+        --location="$REGION" --format='value(state)' 2>/dev/null || true)"
+    case "$state" in
+        NOT_STARTED)
+            echo "Stream $NAME is created and ready to start."
+            exit 0
+            ;;
+        RUNNING)
+            echo "Stream $NAME is already RUNNING -- nothing to wait for."
+            exit 0
+            ;;
+        "")
+            echo "Stream $NAME does not exist (yet) -- waiting ..."
+            ;;
+        *)
+            echo "Stream $NAME is $state -- waiting for the creation to finish ..."
+            ;;
+    esac
+    sleep 10
+done

@@ -130,7 +130,13 @@ gcloud datastream connection-profiles create cymbal-bq-profile --location={{ REG
     --type=bigquery --display-name=cymbal-bq-profile
 ```
 
-The stream itself is defined by two JSON files that ship with the repository — you work on them directly in `content/agenticdata/src/datastream/` (the shipped destination config still contains a placeholder). Writing API-correct configuration is authoring work — agy's job. In your agy session (started from `~/bootkon`), run:
+The stream itself is defined by two JSON files that ship with the repository — you work on them directly in `content/agenticdata/src/datastream/` (the shipped destination config still contains a placeholder). Writing API-correct configuration is authoring work — so call your co-engineer back into the terminal:
+
+```bash
+cd ~/bootkon && agy
+```
+
+Now brief it:
 
 ```bash
 /goal Rewrite content/agenticdata/src/datastream/source_config.json and content/agenticdata/src/datastream/destination_config.json for gcloud datastream streams create. The PostgreSQL source uses publication "cymbal_pub", replication slot "cymbal_slot", and should include all tables of the "cymbal" schema. The BigQuery destination writes every table into the single dataset "{{ PROJECT_ID }}:cymbal_bronze" with a data freshness of 0 seconds. Use the exact JSON field names of the Datastream v1 API (publication, replicationSlot, includeObjects/postgresqlSchemas, singleTargetDataset/datasetId, dataFreshness).
@@ -143,7 +149,7 @@ git -C ~/bootkon restore content/agenticdata/src/datastream/
 sed -i "s/PROJECT_ID_PLACEHOLDER/{{ PROJECT_ID }}/" content/agenticdata/src/datastream/destination_config.json
 ```
 
-The next commands are for the **shell again, not for agy** — exit agy with `/quit` first. Then create the stream (with a full backfill of the seed data) and flip it to `RUNNING`:
+The next commands are for the **shell again, not for agy** — exit agy with `/quit` first. Then create the stream, with a full backfill of the seed data:
 
 ```bash
 gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \
@@ -153,10 +159,15 @@ gcloud datastream streams create cymbal-cdc-stream --location={{ REGION }} \
     --backfill-all
 ```
 
-The create takes a few minutes — watch it happen in the [Datastream console](https://console.cloud.google.com/datastream/streams): your stream appears with status **Creating**, then **Not started**. Don't rush the start: an update issued too early answers *"The resource is being created"* (the console may already say Not started while the create operation still finalizes — trust the API, not the list). The first line below waits for the right moment, then the second flips the stream to `RUNNING`:
+The create takes a few minutes — watch it happen in the [Datastream console](https://console.cloud.google.com/datastream/streams): your stream appears with status **Creating**, then **Not started**. Don't rush the start: an update issued too early answers *"The resource is being created"*, even when the console already shows *Not started* (the create operation is still finalizing — trust the API, not the list). This helper waits for the real thing:
 
 ```bash
-while [ "$(gcloud datastream streams describe cymbal-cdc-stream --location={{ REGION }} --format='value(state)' 2>/dev/null)" != "NOT_STARTED" ]; do echo "stream still creating ..."; sleep 10; done
+content/agenticdata/bk-wait-stream
+```
+
+Now flip the stream to `RUNNING`:
+
+```bash
 gcloud datastream streams update cymbal-cdc-stream --location={{ REGION }} \
     --state=RUNNING --update-mask=state
 ```
