@@ -1,8 +1,9 @@
 # Agenticdata provisioning (organizer tooling)
 
 Everything **project-bound** — APIs, IAM, service accounts, the network path,
-Datastream's private connection, the jump VM, the PSC endpoint and the Cloud
-SQL instance — is provisioned here, ahead of the event. Participants never
+Datastream's private connection and BigQuery connection profile, the jump VM,
+the PSC endpoint, the Cloud SQL instance, the seed bucket and the bronze
+dataset — is provisioned here, ahead of the event. Participants never
 wait on a build or an IAM propagation race; their Lab 1 starts on a project
 where the infrastructure already exists. Participant-side setup (pip, seed
 data, agy, per-user secrets) stays in `../bk-bootstrap` and `bk-init`.

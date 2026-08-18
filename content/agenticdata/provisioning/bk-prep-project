@@ -197,6 +197,9 @@ adopt_existing() {
     adopt google_sql_database_instance.oltp "projects/$PROJECT/instances/cymbal-oltp"
     adopt google_compute_forwarding_rule.endpoint "projects/$PROJECT/regions/$REGION/forwardingRules/cymbal-endpoint"
     adopt google_service_account.dataquality "projects/$PROJECT/serviceAccounts/dataquality-service-account@${PROJECT}.iam.gserviceaccount.com"
+    adopt google_bigquery_dataset.bronze "projects/$PROJECT/datasets/cymbal_bronze"
+    adopt google_datastream_connection_profile.bq "projects/$PROJECT/locations/$REGION/connectionProfiles/cymbal-bq-profile"
+    adopt google_storage_bucket.seed "$PROJECT/${PROJECT}-bucket"
 }
 
 if [ "$MODE" = "destroy" ]; then

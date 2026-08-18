@@ -109,6 +109,12 @@ verify_one() {
         gcloud compute forwarding-rules describe cymbal-endpoint --region="$REGION" --project="$project"
     exists "data-quality service account" \
         gcloud iam service-accounts describe "dataquality-service-account@${project}.iam.gserviceaccount.com" --project="$project"
+    exists "seed bucket gs://${project}-bucket" \
+        gcloud storage buckets describe "gs://${project}-bucket" --project="$project"
+    exists "BigQuery connection profile cymbal-bq-profile" \
+        gcloud datastream connection-profiles describe cymbal-bq-profile --location="$REGION" --project="$project"
+    exists "bronze dataset cymbal_bronze" \
+        bq --project_id="$project" --format=none show --dataset "${project}:cymbal_bronze"
 
     local psc_state
     psc_state="$(gcloud datastream private-connections describe cymbal-psc \

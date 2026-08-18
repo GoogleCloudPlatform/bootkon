@@ -94,13 +94,11 @@ else
     fi
 fi
 
+# The bucket itself belongs to the prep (terraform), which also grants the
+# Cloud SQL instance read access to it for Lab 2's server-side import.
 echo "Staging the seed data in Cloud Storage ..."
-if ! gcloud storage buckets describe "gs://${PROJECT_ID}-bucket" >/dev/null 2>&1; then
-    gcloud storage buckets create "gs://${PROJECT_ID}-bucket" --location="$REGION" \
-        || step_failed "creating the seed bucket failed"
-fi
 gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
-    || step_failed "uploading the seed data failed"
+    || step_failed "uploading the seed data failed (was this project prepped?)"
 
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
 # are NOT written here -- they are created by content/agenticdata/provisioning/bk-init, which

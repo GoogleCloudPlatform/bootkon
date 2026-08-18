@@ -58,20 +58,7 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
 
 Open <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/schema.sql">schema.sql</walkthrough-editor-open-file> — notice every table has a primary key (Datastream's merge mode needs them) and there are deliberately no foreign keys.
 
-Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel. First, look up the instance's service account (every Cloud SQL instance acts as its own Google-managed identity):
-
-```bash
-SQL_SA=$(gcloud sql instances describe cymbal-oltp --format="value(serviceAccountEmailAddress)")
-```
-
-Allow that identity to read your seed bucket:
-
-```bash
-gcloud storage buckets add-iam-policy-binding gs://{{ PROJECT_ID }}-bucket \
-    --member=serviceAccount:$SQL_SA --role=roles/storage.objectAdmin
-```
-
-Then import all six tables (one loop, one line — each import reports itself):
+Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel. It can do that because every Cloud SQL instance acts as its own Google-managed identity, and yours was granted read access to your seed bucket when the project was provisioned. Import all six tables (one loop, one line — each import reports itself):
 
 ```bash
 for t in customers products orders order_items payments reviews; do gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv --database=cymbal --table=cymbal.${t} --quiet; done
@@ -101,21 +88,11 @@ PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymba
     -f content/agenticdata/src/datastream/replication_setup.sql
 ```
 
-### Create the bronze dataset
-
-This is where the CDC data will land, so create the destination dataset first:
-
-```bash
-bq mk --location=US --dataset {{ PROJECT_ID }}:cymbal_bronze
-```
-
-Verify it in the console: open [BigQuery](https://console.cloud.google.com/bigquery), expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> and open its **Datasets** entry — there sits `cymbal_bronze`, empty and waiting. In a few minutes, Datastream will fill it.
-
 ### Provision Datastream
 
-Now you create two **connection profiles** (a PostgreSQL source and a BigQuery destination) and the **CDC stream**.
+A stream needs two **connection profiles** — where the data comes from, and where it goes. The destination side already exists in your project: the BigQuery profile `cymbal-bq-profile` and the empty `cymbal_bronze` dataset the stream will fill. Take a look while it's still empty: open [BigQuery](https://console.cloud.google.com/bigquery), expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> and its **Datasets** entry.
 
-Two profiles: where the data comes from, and where it goes. Note the hostname — the PSC endpoint IP, because Datastream private connections do not resolve DNS:
+The source profile is yours to create — it carries your generated replication password. Note the hostname: the PSC endpoint IP, because Datastream private connections do not resolve DNS:
 
 ```bash
 gcloud datastream connection-profiles create cymbal-postgres-profile --location={{ REGION }} \
@@ -123,11 +100,6 @@ gcloud datastream connection-profiles create cymbal-postgres-profile --location=
     --postgresql-hostname=10.10.0.5 --postgresql-port=5432 \
     --postgresql-username=datastream_user --postgresql-password="{{ BK_DS_PASSWORD }}" \
     --postgresql-database=cymbal --private-connection=cymbal-psc
-```
-
-```bash
-gcloud datastream connection-profiles create cymbal-bq-profile --location={{ REGION }} \
-    --type=bigquery --display-name=cymbal-bq-profile
 ```
 
 The stream itself is defined by two JSON files that ship with the repository — you work on them directly in `content/agenticdata/src/datastream/` (the shipped destination config still contains a placeholder). Writing API-correct configuration is authoring work — so call your co-engineer back into the terminal:

@@ -251,6 +251,49 @@ resource "google_sql_database_instance" "oltp" {
   depends_on = [google_project_service.this]
 }
 
+# The destination side of the CDC pipeline, plus the seed bucket. All of it
+# is boilerplate the labs used to type: the bronze dataset the stream writes
+# into, the BigQuery connection profile (no secrets in it -- unlike the
+# PostgreSQL profile, which carries BK_DS_PASSWORD and therefore stays a
+# Lab 2 command), and the bucket the seed CSVs are staged in, with the SQL
+# instance's service account allowed to read them for the server-side
+# import (terraform knows that account, so the lab needs no describe/grant
+# dance).
+resource "google_bigquery_dataset" "bronze" {
+  dataset_id = "cymbal_bronze"
+  location   = "US"
+
+  # Sandbox projects: --destroy must not trip over CDC-filled tables.
+  delete_contents_on_destroy = true
+
+  depends_on = [google_project_service.this]
+}
+
+resource "google_datastream_connection_profile" "bq" {
+  connection_profile_id = "cymbal-bq-profile"
+  display_name          = "cymbal-bq-profile"
+  location              = var.region
+
+  bigquery_profile {}
+
+  depends_on = [google_project_service.this]
+}
+
+resource "google_storage_bucket" "seed" {
+  name                        = "${var.project_id}-bucket"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  force_destroy               = true
+
+  depends_on = [google_project_service.this]
+}
+
+resource "google_storage_bucket_iam_member" "sql_seed_access" {
+  bucket = google_storage_bucket.seed.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_sql_database_instance.oltp.service_account_email_address}"
+}
+
 # The consumer half of the database's PSC pair: the endpoint at the reserved
 # 10.10.0.5, plugged into the service attachment the instance publishes.
 # From here on that address IS the database -- for Datastream and for the
