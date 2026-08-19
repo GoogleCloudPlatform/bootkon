@@ -40,7 +40,7 @@ Along the way you will spot **Prefer the console?** notes: optional UI routes fo
 {% if ON_ARGOLIS %}
 ### Prepare your project (Argolis)
 
-At an event, the organizers provision every project days ahead — on Argolis you are your own organizer, so run the prep yourself first. It enables the stream APIs, grants your roles, sets up the Datastream service agent and its private connection, creates the data-quality service account, and builds the network path and the Cloud SQL instance (idempotent, safe to re-run; expect 15–25 minutes):
+At an event, the organizers provision every project days ahead — on Argolis (Google internal) you are your own organizer, so run the prep yourself first. It enables the stream APIs, grants your roles, sets up the Datastream service agent and its private connection, creates the data-quality service account, and builds the network path and the Cloud SQL instance (idempotent, safe to re-run; expect 15–25 minutes):
 
 ```bash
 content/agenticdata/provisioning/bk-prep-project
