@@ -5,7 +5,7 @@
 <walkthrough-tutorial-difficulty difficulty="2"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>
 
-In this lab you bring Cymbal's database to life and replicate it — continuously — into BigQuery using **Datastream** change data capture (CDC). By the end, every INSERT, UPDATE and DELETE in Postgres lands in your `cymbal_bronze` dataset within moments.
+In this lab you bring Cymbal's database to life and replicate it — continuously — into BigQuery using **Datastream** change data capture (CDC). By the end of the day, every INSERT, UPDATE and DELETE in Postgres lands in your `cymbal_bronze` dataset within moments.
 
 (The commands below contain your generated database passwords, rendered into the tutorial. If you see empty quotes instead, run the `bk-start` reload step from the end of Lab 1.)
 
