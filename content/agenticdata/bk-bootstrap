@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bootstraps the Agentic Data Bootkon stream on PARTICIPANT time: Python
-# deps, the seed data (generated and staged in GCS), and the agy
+# deps, the Dataform CLI and its project wiring, and the agy
 # pre-configuration.
 #
 # Everything project-bound (APIs, the Datastream service agent, the
@@ -76,34 +76,14 @@ sed "s/PROJECT_ID_PLACEHOLDER/${PROJECT_ID}/" \
 echo "{\"projectId\": \"${PROJECT_ID}\", \"location\": \"US\"}" > content/agenticdata/src/dataform/.df-credentials.json \
     || step_failed "writing the Dataform credentials file failed"
 
-# Seed data: deterministic synthetic CSVs (the pinned faker from the pip
-# install above is what guarantees identical rows for every participant),
-# staged in GCS for Lab 2's server-side import. The .complete marker is
-# written only after a successful run, so a crash mid-generation regenerates
-# on the next attempt -- while the natural novice recovery (re-running this
-# script) skips the minute of generation. Re-uploads are harmless: identical
-# content, gcloud storage cp just overwrites.
-if [ -f seed_data/.complete ]; then
-    echo "Seed data already generated; skipping the generator."
-else
-    echo "Generating the Cymbal seed data (about a minute) ..."
-    if python3 content/agenticdata/src/datagen/generate.py --out seed_data; then
-        touch seed_data/.complete
-    else
-        step_failed "generating the seed data failed"
-    fi
-fi
-
-# The bucket itself belongs to the prep (terraform), which also grants the
-# Cloud SQL instance read access to it for Lab 2's server-side import.
-echo "Staging the seed data in Cloud Storage ..."
-gcloud storage cp seed_data/*.csv "gs://${PROJECT_ID}-bucket/seed/" \
-    || step_failed "uploading the seed data failed (was this project prepped?)"
+# NOTE: the seed data is NOT generated here anymore -- provisioning
+# generates it, stages it in the bucket and imports it into Cloud SQL, so
+# Lab 2 starts on a database that already holds Cymbal's history.
 
 # NOTE: the stream's secrets (BK_DB_PASSWORD/BK_DS_PASSWORD) and runtime config
 # are NOT written here -- they are created by content/agenticdata/provisioning/bk-init, which
 # `. bk` runs at initialization, before the first tutorial render. This script
-# keeps only the per-user work: pip, the Dataform CLI, seed data, agy.
+# keeps only the per-user work: pip, the Dataform CLI, agy.
 
 # Pre-configure Antigravity CLI (agy). It is already installed in Cloud Shell.
 # Every key below mirrors OBSERVED persisted state (2026-08-13, diffed from

@@ -41,30 +41,11 @@ Cloud Shell lives outside your VPC and a PSC-only instance has no public IP — 
 ~/bootkon/content/agenticdata/bk-tunnel
 ```
 
-### Create the schema and load the data
+### Cymbal's history, already in place
 
-Back in your **first terminal**. Create the database (control-plane, no tunnel needed):
-
-```bash
-gcloud sql databases create cymbal --instance=cymbal-oltp
-```
-
-Apply the schema through the tunnel:
-
-```bash
-PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \
-    -f content/agenticdata/src/datagen/schema.sql
-```
+The `cymbal` database, its schema and half a million orders went into your instance when the project was provisioned — a **server-side import from Cloud Storage**, the way you would bulk-load a production database: the instance pulls the CSVs itself, using its own Google-managed identity, so nothing has to travel through a laptop or a tunnel.
 
 Open <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/schema.sql">schema.sql</walkthrough-editor-open-file> — notice every table has a primary key (Datastream's merge mode needs them) and there are deliberately no foreign keys.
-
-Now the bulk load. This is a **server-side import from Cloud Storage** — the instance pulls the CSVs itself; nothing flows through your tunnel. It can do that because every Cloud SQL instance acts as its own Google-managed identity, and yours was granted read access to your seed bucket when the project was provisioned. Import all six tables (one loop, one line — each import reports itself):
-
-```bash
-for t in customers products orders order_items payments reviews; do gcloud sql import csv cymbal-oltp gs://{{ PROJECT_ID }}-bucket/seed/${t}.csv --database=cymbal --table=cymbal.${t} --quiet; done
-```
-
-This takes about two to three minutes for all six tables. While it runs, read ahead — but execute the next sections only once the import finished.
 
 ### Verify in the console
 
@@ -80,7 +61,7 @@ Half a million orders — Cymbal's production history, now living in **your** da
 
 Datastream reads Postgres' write-ahead log through a **publication** and a **replication slot**, as a dedicated replication user. The publication defines *which* tables' changes are exposed (`FOR ALL TABLES` here — the safe default), and the slot tracks *how far* a consumer has read: Postgres retains WAL until the slot has consumed it, which is why Datastream never misses a change, even across restarts. (Details: [Configure a Cloud SQL for PostgreSQL source](https://docs.cloud.google.com/datastream/docs/configure-cloudsql-psql).)
 
-Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then (once the import finished) run it:
+Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datastream/replication_setup.sql">replication_setup.sql</walkthrough-editor-open-file>, then run it:
 
 ```bash
 PGPASSWORD="{{ BK_DB_PASSWORD }}" psql -h localhost -p 5432 -U postgres -d cymbal \

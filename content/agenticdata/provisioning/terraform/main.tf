@@ -294,6 +294,15 @@ resource "google_storage_bucket_iam_member" "sql_seed_access" {
   member = "serviceAccount:${google_sql_database_instance.oltp.service_account_email_address}"
 }
 
+# The database the seed load and every lab command work in. Terraform owns
+# it so it is part of the state (adopted on re-preps, removed by --destroy);
+# the schema and the rows themselves come from bk-seed-project, which the
+# Admin API imports server-side.
+resource "google_sql_database" "cymbal" {
+  name     = "cymbal"
+  instance = google_sql_database_instance.oltp.name
+}
+
 # The consumer half of the database's PSC pair: the endpoint at the reserved
 # 10.10.0.5, plugged into the service attachment the instance publishes.
 # From here on that address IS the database -- for Datastream and for the

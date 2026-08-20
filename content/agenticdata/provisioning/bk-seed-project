@@ -1,0 +1,124 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Generates Cymbal's seed data, stages it in the project's bucket and loads
+# it into the Cloud SQL instance -- all at PREP time, so participants start
+# Lab 2 on a database that already holds the company's history.
+#
+# No network path to the database is needed: `gcloud sql import` is a
+# control-plane call, the instance pulls the files from GCS itself. That is
+# what makes this work against a PSC-only instance from a Cloud Build worker.
+#
+# RE-RUN SAFETY is the whole point of the marker files below. Terraform is
+# idempotent, this is not: re-importing a CSV duplicates rows (or trips the
+# primary key), and re-importing the schema fails outright. Markers are
+# per object -- a run that dies after three of six tables must resume, not
+# restart, because duplicates would silently poison the data-quality story
+# the labs are built on. They live in the bucket, so `--destroy` (which
+# force-destroys it) resets them; deleting one by hand forces a re-import.
+#
+# Called by bk-prep-project (which is called by the fleet and, on Argolis,
+# by the participant) -- never on its own in the labs.
+#
+# Usage: bk-seed-project PROJECT_ID
+# Set BK_SEED_STAMP=<path> to have the file created when this run actually
+# imported something (bk-prep-project uses it to decide about parking).
+
+set -u
+
+PROJECT="${1:?bk-seed-project: PROJECT_ID required}"
+BUCKET="${PROJECT}-bucket"
+INSTANCE="cymbal-oltp"
+DATABASE="cymbal"
+TABLES="customers products orders order_items payments reviews"
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+GENERATOR="$REPO_ROOT/content/agenticdata/src/datagen/generate.py"
+SCHEMA_SQL="$REPO_ROOT/content/agenticdata/src/datagen/schema.sql"
+REQUIREMENTS="$REPO_ROOT/content/agenticdata/requirements.txt"
+SEED_DIR="${TMPDIR:-/tmp}/bootkon-seed/${PROJECT}"
+
+marker_exists() {  # marker_exists NAME
+    gcloud storage ls "gs://${BUCKET}/seed/$1" >/dev/null 2>&1
+}
+mark() {  # mark NAME
+    printf 'done\n' | gcloud storage cp - "gs://${BUCKET}/seed/$1" >/dev/null 2>&1
+}
+did_work() {
+    [ -n "${BK_SEED_STAMP:-}" ] && : > "$BK_SEED_STAMP"
+}
+
+# --- 1. Generate and stage -------------------------------------------------
+# Deterministic generator: the CSVs are bit-identical wherever they are made,
+# which is why moving this off participant machines changes nothing for them.
+if marker_exists ".staged"; then
+    echo "Seed data already staged in gs://${BUCKET}/seed/ -- skipping generation."
+else
+    if ! python3 -c "import faker" >/dev/null 2>&1; then
+        # Pin comes from requirements.txt so it lives in exactly one place.
+        # The second attempt covers PEP 668 images (Debian's "externally
+        # managed environment"), which the Cloud Build cloud-sdk image is.
+        FAKER_PIN="$(grep -E '^faker==' "$REQUIREMENTS" || echo faker)"
+        echo "Installing the generator dependency ($FAKER_PIN) ..."
+        pip install -q --disable-pip-version-check "$FAKER_PIN" 2>/dev/null \
+            || pip install -q --disable-pip-version-check --break-system-packages "$FAKER_PIN" \
+            || { echo "ERROR: could not install $FAKER_PIN." >&2; exit 1; }
+    fi
+    echo "Generating the Cymbal seed data (about a minute) ..."
+    rm -rf "$SEED_DIR"
+    mkdir -p "$SEED_DIR"
+    python3 "$GENERATOR" --out "$SEED_DIR" \
+        || { echo "ERROR: generating the seed data failed." >&2; exit 1; }
+    echo "Staging the seed data and the schema in gs://${BUCKET}/seed/ ..."
+    gcloud storage cp "$SEED_DIR"/*.csv "gs://${BUCKET}/seed/" \
+        || { echo "ERROR: uploading the seed data failed." >&2; exit 1; }
+    gcloud storage cp "$SCHEMA_SQL" "gs://${BUCKET}/seed/schema.sql" \
+        || { echo "ERROR: uploading the schema failed." >&2; exit 1; }
+    rm -rf "$SEED_DIR"
+    mark ".staged"
+    did_work
+fi
+
+# --- 2. Import the schema --------------------------------------------------
+# schema.sql creates tables without IF NOT EXISTS, so a second import would
+# fail -- hence its own marker.
+if marker_exists ".imported-schema"; then
+    echo "Schema already imported -- skipping."
+else
+    echo "Importing the schema into ${INSTANCE}/${DATABASE} ..."
+    gcloud sql import sql "$INSTANCE" "gs://${BUCKET}/seed/schema.sql" \
+        --database="$DATABASE" --project="$PROJECT" --quiet \
+        || { echo "ERROR: importing the schema failed." >&2; exit 1; }
+    mark ".imported-schema"
+    did_work
+fi
+
+# --- 3. Import the tables --------------------------------------------------
+# One marker per table: a run that dies halfway resumes here instead of
+# importing the already-loaded tables a second time.
+for t in $TABLES; do
+    if marker_exists ".imported-${t}"; then
+        echo "Table ${t} already imported -- skipping."
+        continue
+    fi
+    echo "Importing ${t} ..."
+    gcloud sql import csv "$INSTANCE" "gs://${BUCKET}/seed/${t}.csv" \
+        --database="$DATABASE" --table="cymbal.${t}" --project="$PROJECT" --quiet \
+        || { echo "ERROR: importing ${t} failed." >&2; exit 1; }
+    mark ".imported-${t}"
+    did_work
+done
+
+echo "Seed data is in place."

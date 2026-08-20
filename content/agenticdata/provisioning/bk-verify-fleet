@@ -167,6 +167,8 @@ verify_one() {
         gcloud storage buckets describe "gs://${project}-bucket" --project="$project"
     exists "BigQuery connection profile cymbal-bq-profile" \
         gcloud datastream connection-profiles describe cymbal-bq-profile --location="$REGION" --project="$project"
+    exists "seed data imported into Cloud SQL" \
+        gcloud storage ls "gs://${project}-bucket/seed/.imported-reviews"
     exists "bronze dataset cymbal_bronze" \
         bq --project_id="$project" --format=none show --dataset "${project}:cymbal_bronze"
 

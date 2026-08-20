@@ -2,8 +2,8 @@
 
 Everything **project-bound** — APIs, IAM, service accounts, the network path,
 Datastream's private connection and BigQuery connection profile, the jump VM,
-the PSC endpoint, the Cloud SQL instance, the seed bucket and the bronze
-dataset — is provisioned here, ahead of the event. Participants never
+the PSC endpoint, the Cloud SQL instance (schema and seed data loaded), the
+seed bucket and the bronze dataset — is provisioned here, ahead of the event. Participants never
 wait on a build or an IAM propagation race; their Lab 1 starts on a project
 where the infrastructure already exists. Participant-side setup (pip, seed
 data, agy, per-user secrets) stays in `../bk-bootstrap` and `bk-init`.
@@ -53,6 +53,7 @@ either order — the `@` disambiguates).
 | `bk-verify-fleet` | Read-only readiness check, ~26 checks per project (prefix optional). Green one-liner when ready; yellow with the pending components while a prep is still running; red with an ok/missing split otherwise. Exit code = fleet readiness. |
 | `cloudbuild.yaml` | Wraps `bk-prep-project` for Cloud Build. `$PROJECT_ID` is the built-in substitution, so every build preps the project it runs in. |
 | `terraform/` | The desired state (APIs, IAM, service accounts, network, private connection, jump VM, SQL, PSC endpoint). |
+| `bk-seed-project` | Generates Cymbal's data, stages it in the bucket and imports schema + tables into Cloud SQL via the Admin API (no network path needed). Per-object markers make it resume-safe. Called by `bk-prep-project`. |
 | `ensure-terraform` | Sourced helper: single Terraform version pin, self-installs into `~/.local/bin` when missing (Cloud Shell does not preinstall Terraform). |
 | `bk-init` | NOT organizer-run: the stream hook `. bk` executes at participant setup (secrets, runtime config, background wake of the parked SQL instance). |
 

@@ -7,7 +7,7 @@
 
 Welcome to Cymbal{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! By 17:00 you will have built a complete agentic data platform: a live operational database, change-data-capture into BigQuery, a governed bronze→silver→gold architecture, and two AI agents talking to each other over **A2A** — the open *agent-to-agent* protocol that lets AI agents call each other the way HTTP lets services do it. Don't worry if that's new to you: the finale lab explains and builds it step by step.
 
-In this lab you will enable services, run the bootstrap that stages the seed data, take ownership of your already-provisioned production database, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
+In this lab you will enable services, run the bootstrap, take ownership of your already-provisioned production database, and meet **Antigravity CLI (`agy`)** — your co-engineer for the afternoon.
 
 One rule for today: **you** run the infrastructure commands, **agy** writes code and configs, and the **console** is where you verify what happened.
 
@@ -57,7 +57,7 @@ Once it finished, reload the environment once — your jump VM now exists, and t
 
 ### Run the bootstrap
 
-Execute the following script. It installs Python dependencies and the Dataform CLI (you'll meet it in Lab 3), generates Cymbal's synthetic order history and stages it in Cloud Storage, and pre-configures your AI co-engineer. (Everything project-bound — APIs, IAM roles, service accounts — {% if ON_ARGOLIS %}was covered by the prep step above{% else %}was already provisioned for your event project ahead of time; that's why the API step above was instantly green{% endif %}.) It runs for about three minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
+Execute the following script. It installs Python dependencies and the Dataform CLI (you'll meet it in Lab 3) and pre-configures your AI co-engineer. (Everything project-bound — APIs, IAM roles, service accounts — {% if ON_ARGOLIS %}was covered by the prep step above{% else %}was already provisioned for your event project ahead of time; that's why the API step above was instantly green{% endif %}.) It runs for about two minutes — you can inspect <walkthrough-editor-open-file filePath="content/agenticdata/bk-bootstrap">bk-bootstrap</walkthrough-editor-open-file> while it works:
 
 ```bash
 content/agenticdata/bk-bootstrap
@@ -97,9 +97,9 @@ Learn more:
 
 ### The seed data
 
-Cymbal's order history was generated **inside your project** while the bootstrap ran — deterministic synthetic data, so every participant works with identical rows (including some deliberately broken ones you will meet again in Lab 3). Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/generate.py">generate.py</walkthrough-editor-open-file> — note the *planted flaws* section at the top.
+Cymbal's order history is **synthetic and deterministic**: a seeded generator produces it, so every participant works with identical rows — including some deliberately broken ones you will meet again in Lab 3. Have a look at <walkthrough-editor-open-file filePath="content/agenticdata/src/datagen/generate.py">generate.py</walkthrough-editor-open-file> — note the *planted flaws* section at the top.
 
-The bootstrap staged the six CSVs in Cloud Storage, where Lab 2's server-side import will pick them up. Verify they are there:
+The six CSVs were staged in your bucket when the project was provisioned (and loaded into the database from there). Verify they are still around:
 
 ```bash
 gcloud storage ls -l gs://{{ PROJECT_ID }}-bucket/seed/

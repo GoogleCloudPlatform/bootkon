@@ -195,6 +195,7 @@ adopt_existing() {
     adopt google_compute_firewall.allow_iap_ingress "projects/$PROJECT/global/firewalls/allow-iap-ingress"
     adopt google_compute_instance.jump "projects/$PROJECT/zones/${REGION}-a/instances/cymbal-jump"
     adopt google_sql_database_instance.oltp "projects/$PROJECT/instances/cymbal-oltp"
+    adopt google_sql_database.cymbal "projects/$PROJECT/instances/cymbal-oltp/databases/cymbal"
     adopt google_compute_forwarding_rule.endpoint "projects/$PROJECT/regions/$REGION/forwardingRules/cymbal-endpoint"
     adopt google_service_account.dataquality "projects/$PROJECT/serviceAccounts/dataquality-service-account@${PROJECT}.iam.gserviceaccount.com"
     adopt google_bigquery_dataset.bronze "projects/$PROJECT/datasets/cymbal_bronze"
@@ -258,6 +259,15 @@ if ! tf_run apply; then
     fi
 fi
 
+# Generate, stage and import Cymbal's history -- at prep time, so Lab 2 opens
+# on a database that already holds it. Must run BEFORE the parking below: the
+# instance has to be RUNNABLE for the Admin API imports. Re-run safety and
+# resume-after-failure live in the seed script's per-object markers.
+SEED="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bk-seed-project"
+export BK_SEED_STAMP="$TF_DATA_DIR/seeded-this-run"
+rm -f "$BK_SEED_STAMP"
+"$SEED" "$PROJECT" || { echo "ERROR: seeding $PROJECT failed -- see above. Re-running is safe." >&2; exit 1; }
+
 # Park a FRESHLY built instance (the API refuses to create one stopped):
 # storage-only cost (~$0.06/day instead of ~$1.70/day) until the participant
 # runs `. bk`, whose bk-init wakes the instance in the background -- by the
@@ -265,7 +275,11 @@ fi
 # visible backup start for the rare case the silent wake failed. Gated on
 # this run's apply output, so a re-prep never stops a participant's
 # already-woken instance.
-if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG"; then
+# Parking applies to an instance this run built or seeded -- both are
+# prep-time states. (Seeding only happens once, so a re-prep during the event
+# never parks an instance a participant has woken.)
+if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG" \
+    || [ -f "$BK_SEED_STAMP" ]; then
     echo "Parking the freshly built cymbal-oltp (stopped until the participant's setup wakes it) ..."
     gcloud sql instances patch cymbal-oltp --activation-policy=NEVER \
         --project="$PROJECT" --quiet >/dev/null 2>&1 \
