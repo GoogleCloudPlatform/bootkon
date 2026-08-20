@@ -49,6 +49,12 @@ if [[ -z "$LOCAL_CSV_FILE" ]]; then
     exit 1
 fi
 
+CALLER="$(gcloud config get-value account 2>/dev/null)"
+if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
+    echo -e "${RED}Error: No active gcloud account set on this machine. Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+
 REGION="${REGION:-us-central1}"
 PARALLEL="${BK_PREP_PARALLEL:-8}"
 STATUS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-verify.XXXXXX")"
@@ -103,15 +109,15 @@ for USERNAME in "${USERS[@]}"; do
         ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${SUFFIX}")
         continue
     fi
-    MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "-${SUFFIX}$" || true)"
+    MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${SUFFIX}$" || true)"
     COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
     if [ "$COUNT" = "1" ]; then
         ROWS+=("$USERNAME $MATCHES")
     elif [ "$COUNT" = "0" ]; then
-        echo -e "${RED}$USERNAME: no project ending in -${SUFFIX} -- pass the prefix explicitly.${NC}" >&2
+        echo -e "${RED}$USERNAME: no project ending in ${SUFFIX} -- pass the prefix explicitly.${NC}" >&2
         RESOLVE_FAILED=1
     else
-        echo -e "${RED}$USERNAME: several projects end in -${SUFFIX} ($(echo $MATCHES | tr '\n' ' ')) -- pass the prefix explicitly.${NC}" >&2
+        echo -e "${RED}$USERNAME: several projects end in ${SUFFIX} ($(echo $MATCHES | tr '\n' ' ')) -- pass the prefix explicitly.${NC}" >&2
         RESOLVE_FAILED=1
     fi
 done

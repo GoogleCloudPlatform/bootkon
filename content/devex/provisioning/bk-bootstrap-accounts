@@ -16,6 +16,12 @@ if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
     exit 1
 fi
 
+CALLER="$(gcloud config get-value account 2>/dev/null)"
+if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
+    echo -e "${RED}Error: No active gcloud account set on this machine. Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+
 # Step 1: Count the number of users (rows) in the CSV (excluding the header)
 num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
 
