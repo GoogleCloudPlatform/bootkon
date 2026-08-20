@@ -111,8 +111,8 @@ if [ ${#USERS[@]} -eq 0 ]; then
 fi
 
 # Project ids are PREFIX + the username's number. Without a prefix, derive
-# them: one `gcloud projects list`, then match "...<number>" locally.
-ALL_PROJECTS=""
+# it once from the first matching user in the CSV -- all projects in a fleet
+# share the same prefix.
 if [ -z "$PROJECT_ID_PREFIX" ]; then
     echo "No project prefix given -- deriving it from the projects you can see ..."
     ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>/dev/null)"
@@ -120,32 +120,35 @@ if [ -z "$PROJECT_ID_PREFIX" ]; then
         echo "Error: could not list any projects -- pass the prefix explicitly." >&2
         exit 1
     fi
+    for USERNAME in "${USERS[@]}"; do
+        SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+        [ -z "$SUFFIX" ] && continue
+        MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${SUFFIX}$" || true)"
+        COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
+        if [ "$COUNT" = "1" ]; then
+            PROJECT_ID_PREFIX="${MATCHES%"${SUFFIX}"}"
+            echo "Derived project prefix '$PROJECT_ID_PREFIX' (from $MATCHES for $USERNAME)."
+            break
+        fi
+    done
+    if [ -z "$PROJECT_ID_PREFIX" ]; then
+        echo "Error: could not derive project prefix from any user in $LOCAL_CSV_FILE -- pass the prefix explicitly." >&2
+        exit 1
+    fi
 fi
 
 ROWS=()
 RESOLVE_FAILED=0
 for USERNAME in "${USERS[@]}"; do
-    NUMERIC_SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
-    if [ -z "$NUMERIC_SUFFIX" ]; then
+    # Digits from the local part only, last group -- a domain like
+    # gcp2lab.me must not end up in the project id.
+    SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+    if [ -z "$SUFFIX" ]; then
         echo -e "${RED}$USERNAME: no number in the username to build a project id from.${NC}" >&2
         RESOLVE_FAILED=1
         continue
     fi
-    if [ -n "$PROJECT_ID_PREFIX" ]; then
-        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
-        continue
-    fi
-    MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${NUMERIC_SUFFIX}$" || true)"
-    COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
-    if [ "$COUNT" = "1" ]; then
-        ROWS+=("$USERNAME $MATCHES")
-    elif [ "$COUNT" = "0" ]; then
-        echo -e "${RED}$USERNAME: no project ending in ${NUMERIC_SUFFIX} -- pass the prefix explicitly.${NC}" >&2
-        RESOLVE_FAILED=1
-    else
-        echo -e "${RED}$USERNAME: several projects end in ${NUMERIC_SUFFIX} ($(echo $MATCHES | tr '\n' ' ')) -- pass the prefix explicitly.${NC}" >&2
-        RESOLVE_FAILED=1
-    fi
+    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${SUFFIX}")
 done
 
 if [ "$RESOLVE_FAILED" = "1" ] || [ ${#ROWS[@]} -eq 0 ]; then

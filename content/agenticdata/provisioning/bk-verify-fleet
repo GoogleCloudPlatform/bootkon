@@ -80,16 +80,28 @@ if [ ${#USERS[@]} -eq 0 ]; then
 fi
 
 # Project ids are PREFIX + the username's number. Without a prefix, derive
-# them: one `gcloud projects list`, then match "...-<number>" locally -- so
-# nobody has to remember the event's prefix just to check readiness. This is
-# a read-only tool, and ambiguity is reported rather than guessed; the
-# provisioning side deliberately keeps the prefix mandatory.
-ALL_PROJECTS=""
+# it once from the first matching user in the CSV -- all projects in a fleet
+# share the same prefix.
 if [ -z "$PROJECT_ID_PREFIX" ]; then
     echo "No project prefix given -- deriving it from the projects you can see ..."
     ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>/dev/null)"
     if [ -z "$ALL_PROJECTS" ]; then
         echo "Error: could not list any projects -- pass the prefix explicitly." >&2
+        exit 1
+    fi
+    for USERNAME in "${USERS[@]}"; do
+        SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+        [ -z "$SUFFIX" ] && continue
+        MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${SUFFIX}$" || true)"
+        COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
+        if [ "$COUNT" = "1" ]; then
+            PROJECT_ID_PREFIX="${MATCHES%"${SUFFIX}"}"
+            echo "Derived project prefix '$PROJECT_ID_PREFIX' (from $MATCHES for $USERNAME)."
+            break
+        fi
+    done
+    if [ -z "$PROJECT_ID_PREFIX" ]; then
+        echo "Error: could not derive project prefix from any user in $LOCAL_CSV_FILE -- pass the prefix explicitly." >&2
         exit 1
     fi
 fi
@@ -105,24 +117,10 @@ for USERNAME in "${USERS[@]}"; do
         RESOLVE_FAILED=1
         continue
     fi
-    if [ -n "$PROJECT_ID_PREFIX" ]; then
-        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${SUFFIX}")
-        continue
-    fi
-    MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${SUFFIX}$" || true)"
-    COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
-    if [ "$COUNT" = "1" ]; then
-        ROWS+=("$USERNAME $MATCHES")
-    elif [ "$COUNT" = "0" ]; then
-        echo -e "${RED}$USERNAME: no project ending in ${SUFFIX} -- pass the prefix explicitly.${NC}" >&2
-        RESOLVE_FAILED=1
-    else
-        echo -e "${RED}$USERNAME: several projects end in ${SUFFIX} ($(echo $MATCHES | tr '\n' ' ')) -- pass the prefix explicitly.${NC}" >&2
-        RESOLVE_FAILED=1
-    fi
+    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${SUFFIX}")
 done
-if [ ${#ROWS[@]} -eq 0 ]; then
-    echo "Nothing to verify." >&2
+if [ "$RESOLVE_FAILED" = "1" ] || [ ${#ROWS[@]} -eq 0 ]; then
+    echo "Aborting due to project resolution errors." >&2
     exit 1
 fi
 echo "Verifying ${#ROWS[@]} agenticdata project(s), up to $PARALLEL in parallel ..."
