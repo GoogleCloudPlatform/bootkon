@@ -14,12 +14,12 @@ Prep the whole fleet from your laptop (one Cloud Build **per participant
 project**; nothing runs locally, the terminal returns after submitting):
 
 ```bash
-./bk-prep-fleet --cloud-build "Bootkon Accounts - Sheet1.csv" "bootkon-event-"
+./bk-prep-fleet --cloud-build "Bootkon Accounts - Sheet1.csv"
 ```
 
 Watch progress / check readiness any time (read-only, repeat freely). The
-prefix is optional here — without it the projects are looked up by the
-username's number:
+prefix is optional for both commands — without it the projects are looked up by
+deriving the fleet prefix automatically:
 
 ```bash
 ./bk-verify-fleet "Bootkon Accounts - Sheet1.csv"
@@ -28,7 +28,7 @@ username's number:
 Single account (testing) — pass a username instead of the CSV:
 
 ```bash
-./bk-prep-fleet --cloud-build devstar1234@gcplab.me "bootkon-event-"
+./bk-prep-fleet --cloud-build devstar1234@gcplab.me
 ./bk-verify-fleet devstar1234@gcplab.me
 ```
 
@@ -48,7 +48,7 @@ either order — the `@` disambiguates).
 
 | File | Role |
 |---|---|
-| `bk-prep-fleet` | Fan-out over the CSV (or one username). `--cloud-build`: one build per project, submit-and-return. Without the flag: runs the preps locally via xargs (`BK_PREP_PARALLEL`, default 8). |
+| `bk-prep-fleet` | Fan-out over the CSV (or one username; prefix optional). `--cloud-build`: one build per project, submit-and-return. Without the flag: runs the preps locally via xargs (`BK_PREP_PARALLEL`, default 8). |
 | `bk-prep-project` | The engine — everything below happens in here, identically on your laptop, in Cloud Shell and inside Cloud Build. |
 | `bk-verify-fleet` | Read-only readiness check, ~26 checks per project (prefix optional). Green one-liner when ready; yellow with the pending components while a prep is still running; red with an ok/missing split otherwise. Exit code = fleet readiness. |
 | `cloudbuild.yaml` | Wraps `bk-prep-project` for Cloud Build. `$PROJECT_ID` is the built-in substitution, so every build preps the project it runs in. |
