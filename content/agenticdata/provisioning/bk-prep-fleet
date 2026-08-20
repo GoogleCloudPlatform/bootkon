@@ -92,7 +92,9 @@ LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-prep-logs.XXXXXX")"
 ROWS=()
 if [ ! -f "$LOCAL_CSV_FILE" ] && [[ "$LOCAL_CSV_FILE" == *@* ]]; then
     USERNAME="$LOCAL_CSV_FILE"
-    NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+    # Digits from the local part only, last group -- a domain like
+    # gcp2lab.me must not end up in the project id.
+    NUMERIC_SUFFIX=$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)
     ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
 elif [ ! -f "$LOCAL_CSV_FILE" ]; then
     echo "Error: $LOCAL_CSV_FILE is neither a file nor a username (user@domain)." >&2
@@ -101,7 +103,7 @@ else
     while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
         USERNAME=${fields[0]%$'\r'}
         [ -z "$USERNAME" ] && continue
-        NUMERIC_SUFFIX=$(echo "$USERNAME" | grep -o '[0-9]\+')
+        NUMERIC_SUFFIX=$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)
         ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
     done < <(tail -n +2 "$LOCAL_CSV_FILE")
 fi
