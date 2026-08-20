@@ -35,11 +35,12 @@
 # readiness are bk-verify-fleet's job.
 # Flags are accepted at any position; unknown flags are hard errors -- a
 # silently ignored --cloud-build once sent a run down the local path.
-MODE=local
+MODE=cloudbuild
 AUTO_CONFIRM=0
 POSITIONAL=()
 for arg in "$@"; do
     case "$arg" in
+        --local) MODE=local ;;
         --cloud-build) MODE=cloudbuild ;;
         -y|--yes) AUTO_CONFIRM=1 ;;
         --*) echo "Error: unknown flag '$arg'." >&2; exit 1 ;;
@@ -59,14 +60,15 @@ NC='\033[0m'
 
 if [[ -z "$LOCAL_CSV_FILE" ]]; then
     echo "Error: Missing required arguments."
-    echo "Usage: $(basename $0) [--cloud-build] <CSV_FILE|USERNAME> [PROJECT_ID_PREFIX]"
+    echo "Usage: $(basename $0) [--local] [-y] <CSV_FILE|USERNAME> [PROJECT_ID_PREFIX]"
     echo "Examples:"
     echo "  $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\""
-    echo "  $(basename $0) --cloud-build devstar1234@gcplab.me \"bootkon-dt25test-\""
+    echo "  $(basename $0) devstar1234@gcplab.me \"bootkon-dt25test-\""
+    echo "  $(basename $0) --local \"Bootkon Test Accounts - Sheet1.csv\"   # run locally via xargs"
     echo ""
     echo "Without a prefix the projects are looked up by the username's number."
-    echo "Local mode parallelism: BK_PREP_PARALLEL=<n> (default 8)."
-    echo "--cloud-build submits one build per project instead (fully parallel)."
+    echo "Default mode: Cloud Build (submits server-side builds for all projects)."
+    echo "Pass --local to run preps directly on this machine (BK_PREP_PARALLEL=<n>, default 8)."
     exit 1
 fi
 
@@ -77,9 +79,9 @@ if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
 fi
 
 if [ "$MODE" = "cloudbuild" ]; then
-    echo "Mode: Cloud Build (one build per project; nothing runs on this machine)."
+    echo "Mode: Cloud Build (one build per project; default)."
 else
-    echo "Mode: local (the preps run right here; pass --cloud-build for the build fan-out)."
+    echo "Mode: local (the preps run right here on this machine)."
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
