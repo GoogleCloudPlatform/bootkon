@@ -36,10 +36,12 @@
 # Flags are accepted at any position; unknown flags are hard errors -- a
 # silently ignored --cloud-build once sent a run down the local path.
 MODE=local
+AUTO_CONFIRM=0
 POSITIONAL=()
 for arg in "$@"; do
     case "$arg" in
         --cloud-build) MODE=cloudbuild ;;
+        -y|--yes) AUTO_CONFIRM=1 ;;
         --*) echo "Error: unknown flag '$arg'." >&2; exit 1 ;;
         *) POSITIONAL+=("${arg}") ;;
     esac
@@ -154,6 +156,32 @@ done
 if [ "$RESOLVE_FAILED" = "1" ] || [ ${#ROWS[@]} -eq 0 ]; then
     echo "Aborting due to project resolution errors." >&2
     exit 1
+fi
+
+echo ""
+echo "================================================================================"
+echo "PROVISIONING PLAN SUMMARY"
+echo "================================================================================"
+if [ "$MODE" = "cloudbuild" ]; then
+    echo "  Execution Mode : Cloud Build (submits server-side builds for all projects)"
+else
+    echo "  Execution Mode : Local (runs terraform locally with $PARALLEL workers)"
+fi
+echo "  Project Prefix : ${PROJECT_ID_PREFIX:-[Derived]}"
+echo "  Target Count   : ${#ROWS[@]} project(s)"
+echo ""
+echo "Target Projects & Users:"
+for row in "${ROWS[@]}"; do
+    set -- $row
+    echo "  * $2 ($1)"
+done
+echo "================================================================================"
+echo ""
+
+if [ -t 0 ] && [ "${AUTO_CONFIRM:-0}" != "1" ] && [ "${BK_PREP_AUTO_CONFIRM:-0}" != "1" ]; then
+    echo -n "Press [ENTER] to confirm and start provisioning (or Ctrl+C to cancel)... "
+    read -r _unused
+    echo ""
 fi
 
 if [ "$MODE" = "cloudbuild" ]; then
