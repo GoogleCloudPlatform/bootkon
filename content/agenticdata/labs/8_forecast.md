@@ -8,7 +8,7 @@
 
 So far your platform explains the past. In this lab it starts predicting the future: you forecast Cymbal's daily revenue with a **single SQL function** — `AI.FORECAST`, backed by the **TimesFM** foundation model built into BigQuery — then let agy materialize the forecast as a proper gold mart in your Dataform project, and chart actuals against forecast in a **data canvas** using natural language.
 
-Before you start: this lab assumes **Labs 1–3 are complete** — the medallion is built and `cymbal_gold.fct_daily_revenue` exists. Work in your main terminal as usual, and leave the tunnel (terminal 2) and the simulator (terminal 3) running untouched — everything here reads from BigQuery. The final section additionally needs the published `cymbal-data-agent` from Lab 5; it is clearly marked and skippable if you haven't done that lab.
+Before you start: this lab assumes **Labs 1–3 are complete** — the medallion is built and `cymbal_gold.fct_daily_revenue` exists. Work in your main terminal as usual, and leave the simulator (terminal 2) running untouched — everything here reads from BigQuery. The final section additionally needs the published `cymbal-data-agent` from Lab 5; it is clearly marked and skippable if you haven't done that lab.
 
 ### About TimesFM and AI.FORECAST
 

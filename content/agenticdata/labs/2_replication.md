@@ -29,17 +29,17 @@ A quick look at the plumbing you get to use today: your instance exposes a **ser
 
 Cloud Shell lives outside your VPC and a PSC-only instance has no public IP — so your project ships with a tiny helper: `cymbal-jump`, an e2-micro VM (no external IP either!) that forwards port 5432 to the database endpoint. Its <walkthrough-editor-open-file filePath="content/agenticdata/src/jumpvm-startup.sh">startup script</walkthrough-editor-open-file> is four lines of iptables. You reach it through an **IAP tunnel** — identity-based, no IPs exposed anywhere.
 
-### Open the tunnel
+### The tunnel
 
-Open a **second terminal tab** (`+`) and start the tunnel. **Leave this terminal open for the rest of the event** — the simulator and (much later) your concierge agent use it. The helper wraps `gcloud compute start-iap-tunnel` and reconnects automatically if the tunnel ever drops:
+`localhost:5432` in your Cloud Shell **is** the Cymbal database — no setup needed: your bootkon environment opened an IAP tunnel to the jump VM in the background, and the VM forwards the port to the PSC endpoint at `10.10.0.5`.
+
+**Identity-Aware Proxy (IAP)** TCP forwarding is what makes this safe: the tunnel is authorized by your Google identity and an IAM role (`iap.tunnelResourceAccessor`), not by network position — no VPN, no bastion with a public IP, and every connection is auditable. ([IAP TCP forwarding](https://docs.cloud.google.com/iap/docs/using-tcp-forwarding))
+
+❗ Should any command below ever answer *connection refused*, the tunnel is gone — a long break recycles your Cloud Shell and takes background processes with it. Run `. bk` to bring it back, or start it in a spare tab (it logs to `~/.bootkon-tunnel.log`):
 
 ```bash
 ~/bootkon/content/agenticdata/bk-tunnel
 ```
-
-When you see *Listening on port [5432]*, `localhost:5432` in Cloud Shell is your production database.
-
-**Identity-Aware Proxy (IAP)** TCP forwarding is what makes this safe: the tunnel is authorized by your Google identity and an IAM role (`iap.tunnelResourceAccessor`), not by network position — no VPN, no bastion with a public IP, and every connection is auditable. ([IAP TCP forwarding](https://docs.cloud.google.com/iap/docs/using-tcp-forwarding))
 
 ### Create the schema and load the data
 
@@ -156,7 +156,7 @@ Learn more:
 
 Open [Datastream](https://console.cloud.google.com/datastream/streams) and click <walkthrough-spotlight-pointer locator="text('cymbal-cdc-stream')">cymbal-cdc-stream</walkthrough-spotlight-pointer>. Explore the <walkthrough-spotlight-pointer locator="text('Objects')">Objects</walkthrough-spotlight-pointer> tab — you can watch the per-table backfill progress live. Within a couple of minutes the stream shows **Running** and the six `cymbal_*` tables appear.
 
-Now make it *live*. Open a **third terminal tab**, and start the activity simulator — Cymbal's customers waking up:
+Now make it *live*. Open a **second terminal tab** (`+`), and start the activity simulator — Cymbal's customers waking up:
 
 ```bash
 cd ~/bootkon

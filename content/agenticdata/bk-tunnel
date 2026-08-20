@@ -1,11 +1,34 @@
 #!/bin/bash
-# Keeps the IAP tunnel to the cymbal-jump VM alive. IAP tunnels disconnect
-# after ~1 hour of inactivity; this wrapper simply reconnects so the tunnel
-# terminal can be left open for the whole event.
-# REGION is fixed to us-central1 for this stream (see .scripts/vars.template.sh).
+# Keeps the IAP tunnel to the cymbal-jump VM alive: Cloud Shell sits outside
+# your VPC and the database has no public IP, so localhost:5432 reaches it
+# through this tunnel and the jump VM's iptables forward. IAP tunnels
+# disconnect after ~1 hour of inactivity, hence the reconnect loop.
+#
+# bk-init starts this in the background at every `. bk`, so participants
+# normally never run it -- but running it in a terminal by hand behaves
+# exactly the same and is the documented recovery.
+#
+# A tunnel that dies immediately means something is genuinely wrong (VM
+# missing, IAM not granted, credentials expired). Give up after a few such
+# attempts instead of retrying forever in a background process nobody
+# watches.
+ZONE="${REGION:-us-central1}-a"
+fails=0
 while true; do
+    started=$SECONDS
     gcloud compute start-iap-tunnel cymbal-jump 5432 \
-        --local-host-port=localhost:5432 --zone=us-central1-a
+        --local-host-port=localhost:5432 --zone="$ZONE"
+    if [ $((SECONDS - started)) -lt 10 ]; then
+        fails=$((fails + 1))
+        if [ "$fails" -ge 5 ]; then
+            echo "The tunnel failed 5 times in a row -- giving up." >&2
+            echo "Check that the cymbal-jump VM exists and that your Cloud Shell" >&2
+            echo "session is still authorized, then start it again with: bk-tunnel" >&2
+            exit 1
+        fi
+    else
+        fails=0
+    fi
     echo "Tunnel disconnected -- reconnecting in 3 seconds (Ctrl+C to stop) ..."
     sleep 3
 done

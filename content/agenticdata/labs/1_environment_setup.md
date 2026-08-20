@@ -47,6 +47,12 @@ content/agenticdata/provisioning/bk-prep-project
 ```
 
 ❗ Argolis organization policies (for example `constraints/compute.requireOsLogin`, `constraints/compute.requireShieldedVm`, or SQL constraints) may block the VM or instance creation inside the prep. If it fails with a policy error, disable the constraint under IAM & Admin → Organization Policies and run the prep again.
+
+Once it finished, reload the environment once — your jump VM now exists, and this brings up the database tunnel that the labs rely on:
+
+```bash
+. bk
+```
 {% endif %}
 
 ### Run the bootstrap

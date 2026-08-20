@@ -48,6 +48,22 @@ if [ "${BK_SQL_WOKEN:-}" != "$PROJECT_ID" ]; then
         --project="$PROJECT_ID" --quiet >/dev/null 2>&1) &
 fi
 
+# Fire-and-forget: bring up the IAP tunnel that makes localhost:5432 the
+# Cymbal database. Unlike the two blocks above this is deliberately NOT
+# marker-guarded -- a tunnel is a process, and a recycled Cloud Shell VM
+# kills it, so every `. bk` must be able to bring it back. The guard is the
+# port itself: if anything already listens on 5432 (including a participant
+# running bk-tunnel in a terminal), leave it alone. Output goes to a log,
+# because a background tunnel that dies must stay diagnosable; bk-tunnel
+# gives up by itself when the VM or the authorization is missing, so this
+# never becomes an endless retry loop. On Argolis the jump VM only exists
+# after Lab 1's prep -- the labs name `bk-tunnel` as the recovery.
+if ! (echo >/dev/tcp/localhost/5432) 2>/dev/null; then
+    nohup "$BK_DIR/content/agenticdata/bk-tunnel" \
+        >> "$HOME/.bootkon-tunnel.log" 2>&1 &
+    disown 2>/dev/null || true
+fi
+
 # Generated once: Lab 1 sets BK_DB_PASSWORD as the postgres password on the
 # pre-provisioned Cloud SQL instance; Lab 2 creates the Datastream connection
 # profile with BK_DS_PASSWORD.

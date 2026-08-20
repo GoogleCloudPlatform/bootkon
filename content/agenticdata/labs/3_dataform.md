@@ -95,7 +95,7 @@ FROM `{{ PROJECT_ID }}.cymbal_silver.stg_orders` WHERE status = 'shiped'
 
 4. The payoff: open `cymbal_gold` → `fct_daily_revenue` and click the <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. The bronze→silver→gold graph you see was **not configured by anyone** — BigQuery reports [data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage) automatically from the jobs the Dataform CLI just ran, following the `${ref(...)}` dependencies agy wrote. (Lineage is assembled asynchronously from the job metadata — if you only see a single box right after the run, give it a few minutes and refresh.)
 
-One more thing: your simulator (terminal 3) is still writing to Postgres, and Datastream keeps updating bronze. Re-run `dataform run` at any time and the whole medallion refreshes with the latest data.
+One more thing: your simulator (terminal 2) is still writing to Postgres, and Datastream keeps updating bronze. Re-run `dataform run` at any time and the whole medallion refreshes with the latest data.
 
 ### Success
 

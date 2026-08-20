@@ -8,7 +8,7 @@
 
 Remember where this story started: Cymbal's analytics team drowning in one-off CSV exports. You built the cure for the *inside* of the company — but Cymbal's partners still get their numbers the old way: somebody exports a CSV, attaches it to an email, and it's stale before it lands. In this lab you close that loop with **BigQuery sharing**: publish the gold marts as a **listing** in your own **data exchange**, then switch chairs and subscribe to it exactly like a partner would — receiving a live, read-only, zero-copy view instead of an attachment.
 
-This lab assumes Labs 1–3 are complete (the `cymbal_gold` marts exist and have been built at least once) and that your two background terminals from Lab 2 are still open: the tunnel (terminal 2) and the data simulator (terminal 3) — the simulator is what makes the zero-copy proof land.
+This lab assumes Labs 1–3 are complete (the `cymbal_gold` marts exist and have been built at least once) and that the data simulator (terminal 2) from Lab 2 is still running — it is what makes the zero-copy proof land.
 
 ### About BigQuery sharing
 
@@ -102,7 +102,7 @@ SELECT 'linked', SUM(orders),
 FROM `{{ PROJECT_ID }}.cymbal_gold_linked.fct_daily_revenue`
 ```
 
-Two identical rows — of course: it's the same storage. Expect roughly 450,000 non-cancelled orders; the exact number depends on how long your simulator has been running. Now make the *source* move. Your simulator (terminal 3) has been writing to Postgres all along, and Datastream has been keeping bronze fresh — refresh silver from live bronze and rebuild gold, same commands as Lab 3, each run finishing in well under a minute:
+Two identical rows — of course: it's the same storage. Expect roughly 450,000 non-cancelled orders; the exact number depends on how long your simulator has been running. Now make the *source* move. Your simulator (terminal 2) has been writing to Postgres all along, and Datastream has been keeping bronze fresh — refresh silver from live bronze and rebuild gold, same commands as Lab 3, each run finishing in well under a minute:
 
 ```bash
 cd ~/bootkon/content/agenticdata/src/dataform

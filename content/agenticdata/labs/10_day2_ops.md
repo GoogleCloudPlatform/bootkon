@@ -8,7 +8,7 @@
 
 You built a pipeline. Tonight, at 3 a.m., it will break — and nobody will know until the Monday revenue meeting stares at Friday's numbers. In this lab you become Cymbal's on-call engineer: you build a **Cloud Monitoring dashboard as code** (authored by agy), create the **alert** Datastream doesn't ship, and then — deliberately — **break your own replication** with a chaos script you are not allowed to read first. You'll watch the incident unfold on your dashboard, diagnose it with agy as your read-only co-responder, fix it with one line of SQL, and prove that not a single row was lost.
 
-This lab expects **Labs 1–3 to be complete**: `cymbal-cdc-stream` replicating into `cymbal_bronze`, and the medallion built. It also needs **terminal 2 (the `bk-tunnel` IAP tunnel) and terminal 3 (the simulator) still running** — an incident is only interesting while live traffic is flowing. If the simulator stopped, restart it from Lab 2's *Watch it flow* section before continuing.
+This lab expects **Labs 1–3 to be complete**: `cymbal-cdc-stream` replicating into `cymbal_bronze`, and the medallion built. It also needs **the simulator (terminal 2) still running** — an incident is only interesting while live traffic is flowing. If the simulator stopped, restart it from Lab 2's *Watch it flow* section before continuing.
 
 (The commands below contain your generated database password, rendered into the tutorial. If you see empty quotes instead, run the `bk-start` reload step from the end of Lab 1.)
 
@@ -123,7 +123,7 @@ Go back to your **Cymbal Day-2 Ops** dashboard and watch the incident develop ov
 
 - **Data freshness** stops hugging zero and starts climbing — a straight, relentless ramp toward the red SLO line and past it.
 - **Throughput** decays to zero. No events are arriving from the source.
-- And the tell that makes this a *good* mystery: **Cloud SQL connections and CPU don't move.** Check terminal 3 — the simulator is still cheerfully inserting orders. Postgres is fine. Production is fine. Only the replica is freezing.
+- And the tell that makes this a *good* mystery: **Cloud SQL connections and CPU don't move.** Check terminal 2 — the simulator is still cheerfully inserting orders. Postgres is fine. Production is fine. Only the replica is freezing.
 
 Now the producer's view: on the [Datastream](https://console.cloud.google.com/datastream/streams) page, open <walkthrough-spotlight-pointer locator="text('cymbal-cdc-stream')">cymbal-cdc-stream</walkthrough-spotlight-pointer> — the stream no longer looks healthy, and as the lockout persists its status flips from **Running** to **Failed**, with the stream's error details naming the reason.
 

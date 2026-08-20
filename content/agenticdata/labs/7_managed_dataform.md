@@ -13,7 +13,7 @@
 
 Lab 3 ended with a promise: *"In production you would run the same project on a schedule in managed Dataform."* This lab cashes it. You push the exact project agy wrote — not a rewrite, the very same SQLX files — into a **managed Dataform repository**, walk its interactive dependency graph, and put it on a 15-minute schedule that runs as a service account instead of you. When you leave this lab, the medallion refreshes itself.
 
-Before you start: this lab assumes **Labs 1–3 are complete** — the Dataform project in `content/agenticdata/src/dataform` compiles and has been run at least once — and that **terminal 2 (the IAP tunnel) and terminal 3 (the data simulator)** from Lab 2 are still running. The simulator matters here: live writes are what make a schedule worth having.
+Before you start: this lab assumes **Labs 1–3 are complete** — the Dataform project in `content/agenticdata/src/dataform` compiles and has been run at least once — and that **the data simulator (terminal 2)** from Lab 2 is still running. The simulator matters here: live writes are what make a schedule worth having.
 
 ### About managed Dataform
 
