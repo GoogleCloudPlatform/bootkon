@@ -1,0 +1,249 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Resets a project to its pre-bootkon state: deletes everything the
+# agenticdata stream creates -- BOTH the provisioning (network, SQL,
+# Datastream, buckets, service accounts) AND everything participants build
+# during the labs (streams, medallion datasets, scans, glossaries, policy
+# tags, data agents, Dataform repositories, Analytics Hub exchanges,
+# dashboards and alerts).
+#
+# Difference to `bk-prep-project --destroy`: that one is terraform-only and
+# needs an intact state -- it removes what the prep built and nothing else.
+# This script asks no one for permission and needs no state: it deletes by
+# name through the APIs, ignores whatever is already gone, and finishes by
+# wiping the terraform state itself, so the next prep starts from zero.
+#
+# Deliberately NOT deleted: enabled APIs and the participant's IAM roles.
+# They cost nothing, block nothing and save time on the next prep.
+#
+# Requires owner (or equivalent) on the project.
+#
+# Usage: bk-reset-project PROJECT_ID [-y]
+
+set -u
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+AUTO_CONFIRM=0
+PROJECT=""
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes) AUTO_CONFIRM=1 ;;
+        --*|-*) echo "Error: unknown flag '$arg'." >&2; exit 1 ;;
+        *) PROJECT="$arg" ;;
+    esac
+done
+if [ -z "$PROJECT" ]; then
+    echo "Usage: $(basename "$0") PROJECT_ID [-y]" >&2
+    echo "Deletes EVERYTHING the agenticdata stream created in that project." >&2
+    exit 1
+fi
+REGION="${REGION:-us-central1}"
+
+if ! gcloud projects describe "$PROJECT" >/dev/null 2>&1; then
+    echo -e "${RED}Error: cannot access project $PROJECT.${NC}" >&2
+    exit 1
+fi
+
+cat <<EOF
+
+================================================================================
+RESET PROJECT: $PROJECT
+================================================================================
+This deletes, if present:
+  * Datastream    stream, connection profiles, private connection
+  * Cloud SQL     cymbal-oltp (instance, database, data -- irreversibly)
+  * Network       PSC endpoint, jump VM, firewall, attachment, address,
+                  subnet, VPC
+  * BigQuery      every cymbal_* dataset (bronze/silver/gold/assertions/
+                  linked) with all tables
+  * Governance    Dataplex scans, glossaries, aspect types, policy tags
+  * Agents        Conversational Analytics data agents
+  * Optional labs Dataform repositories, Analytics Hub exchanges,
+                  Monitoring dashboards and alert policies
+  * Storage       seed bucket, terraform state bucket, Cloud Build staging
+  * Identities    dataquality-service-account, bootkon-provisioner
+
+Kept: enabled APIs and IAM role bindings.
+================================================================================
+
+EOF
+
+if [ "$AUTO_CONFIRM" != "1" ]; then
+    echo -n "Type the project id to confirm: "
+    read -r CONFIRM
+    if [ "$CONFIRM" != "$PROJECT" ]; then
+        echo "Aborted."
+        exit 1
+    fi
+    echo ""
+fi
+
+# Every deletion goes through this: a reset must never stop because
+# something was already gone (or never existed on a half-built project).
+try() {  # try LABEL cmd...
+    local label="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+        echo -e "  ${GREEN}deleted${NC}  $label"
+    else
+        echo -e "  ${YELLOW}skipped${NC}  $label (absent or not deletable)"
+    fi
+}
+
+TOKEN="$(gcloud auth print-access-token 2>/dev/null)"
+# REST helpers for the three surfaces that have no gcloud commands
+# (managed Dataform, Analytics Hub, Conversational Analytics agents).
+api_get() { curl -s -H "Authorization: Bearer $TOKEN" "$1" 2>/dev/null; }
+api_delete() { curl -s -f -X DELETE -H "Authorization: Bearer $TOKEN" "$1" >/dev/null 2>&1; }
+# Pull "name" fields out of a list response without depending on jq.
+names_from() {  # names_from JSON KEY
+    python3 -c '
+import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for item in d.get(sys.argv[1], []):
+    n = item.get("name")
+    if n:
+        print(n)
+' "$1" 2>/dev/null
+}
+
+echo "=== Datastream (stream first -- profiles and the connection hold it)"
+try "stream cymbal-cdc-stream" \
+    gcloud datastream streams delete cymbal-cdc-stream --location="$REGION" --project="$PROJECT" --quiet
+for p in cymbal-postgres-profile cymbal-bq-profile; do
+    try "connection profile $p" \
+        gcloud datastream connection-profiles delete "$p" --location="$REGION" --project="$PROJECT" --quiet
+done
+try "private connection cymbal-psc" \
+    gcloud datastream private-connections delete cymbal-psc --location="$REGION" --project="$PROJECT" --quiet --force
+
+echo "=== Managed Dataform (REST -- no gcloud surface)"
+for repo in $(api_get "https://dataform.googleapis.com/v1beta1/projects/${PROJECT}/locations/${REGION}/repositories" | names_from repositories); do
+    if api_delete "https://dataform.googleapis.com/v1beta1/${repo}?force=true"; then
+        echo -e "  ${GREEN}deleted${NC}  dataform repository ${repo##*/}"
+    else
+        echo -e "  ${YELLOW}skipped${NC}  dataform repository ${repo##*/}"
+    fi
+done
+
+echo "=== Analytics Hub (REST -- listings before exchanges)"
+for loc in us "$REGION"; do
+    for ex in $(api_get "https://analyticshub.googleapis.com/v1/projects/${PROJECT}/locations/${loc}/dataExchanges" | names_from dataExchanges); do
+        for li in $(api_get "https://analyticshub.googleapis.com/v1/${ex}/listings" | names_from listings); do
+            api_delete "https://analyticshub.googleapis.com/v1/${li}" \
+                && echo -e "  ${GREEN}deleted${NC}  listing ${li##*/}" \
+                || echo -e "  ${YELLOW}skipped${NC}  listing ${li##*/}"
+        done
+        api_delete "https://analyticshub.googleapis.com/v1/${ex}" \
+            && echo -e "  ${GREEN}deleted${NC}  data exchange ${ex##*/}" \
+            || echo -e "  ${YELLOW}skipped${NC}  data exchange ${ex##*/}"
+    done
+done
+
+echo "=== Conversational Analytics data agents (REST, preview API)"
+for v in v1beta v1alpha; do
+    for ag in $(api_get "https://geminidataanalytics.googleapis.com/${v}/projects/${PROJECT}/locations/global/dataAgents" | names_from dataAgents); do
+        api_delete "https://geminidataanalytics.googleapis.com/${v}/${ag}?force=true" \
+            && echo -e "  ${GREEN}deleted${NC}  data agent ${ag##*/}" \
+            || echo -e "  ${YELLOW}skipped${NC}  data agent ${ag##*/}"
+    done
+done
+
+echo "=== Governance (Dataplex scans, glossaries, aspect types, policy tags)"
+for scan in $(gcloud dataplex datascans list --location="$REGION" --project="$PROJECT" \
+        --format='value(name)' 2>/dev/null); do
+    try "data scan ${scan##*/}" \
+        gcloud dataplex datascans delete "${scan##*/}" --location="$REGION" --project="$PROJECT" --quiet
+done
+for glo in $(gcloud dataplex glossaries list --location="$REGION" --project="$PROJECT" \
+        --format='value(name)' 2>/dev/null); do
+    try "glossary ${glo##*/}" \
+        gcloud dataplex glossaries delete "${glo##*/}" --location="$REGION" --project="$PROJECT" --quiet
+done
+for at in $(gcloud dataplex aspect-types list --location="$REGION" --project="$PROJECT" \
+        --format='value(name)' 2>/dev/null); do
+    try "aspect type ${at##*/}" \
+        gcloud dataplex aspect-types delete "${at##*/}" --location="$REGION" --project="$PROJECT" --quiet
+done
+for tax in $(gcloud data-catalog taxonomies list --location="$REGION" --project="$PROJECT" \
+        --format='value(name)' 2>/dev/null); do
+    try "policy tag taxonomy ${tax##*/}" \
+        gcloud data-catalog taxonomies delete "$tax" --location="$REGION" --project="$PROJECT" --quiet
+done
+
+echo "=== BigQuery (every cymbal_* dataset, tables included)"
+for ds in $(bq --project_id="$PROJECT" ls --datasets --max_results=1000 2>/dev/null \
+        | awk 'NR>2 {print $1}' | grep '^cymbal'); do
+    try "dataset $ds" bq --project_id="$PROJECT" rm -r -f -d "${PROJECT}:${ds}"
+done
+
+echo "=== Monitoring (Day-2 Ops dashboard and alert policies)"
+for d in $(gcloud monitoring dashboards list --project="$PROJECT" \
+        --filter='displayName~"Cymbal"' --format='value(name)' 2>/dev/null); do
+    try "dashboard ${d##*/}" gcloud monitoring dashboards delete "$d" --project="$PROJECT" --quiet
+done
+for pol in $(gcloud monitoring policies list --project="$PROJECT" \
+        --filter='displayName~"Cymbal OR freshness OR Datastream"' --format='value(name)' 2>/dev/null); do
+    try "alert policy ${pol##*/}" gcloud monitoring policies delete "$pol" --project="$PROJECT" --quiet
+done
+
+echo "=== Cloud SQL and the network path (order matters)"
+try "PSC endpoint cymbal-endpoint" \
+    gcloud compute forwarding-rules delete cymbal-endpoint --region="$REGION" --project="$PROJECT" --quiet
+# The API-level guard is independent of terraform's deletion_protection.
+gcloud sql instances patch cymbal-oltp --no-deletion-protection --project="$PROJECT" --quiet >/dev/null 2>&1
+try "Cloud SQL instance cymbal-oltp" \
+    gcloud sql instances delete cymbal-oltp --project="$PROJECT" --quiet
+try "jump VM cymbal-jump" \
+    gcloud compute instances delete cymbal-jump --zone="${REGION}-a" --project="$PROJECT" --quiet
+try "firewall allow-iap-ingress" \
+    gcloud compute firewall-rules delete allow-iap-ingress --project="$PROJECT" --quiet
+try "network attachment cymbal-attachment" \
+    gcloud compute network-attachments delete cymbal-attachment --region="$REGION" --project="$PROJECT" --quiet
+try "address cymbal-endpoint-ip" \
+    gcloud compute addresses delete cymbal-endpoint-ip --region="$REGION" --project="$PROJECT" --quiet
+try "subnet cymbal-subnet" \
+    gcloud compute networks subnets delete cymbal-subnet --region="$REGION" --project="$PROJECT" --quiet
+try "VPC cymbal-vpc" \
+    gcloud compute networks delete cymbal-vpc --project="$PROJECT" --quiet
+
+echo "=== Buckets (seed, terraform state, Cloud Build staging)"
+for b in "${PROJECT}-bucket" "${PROJECT}-tfstate" "${PROJECT}_cloudbuild"; do
+    try "gs://$b" gcloud storage rm --recursive "gs://$b" --project="$PROJECT" --quiet
+done
+
+echo "=== Service accounts"
+for sa in "dataquality-service-account@${PROJECT}.iam.gserviceaccount.com" \
+          "bootkon-provisioner@${PROJECT}.iam.gserviceaccount.com"; do
+    try "${sa%%@*}" gcloud iam service-accounts delete "$sa" --project="$PROJECT" --quiet
+done
+
+cat <<EOF
+
+$(echo -e "${GREEN}Project $PROJECT is reset.${NC}")
+Run bk-prep-fleet / bk-prep-project to build it up again (about 20 minutes).
+
+Anything that shows as "skipped" was already gone -- that is the normal
+case for a partially built project. Should something have survived (the
+preview APIs above move fast), the console will show it; deleting it by
+hand is safe and this script can be re-run any time.
+EOF

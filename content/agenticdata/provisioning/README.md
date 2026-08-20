@@ -32,7 +32,14 @@ Single account (testing) — pass a username instead of the CSV:
 ./bk-verify-fleet devstar1234@gcplab.me
 ```
 
-Reset a **test** project between runs:
+Reset a project completely — everything the stream created, provisioning
+*and* whatever the labs built (needs owner):
+
+```bash
+./bk-reset-project bootkon-event-1234
+```
+
+Or roll back just the provisioning, terraform-style (needs an intact state):
 
 ```bash
 ./bk-prep-project --destroy devstar1234@gcplab.me bootkon-event-1234
@@ -53,6 +60,7 @@ either order — the `@` disambiguates).
 | `bk-verify-fleet` | Read-only readiness check, ~26 checks per project (prefix optional). Green one-liner when ready; yellow with the pending components while a prep is still running; red with an ok/missing split otherwise. Exit code = fleet readiness. |
 | `cloudbuild.yaml` | Wraps `bk-prep-project` for Cloud Build. `$PROJECT_ID` is the built-in substitution, so every build preps the project it runs in. |
 | `terraform/` | The desired state (APIs, IAM, service accounts, network, private connection, jump VM, SQL, PSC endpoint). |
+| `bk-reset-project` | Wipes a project back to pre-bootkon: prep resources *and* lab-created ones (streams, medallion datasets, scans, glossaries, policy tags, data agents, Dataform repos, Analytics Hub, dashboards), plus the state bucket. Needs no terraform state; keeps APIs and IAM. |
 | `bk-seed-project` | Generates Cymbal's data, stages it in the bucket and imports schema + tables into Cloud SQL via the Admin API (no network path needed). Per-object markers make it resume-safe. Called by `bk-prep-project`. |
 | `ensure-terraform` | Sourced helper: single Terraform version pin, self-installs into `~/.local/bin` when missing (Cloud Shell does not preinstall Terraform). |
 | `bk-init` | NOT organizer-run: the stream hook `. bk` executes at participant setup (secrets, runtime config, background wake of the parked SQL instance). |

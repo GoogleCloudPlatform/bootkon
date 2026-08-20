@@ -39,7 +39,8 @@
 # terraform import on conflict and then converged to the config; stale
 # state locks from killed runs are broken automatically.
 # `--destroy` (first argument) tears the prepared resources down again --
-# meant for resetting TEST projects between runs; see the flag comment below.
+# terraform-only, so it needs an intact state and leaves anything the LABS
+# created untouched; `bk-reset-project` is the state-independent full wipe.
 
 set -u
 
