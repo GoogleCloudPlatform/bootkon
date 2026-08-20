@@ -25,8 +25,8 @@ Learn more:
 
 Aspects are structured metadata attached to catalog entries. We'll create a **Data tier** aspect type and stamp bronze/silver/gold onto the datasets.
 
-1. Open [Knowledge Catalog](https://console.cloud.google.com/dataplex) and go to <walkthrough-spotlight-pointer locator="text('Aspect types')">Aspect types</walkthrough-spotlight-pointer> (under *Metadata types*).
-2. Click <walkthrough-spotlight-pointer locator="text('Create aspect type')">Create aspect type</walkthrough-spotlight-pointer> and use:
+1. Open [Knowledge Catalog](https://console.cloud.google.com/dataplex) and go to <walkthrough-spotlight-pointer locator="text('Metadata types')">Metadata types</walkthrough-spotlight-pointer> → <walkthrough-spotlight-pointer locator="semantic({tab 'Aspect types'})">Aspect types</walkthrough-spotlight-pointer>.
+2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer> (or *Create aspect type*) and use:
     - Aspect type ID: `data-tier`
     - Display name: `Data tier`
     - Location: `global` — this matters: an aspect type can only be attached to entries in the same location or in `global`, and your BigQuery datasets live in the multi-region `us`. A regional aspect type (e.g. `us-central1`) will *not* show up when you try to attach it below.
@@ -38,7 +38,7 @@ Aspects are structured metadata attached to catalog entries. We'll create a **Da
 
 Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
 
-5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> → under *Optional aspects* click *Add*, filter for **Data tier**, set Tier to `gold` → save.
+5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> → under *Optional aspects* click <walkthrough-spotlight-pointer locator="text('Add')">Add</walkthrough-spotlight-pointer>, filter for **Data tier**, set Tier to `gold` → save.
 6. Repeat for `cymbal_silver` (`silver`) and `cymbal_bronze` (`bronze`).
 
 Verify the point of the exercise: in the catalog search bar, filter by your new aspect (e.g. search for `cymbal` and use the aspect filter for `Data tier = gold`) — anyone in the company can now find the *consumable* data without asking around.
