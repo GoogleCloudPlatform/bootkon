@@ -39,11 +39,10 @@ Reset a **test** project between runs:
 ```
 
 The CSV needs the username in the first column (header row is skipped);
-`project = PREFIX + numeric suffix of the username`. `bk-prep-fleet` needs
-the prefix (provisioning must never guess a project); `bk-verify-fleet`
-takes it optionally and otherwise looks the projects up by that number;
-`bk-prep-project` takes the full project id (project/username in either
-order — the `@` disambiguates).
+`project = PREFIX + numeric suffix of the username`. Both `bk-prep-fleet` and
+`bk-verify-fleet` take the prefix optionally and otherwise look the projects up
+by that number; `bk-prep-project` takes the full project id (project/username in
+either order — the `@` disambiguates).
 
 ## The pieces
 

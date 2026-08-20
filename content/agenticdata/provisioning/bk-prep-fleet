@@ -55,15 +55,14 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-if [[ -z "$LOCAL_CSV_FILE" || -z "$PROJECT_ID_PREFIX" ]]; then
+if [[ -z "$LOCAL_CSV_FILE" ]]; then
     echo "Error: Missing required arguments."
-    echo "Usage: $(basename $0) [--cloud-build] <CSV_FILE|USERNAME> <PROJECT_ID_PREFIX>"
+    echo "Usage: $(basename $0) [--cloud-build] <CSV_FILE|USERNAME> [PROJECT_ID_PREFIX]"
     echo "Examples:"
-    echo "  $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\" \"bootkon-dt25test-\""
-    echo "  $(basename $0) --cloud-build devstar1234@gcplab.me \"bootkon-dt25test-\"   # single account"
+    echo "  $(basename $0) \"Bootkon Test Accounts - Sheet1.csv\""
+    echo "  $(basename $0) --cloud-build devstar1234@gcplab.me \"bootkon-dt25test-\""
     echo ""
-    echo "The CSV file needs to have the username in the first column; passing a"
-    echo "single username instead runs the identical pipeline for just that account."
+    echo "Without a prefix the projects are looked up by the username's number."
     echo "Local mode parallelism: BK_PREP_PARALLEL=<n> (default 8)."
     echo "--cloud-build submits one build per project instead (fully parallel)."
     exit 1
@@ -91,17 +90,10 @@ fi
 PARALLEL="${BK_PREP_PARALLEL:-8}"
 LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-prep-logs.XXXXXX")"
 
-# Collect "username project" pairs first. A username instead of a CSV file
-# runs the identical pipeline for that single account (handy for testing).
-# The `|| [ ... ]` keeps the final row alive when the file lacks a trailing
-# newline; the \r strip guards against CRLF endings from spreadsheet exports.
-ROWS=()
+# Usernames first
+USERS=()
 if [ ! -f "$LOCAL_CSV_FILE" ] && [[ "$LOCAL_CSV_FILE" == *@* ]]; then
-    USERNAME="$LOCAL_CSV_FILE"
-    # Digits from the local part only, last group -- a domain like
-    # gcp2lab.me must not end up in the project id.
-    NUMERIC_SUFFIX=$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)
-    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+    USERS+=("$LOCAL_CSV_FILE")
 elif [ ! -f "$LOCAL_CSV_FILE" ]; then
     echo "Error: $LOCAL_CSV_FILE is neither a file nor a username (user@domain)." >&2
     exit 1
@@ -109,13 +101,55 @@ else
     while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
         USERNAME=${fields[0]%$'\r'}
         [ -z "$USERNAME" ] && continue
-        NUMERIC_SUFFIX=$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)
-        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+        USERS+=("$USERNAME")
     done < <(tail -n +2 "$LOCAL_CSV_FILE")
 fi
 
-if [ ${#ROWS[@]} -eq 0 ]; then
+if [ ${#USERS[@]} -eq 0 ]; then
     echo "No usernames found in $LOCAL_CSV_FILE."
+    exit 1
+fi
+
+# Project ids are PREFIX + the username's number. Without a prefix, derive
+# them: one `gcloud projects list`, then match "...<number>" locally.
+ALL_PROJECTS=""
+if [ -z "$PROJECT_ID_PREFIX" ]; then
+    echo "No project prefix given -- deriving it from the projects you can see ..."
+    ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>/dev/null)"
+    if [ -z "$ALL_PROJECTS" ]; then
+        echo "Error: could not list any projects -- pass the prefix explicitly." >&2
+        exit 1
+    fi
+fi
+
+ROWS=()
+RESOLVE_FAILED=0
+for USERNAME in "${USERS[@]}"; do
+    NUMERIC_SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+    if [ -z "$NUMERIC_SUFFIX" ]; then
+        echo -e "${RED}$USERNAME: no number in the username to build a project id from.${NC}" >&2
+        RESOLVE_FAILED=1
+        continue
+    fi
+    if [ -n "$PROJECT_ID_PREFIX" ]; then
+        ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${NUMERIC_SUFFIX}")
+        continue
+    fi
+    MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${NUMERIC_SUFFIX}$" || true)"
+    COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
+    if [ "$COUNT" = "1" ]; then
+        ROWS+=("$USERNAME $MATCHES")
+    elif [ "$COUNT" = "0" ]; then
+        echo -e "${RED}$USERNAME: no project ending in ${NUMERIC_SUFFIX} -- pass the prefix explicitly.${NC}" >&2
+        RESOLVE_FAILED=1
+    else
+        echo -e "${RED}$USERNAME: several projects end in ${NUMERIC_SUFFIX} ($(echo $MATCHES | tr '\n' ' ')) -- pass the prefix explicitly.${NC}" >&2
+        RESOLVE_FAILED=1
+    fi
+done
+
+if [ "$RESOLVE_FAILED" = "1" ] || [ ${#ROWS[@]} -eq 0 ]; then
+    echo "Aborting due to project resolution errors." >&2
     exit 1
 fi
 
@@ -206,7 +240,11 @@ if [ "$MODE" = "cloudbuild" ]; then
         echo "(15-25 minutes each, fully server-side -- this terminal is done)."
         echo "Watch progress and check readiness any time with:"
         echo ""
-        echo "  $SCRIPT_DIR/bk-verify-fleet \"$LOCAL_CSV_FILE\" \"$PROJECT_ID_PREFIX\""
+        if [ -n "$PROJECT_ID_PREFIX" ]; then
+            echo "  $SCRIPT_DIR/bk-verify-fleet \"$LOCAL_CSV_FILE\" \"$PROJECT_ID_PREFIX\""
+        else
+            echo "  $SCRIPT_DIR/bk-verify-fleet \"$LOCAL_CSV_FILE\""
+        fi
         echo ""
         echo "(raw build status: gcloud builds list --project=<project>)"
     fi
