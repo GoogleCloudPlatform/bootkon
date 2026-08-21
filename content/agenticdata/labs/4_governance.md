@@ -72,6 +72,7 @@ Then hold bronze orders to a standard:
 5. Back on the same page, click <walkthrough-spotlight-pointer locator="semantic({button 'Create data quality scan'})">Create data quality scan</walkthrough-spotlight-pointer>:
     - Display name: `cymbal-dq-bronze-orders`
     - Table: `cymbal_bronze` → `cymbal_orders`
+    - Scope *Entire data*, sampling *All data*, Publish *results to Knowledge Catalog*
     - Credential type: **Service account** → `dataquality-service-account`
     - Schedule: *On-demand*
 6. Add two rules (rule type *Row check* / validity):
