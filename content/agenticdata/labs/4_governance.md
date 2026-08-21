@@ -115,7 +115,7 @@ You are the project owner and *still* can't read that column — fine-grained ac
 
 ### Give the business a vocabulary
 
-1. In Knowledge Catalog, open <walkthrough-spotlight-pointer locator="text('Glossaries')">Glossaries</walkthrough-spotlight-pointer> and create glossary `Cymbal Business Glossary` (location `us-central1`).
+1. In [Knowledge Catalog](https://console.cloud.google.com/dataplex), open <walkthrough-spotlight-pointer locator="text('Glossaries')">Glossaries</walkthrough-spotlight-pointer> and create glossary `Cymbal Business Glossary` (location `us-central1`).
 2. Add a term: **Lifetime value** — *"Gross revenue of a customer's non-cancelled orders, in the order currency. Source of truth: cymbal_gold.dim_customer_360.lifetime_value."*
 3. Open the `dim_customer_360` entry via catalog Search, go to its schema, select the `lifetime_value` column and attach the term.
 
