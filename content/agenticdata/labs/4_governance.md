@@ -93,7 +93,7 @@ Then hold bronze orders to a standard:
 
 `stg_customers.email` is personal data. Enforce column-level security with a policy tag:
 
-1. Open [BigQuery policy tags](https://console.cloud.google.com/bigquery/policy-tags) and click <walkthrough-spotlight-pointer locator="text('Create taxonomy')">Create taxonomy</walkthrough-spotlight-pointer>:
+1. Open [BigQuery policy tags](https://console.cloud.google.com/bigquery/policy-tags) and click <walkthrough-spotlight-pointer locator="text('Create taxonomy')">Create Taxonomy</walkthrough-spotlight-pointer>:
     - Taxonomy name: `cymbal-governance`, location `us`
     - Policy tag: `PII`, description: `Personal data — restricted`
 2. Create it, then toggle <walkthrough-spotlight-pointer locator="text('Enforce access control')">Enforce access control</walkthrough-spotlight-pointer> on.
