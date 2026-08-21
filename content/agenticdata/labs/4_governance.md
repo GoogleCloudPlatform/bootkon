@@ -57,7 +57,7 @@ gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{
 
 Now profile the customer data:
 
-1. In Knowledge Catalog, open <walkthrough-spotlight-pointer locator="text('Data profiling & quality')">Data profiling & quality</walkthrough-spotlight-pointer>.
+1. In [Knowledge Catalog](https://console.cloud.google.com/dataplex), open <walkthrough-spotlight-pointer locator="text('Data profiling & quality')">Data profiling & quality</walkthrough-spotlight-pointer>.
 2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create data profile scan'})">Create data profile scan</walkthrough-spotlight-pointer>:
     - Display name: `cymbal-profile-bronze-customers`
     - Table: browse to `cymbal_bronze` → `cymbal_customers`
