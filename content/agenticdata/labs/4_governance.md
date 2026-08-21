@@ -61,7 +61,7 @@ Now profile the customer data:
 2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create data profile scan'})">Create data profile scan</walkthrough-spotlight-pointer>:
     - Display name: `cymbal-profile-bronze-customers`
     - Table: browse to `cymbal_bronze` → `cymbal_customers`
-    - Scope *Entire data*, sampling *All data*, publish results on
+    - Scope *Entire data*, sampling *All data*, Publish *results to Knowledge Catalog*
     - Credential type: **Service account** → `dataquality-service-account`
     - Schedule: On-demand
 3. Create it, open it, and click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer>.
