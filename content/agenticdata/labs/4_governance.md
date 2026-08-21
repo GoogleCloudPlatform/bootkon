@@ -38,7 +38,7 @@ Aspects are structured metadata attached to catalog entries. We'll create a **Da
 
 Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
 
-5. In the entry's details, find <walkthrough-spotlight-pointer locator="text('Aspects')">Aspects</walkthrough-spotlight-pointer> → under *Optional aspects* click <walkthrough-spotlight-pointer locator="text('Add')">Add</walkthrough-spotlight-pointer>, filter for **Data tier**, set Tier to `gold` → save.
+5. In the entry's details, find `Aspects` → under *Optional aspects* click <walkthrough-spotlight-pointer locator="text('Add')">Add</walkthrough-spotlight-pointer>, filter for **Data tier**, set Tier to `gold` → save.
 6. Repeat for `cymbal_silver` (`silver`) and `cymbal_bronze` (`bronze`).
 
 Verify the point of the exercise: in the catalog search bar, filter by your new aspect (e.g. search for `cymbal` and use the aspect filter for `Data tier = gold`) — anyone in the company can now find the *consumable* data without asking around.
