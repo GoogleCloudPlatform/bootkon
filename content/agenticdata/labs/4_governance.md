@@ -87,7 +87,7 @@ Then hold bronze orders to a standard:
     order_ts <= CURRENT_TIMESTAMP()
     ```
     
-8. Run the scan. **It fails — on purpose.** The `shiped` typo and the future-dated orders you saw in Lab 3 are now caught by governance, not just by your pipeline. Discuss with your table: the same rules would pass on `cymbal_silver.stg_orders` — why keep both layers scanned? (If you have time, clone the scan onto silver and prove it passes.)
+7. Run the scan. **It fails — on purpose.** The `shiped` typo and the future-dated orders you saw in Lab 3 are now caught by governance, not just by your pipeline. Discuss with your table: the same rules would pass on `cymbal_silver.stg_orders` — why keep both layers scanned? (If you have time, clone the scan onto silver and prove it passes.)
 
 ### Lock down PII
 
