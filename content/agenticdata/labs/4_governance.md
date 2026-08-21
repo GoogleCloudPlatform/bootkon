@@ -127,9 +127,9 @@ Which tables contain revenue by day?
 
 Gemini-powered search reads the same metadata you just curated — every aspect, term, and description you add makes both humans *and* agents smarter.
 
-### Admire the lineage
+### Admire the Lineage
 
-One more look: open `cymbal_gold.fct_daily_revenue` in BigQuery and its <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. Bronze→silver→gold, captured automatically from the Dataform runs. (Datastream's Postgres→bronze hop publishes its metadata to the catalog in Preview, but doesn't draw lineage edges yet — watch that space.)
+One more look: open `cymbal_gold.fct_daily_revenue` in [BigQuery](https://console.cloud.google.com/bigquery) and its <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. Bronze→silver→gold, captured automatically from the Dataform runs. (Datastream's Postgres→bronze hop publishes its metadata to the catalog in Preview, but doesn't draw lineage edges yet — watch that space.)
 
 ### Success
 
