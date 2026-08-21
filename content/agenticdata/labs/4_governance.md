@@ -96,7 +96,7 @@ Then hold bronze orders to a standard:
 1. Open [BigQuery policy tags](https://console.cloud.google.com/bigquery/policy-tags) and click <walkthrough-spotlight-pointer locator="text('Create taxonomy')">Create Taxonomy</walkthrough-spotlight-pointer>:
     - Taxonomy name: `cymbal-governance`, location `us`
     - Policy tag: `PII`, description: `Personal data — restricted`
-2. Create it, then toggle <walkthrough-spotlight-pointer locator="text('Enforce access control')">Enforce access control</walkthrough-spotlight-pointer> on.
+2. Create it, then toggle `Enforce access control` on.
 3. In [BigQuery](https://console.cloud.google.com/bigquery), open `cymbal_silver` → `stg_customers` → <walkthrough-spotlight-pointer locator="semantic({button 'Edit schema'})">Edit schema</walkthrough-spotlight-pointer>, select the `email` column, click *Add policy tag*, and pick `cymbal-governance > PII`. Save.
 
 Now prove it works — this query **must fail** with an access-denied error on the tagged column:
