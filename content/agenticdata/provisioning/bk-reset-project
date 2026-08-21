@@ -79,6 +79,7 @@ This deletes, if present:
                   Monitoring dashboards and alert policies
   * Storage       seed bucket, terraform state bucket, Cloud Build staging
   * Identities    dataquality-service-account, bootkon-provisioner
+  * Cloud Shell   ~/bootkon repository checkout
 
 Kept: enabled APIs and IAM role bindings.
 ================================================================================
@@ -247,3 +248,10 @@ case for a partially built project. Should something have survived (the
 preview APIs above move fast), the console will show it; deleting it by
 hand is safe and this script can be re-run any time.
 EOF
+
+echo "=== Cloud Shell ==="
+if [ -n "${CLOUD_SHELL:-}" ]; then
+    try "~/bootkon (local checkout)" rm -rf ~/bootkon
+else
+    try "~/bootkon (remote checkout)" gcloud cloud-shell ssh --command="rm -rf ~/bootkon" --force-key-file-overwrite --quiet
+fi
