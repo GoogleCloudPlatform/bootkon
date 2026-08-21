@@ -63,7 +63,7 @@ Now profile the customer data:
     - Table: browse to `cymbal_bronze` → `cymbal_customers`
     - Scope *Entire data*, sampling *All data*, Publish *results to Knowledge Catalog*
     - Credential type: **Service account** → `dataquality-service-account`
-    - Schedule: On-demand
+    - Schedule: *On-demand*
 3. Create it, open it, and click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer>.
 4. When the job finishes (a few minutes), explore the results — look at the `country` column: there's your planted ~1.5% NULL rate, and the `email` column's distinct count hints at the duplicates.
 
