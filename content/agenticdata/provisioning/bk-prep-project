@@ -215,7 +215,17 @@ if [ "$MODE" = "destroy" ]; then
         echo "Datastream stream and its connection profiles on the private" >&2
         echo "connection). Delete those first, then re-run with --destroy." >&2
         exit 1
-    fi
+fi
+
+# If the instance exists but is parked (NEVER), Terraform will fail to adopt
+# or create the database (Error 400: Invalid request since instance is not running).
+# Wake it up silently here before apply. We'll park it again at the end if we seeded it
+# or woke it up here.
+BK_WOKE_INSTANCE=0
+if gcloud sql instances describe cymbal-oltp --project="$PROJECT" --format="value(settings.activationPolicy)" 2>/dev/null | grep -q "NEVER"; then
+    echo "Instance is parked; waking it up for terraform operations ..."
+    gcloud sql instances patch cymbal-oltp --activation-policy=ALWAYS --project="$PROJECT" --quiet >/dev/null 2>&1 || true
+    BK_WOKE_INSTANCE=1
 fi
 
 if ! tf_run apply; then
@@ -280,8 +290,8 @@ rm -f "$BK_SEED_STAMP"
 # prep-time states. (Seeding only happens once, so a re-prep during the event
 # never parks an instance a participant has woken.)
 if grep -q "google_sql_database_instance.oltp: Creation complete" "$APPLY_LOG" \
-    || [ -f "$BK_SEED_STAMP" ]; then
-    echo "Parking the freshly built cymbal-oltp (stopped until the participant's setup wakes it) ..."
+    || [ -f "$BK_SEED_STAMP" ] || [ "${BK_WOKE_INSTANCE:-0}" = "1" ]; then
+    echo "Parking cymbal-oltp (stopped until the participant's setup wakes it) ..."
     gcloud sql instances patch cymbal-oltp --activation-policy=NEVER \
         --project="$PROJECT" --quiet >/dev/null 2>&1 \
         || echo "WARNING: could not park cymbal-oltp -- it stays running (~\$1.70/day)." >&2
