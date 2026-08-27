@@ -30,11 +30,11 @@ Aspects are structured metadata attached to catalog entries. We'll create a **Da
     - Aspect type ID: `data-tier`
     - Display name: `Data tier`
     - Location: `global` — this matters: an aspect type can only be attached to entries in the same location or in `global`, and your BigQuery datasets live in the multi-region `us`. A regional aspect type (e.g. `us-central1`) will *not* show up when you try to attach it below.
-3. Add a field (under *Template*, click <walkthrough-spotlight-pointer locator="semantic({button 'Add Field'})">Add Field</walkthrough-spotlight-pointer>):
-    - Type: **Enum** (<walkthrough-spotlight-pointer locator="text('Type')">Type</walkthrough-spotlight-pointer>), Name: `tier`, Display name: `Tier`
-    - Enum values (click <walkthrough-spotlight-pointer locator="semantic({button 'Add an Enum Value'})">Add an Enum Value</walkthrough-spotlight-pointer> three times): `bronze`, `silver`, `gold`
-    - Check <walkthrough-spotlight-pointer locator="text('Is Required')">Is Required</walkthrough-spotlight-pointer>.
-4. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer>.
+3. Add a field (under *Template*, click Add Field):
+    - Type: **Enum** (Type), Name: `tier`, Display name: `Tier`
+    - Enum values (click Add an Enum Value three times): `bronze`, `silver`, `gold`
+    - Check Is Required.
+4. Click Create.
 
 Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
 
