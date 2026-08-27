@@ -215,6 +215,7 @@ if [ "$MODE" = "destroy" ]; then
         echo "Datastream stream and its connection profiles on the private" >&2
         echo "connection). Delete those first, then re-run with --destroy." >&2
         exit 1
+    fi
 fi
 
 # If the instance exists but is parked (NEVER), Terraform will fail to adopt
