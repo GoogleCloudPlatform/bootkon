@@ -55,7 +55,7 @@ gcloud services enable aiplatform.googleapis.com
 Run the commands below to clone the Git repository locally.
 
 ```bash
-git clone https://github.com/gitrey/calendar-app-lab
+git clone https://github.com/kbhattac/calendar-app-lab
 cd calendar-app-lab
 ```
 
