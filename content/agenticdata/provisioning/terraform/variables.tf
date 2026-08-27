@@ -61,6 +61,7 @@ locals {
     "roles/iap.tunnelResourceAccessor",           # IAP TCP tunnel to the jump VM
     "roles/bigquery.admin",                       # datasets, jobs, connections
     "roles/dataplex.admin",                       # Knowledge Catalog: aspects, scans, glossary
+    "roles/datacatalog.categoryAdmin",            # Knowledge Catalog: policy tags
     "roles/datalineage.admin",                    # lineage graph
     "roles/aiplatform.user",                      # Gemini calls from ADK agents
     "roles/geminidataanalytics.dataAgentCreator", # create + chat with data agents

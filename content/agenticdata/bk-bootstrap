@@ -125,7 +125,8 @@ if [ ! -f "$AGY_DIR/settings.json" ]; then
     "$BK_DIR",
     "$BK_DIR/content/agenticdata/src/dataform",
     "$BK_DIR/content/agenticdata/src/adk"
-  ]
+  ],
+  "allowNonWorkspaceAccess": true
 }
 JSON
 else
