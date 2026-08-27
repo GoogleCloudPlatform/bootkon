@@ -62,6 +62,7 @@ locals {
     "roles/bigquery.admin",                       # datasets, jobs, connections
     "roles/dataplex.admin",                       # Knowledge Catalog: aspects, scans, glossary
     "roles/datacatalog.categoryAdmin",            # Knowledge Catalog: policy tags
+    "roles/datacatalog.admin",                    # Knowledge Catalog: admin
     "roles/datalineage.admin",                    # lineage graph
     "roles/aiplatform.user",                      # Gemini calls from ADK agents
     "roles/geminidataanalytics.dataAgentCreator", # create + chat with data agents
