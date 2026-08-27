@@ -12,6 +12,19 @@
 # missing, IAM not granted, credentials expired). Give up after a few such
 # attempts instead of retrying forever in a background process nobody
 # watches.
+#
+# Because running it by hand is normal, the first thing it does is look at
+# port 5432. A second tunnel cannot bind it anyway, and starting one would
+# only spin the loop below against "address already in use" until it gives
+# up. If something is already listening, the tunnel the participant wants
+# is already there, so say so and stop.
+
+if (echo >/dev/tcp/localhost/5432) 2>/dev/null; then
+    echo "A tunnel is already running on localhost:5432 -- nothing to do."
+    echo "Stop it first if you want to start a fresh one."
+    exit 0
+fi
+
 ZONE="${REGION:-us-central1}-a"
 fails=0
 while true; do
