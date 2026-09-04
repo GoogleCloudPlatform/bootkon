@@ -46,8 +46,9 @@ Rules:
 2. Expand <walkthrough-spotlight-pointer locator="semantic({treeitem 'Toggle node {{ PROJECT_ID }}'} {button 'Toggle node'})">{{ PROJECT_ID }}</walkthrough-spotlight-pointer> and click <walkthrough-spotlight-pointer locator="text('Agents')">Agents</walkthrough-spotlight-pointer>.
 3. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create agent'})">Create agent</walkthrough-spotlight-pointer>.
 4. Name it ``cymbal-data-agent`` — Lab 6 refers to it by exactly this name — and add a description like *"Analytics over Cymbal's gold layer"*.
-5. Click *Add Source* and select the three gold tables: ``fct_daily_revenue``, ``dim_customer_360``, ``fct_product_performance``.
-6. Paste your instructions (agy's draft, reviewed, or the baseline above) into the instructions box.
+5. Set the region to **GLOBAL** (or ``global``) — the Conversational Analytics API used in Lab 6 routes to `locations/global`.
+6. Click *Add Source* and select the three gold tables: ``fct_daily_revenue``, ``dim_customer_360``, ``fct_product_performance``.
+7. Paste your instructions (agy's draft, reviewed, or the baseline above) into the instructions box.
 
 ### Add a verified query
 
