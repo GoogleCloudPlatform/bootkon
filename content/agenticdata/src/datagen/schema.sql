@@ -9,7 +9,7 @@
 
 CREATE SCHEMA IF NOT EXISTS cymbal;
 
-CREATE TABLE cymbal.customers (
+CREATE TABLE IF NOT EXISTS cymbal.customers (
     customer_id BIGINT PRIMARY KEY,
     full_name   TEXT NOT NULL,
     email       TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE cymbal.customers (
     updated_at  TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE cymbal.products (
+CREATE TABLE IF NOT EXISTS cymbal.products (
     product_id BIGINT PRIMARY KEY,
     sku        TEXT NOT NULL,
     name       TEXT NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE cymbal.products (
     cost       NUMERIC(10, 2) NOT NULL
 );
 
-CREATE TABLE cymbal.orders (
+CREATE TABLE IF NOT EXISTS cymbal.orders (
     order_id    BIGINT PRIMARY KEY,
     customer_id BIGINT NOT NULL,
     status      TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE cymbal.orders (
     updated_at  TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE cymbal.order_items (
+CREATE TABLE IF NOT EXISTS cymbal.order_items (
     order_item_id BIGINT PRIMARY KEY,
     order_id      BIGINT NOT NULL,
     product_id    BIGINT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE cymbal.order_items (
     unit_price    NUMERIC(10, 2) NOT NULL
 );
 
-CREATE TABLE cymbal.payments (
+CREATE TABLE IF NOT EXISTS cymbal.payments (
     payment_id BIGINT PRIMARY KEY,
     order_id   BIGINT NOT NULL,
     method     TEXT NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE cymbal.payments (
     paid_at    TIMESTAMPTZ
 );
 
-CREATE TABLE cymbal.reviews (
+CREATE TABLE IF NOT EXISTS cymbal.reviews (
     review_id   BIGINT PRIMARY KEY,
     order_id    BIGINT NOT NULL,
     rating      INTEGER NOT NULL,

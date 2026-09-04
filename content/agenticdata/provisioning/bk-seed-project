@@ -114,6 +114,12 @@ for t in $TABLES; do
         continue
     fi
     echo "Importing ${t} ..."
+    # Truncate first in case a prior interrupted run partially loaded rows,
+    # which would otherwise fail with duplicate key on the primary key.
+    printf 'TRUNCATE TABLE cymbal.%s;\n' "$t" | gcloud storage cp - "gs://${BUCKET}/seed/.truncate-${t}.sql" >/dev/null 2>&1
+    gcloud sql import sql "$INSTANCE" "gs://${BUCKET}/seed/.truncate-${t}.sql" \
+        --database="$DATABASE" --project="$PROJECT" --quiet >/dev/null 2>&1 || true
+
     gcloud sql import csv "$INSTANCE" "gs://${BUCKET}/seed/${t}.csv" \
         --database="$DATABASE" --table="cymbal.${t}" --project="$PROJECT" --quiet \
         || { echo "ERROR: importing ${t} failed." >&2; exit 1; }
