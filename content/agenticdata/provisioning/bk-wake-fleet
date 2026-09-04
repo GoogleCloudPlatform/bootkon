@@ -1,0 +1,282 @@
+#!/bin/bash
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Organizer-side fleet wake for the AGENTICDATA stream: starts every Cloud
+# SQL instance in every participant project. Same contract as bk-prep-fleet
+# and bk-verify-fleet (username in the first CSV column; project = PREFIX +
+# numeric suffix, prefix optional).
+#
+# WHY this exists: bk-prep-project leaves cymbal-oltp PARKED
+# (activation_policy NEVER, ~$0.06/day) so that prepping days ahead is
+# cheap. Waking is normally the participant's own `. bk` -- but that wake is
+# fire-and-forget and takes a few minutes, so a room full of people hitting
+# Lab 1 at the same time all wait on it, and any project whose wake silently
+# failed only shows up as a broken Lab 1. Run this ~30 minutes before the
+# stream starts and the fleet is warm when the room arrives.
+#
+# It starts EVERY instance it finds per project, not just cymbal-oltp: an
+# instance nobody meant to leave behind still costs money, and "everything
+# in this project runs" is the state the labs assume.
+#
+# Idempotent: an instance already RUNNABLE with policy ALWAYS is left alone,
+# so re-running is free and safe.
+#
+# Usage: bk-wake-fleet [--no-wait] [-y] <CSV_FILE|USERNAME> [PROJECT_ID_PREFIX]
+# Parallelism: BK_PREP_PARALLEL=<n> (default 8) for the fan-out.
+# Wait budget:  BK_WAKE_TIMEOUT=<seconds> (default 900).
+
+# Flags at any position; unknown flags are hard errors -- same rule as
+# bk-prep-fleet, where a silently ignored flag once sent a run the wrong way.
+WAIT=1
+AUTO_CONFIRM=0
+POSITIONAL=()
+for arg in "$@"; do
+    case "$arg" in
+        --no-wait) WAIT=0 ;;
+        --wait) WAIT=1 ;;
+        -y|--yes) AUTO_CONFIRM=1 ;;
+        --*) echo "Error: unknown flag '$arg'." >&2; exit 1 ;;
+        *) POSITIONAL+=("${arg}") ;;
+    esac
+done
+LOCAL_CSV_FILE="${POSITIONAL[0]:-}"
+PROJECT_ID_PREFIX="${POSITIONAL[1]:-}"
+if [ ${#POSITIONAL[@]} -gt 2 ]; then
+    echo "Error: unexpected extra argument '${POSITIONAL[2]}'." >&2
+    exit 1
+fi
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+if [[ -z "$LOCAL_CSV_FILE" ]]; then
+    echo "Error: Missing required arguments."
+    echo "Usage: $(basename $0) [--no-wait] [-y] <CSV_FILE|USERNAME> [PROJECT_ID_PREFIX]"
+    echo "Examples:"
+    echo "  $(basename $0) \"Bootkon Accounts - Sheet1.csv\""
+    echo "  $(basename $0) devstar1234@gcplab.me                     # single account"
+    echo "  $(basename $0) --no-wait \"Bootkon Accounts - Sheet1.csv\"  # fire and return"
+    echo ""
+    echo "Without a prefix the projects are looked up by the username's number."
+    echo "Starting an instance costs ~\$1.70/day each -- park them again after the event."
+    exit 1
+fi
+
+CALLER="$(gcloud config get-value account 2>/dev/null)"
+if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
+    echo -e "${RED}Error: No active gcloud account set on this machine. Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+
+AUTH_ERR="$(mktemp "${TMPDIR:-/tmp}/bk-auth-err.XXXXXX")"
+if ! gcloud auth print-access-token >/dev/null 2>"$AUTH_ERR"; then
+    echo -e "${RED}Error: gcloud authentication failed for $CALLER:${NC}" >&2
+    cat "$AUTH_ERR" >&2
+    rm -f "$AUTH_ERR"
+    echo -e "${RED}Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+rm -f "$AUTH_ERR"
+
+REGION="${REGION:-us-central1}"
+PARALLEL="${BK_PREP_PARALLEL:-8}"
+TIMEOUT="${BK_WAKE_TIMEOUT:-900}"
+STATUS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-wake.XXXXXX")"
+mkdir -p "$STATUS_DIR/pending" "$STATUS_DIR/failed"
+
+# Usernames first (single username or CSV; final-row and CRLF guards
+# included, same contract as bk-prep-fleet).
+USERS=()
+if [ ! -f "$LOCAL_CSV_FILE" ] && [[ "$LOCAL_CSV_FILE" == *@* ]]; then
+    USERS+=("$LOCAL_CSV_FILE")
+elif [ ! -f "$LOCAL_CSV_FILE" ]; then
+    echo "Error: $LOCAL_CSV_FILE is neither a file nor a username (user@domain)." >&2
+    exit 1
+else
+    while IFS=, read -r -a fields || [ ${#fields[@]} -gt 0 ]; do
+        USERNAME=${fields[0]%$'\r'}
+        [ -z "$USERNAME" ] && continue
+        USERS+=("$USERNAME")
+    done < <(tail -n +2 "$LOCAL_CSV_FILE")
+fi
+if [ ${#USERS[@]} -eq 0 ]; then
+    echo "No usernames found in $LOCAL_CSV_FILE."
+    exit 1
+fi
+
+# Project ids are PREFIX + the username's number. Without a prefix, derive
+# it once from the first matching user in the CSV -- all projects in a fleet
+# share the same prefix.
+if [ -z "$PROJECT_ID_PREFIX" ]; then
+    echo "No project prefix given -- deriving it from the projects you can see ..."
+    PROJECTS_ERR="$(mktemp "${TMPDIR:-/tmp}/bk-projects-err.XXXXXX")"
+    if ! ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>"$PROJECTS_ERR")"; then
+        echo -e "${RED}Error: 'gcloud projects list' failed:${NC}" >&2
+        cat "$PROJECTS_ERR" >&2
+        rm -f "$PROJECTS_ERR"
+        exit 1
+    fi
+    rm -f "$PROJECTS_ERR"
+    if [ -z "$ALL_PROJECTS" ]; then
+        echo -e "${RED}Error: could not list any projects for $CALLER -- pass the prefix explicitly.${NC}" >&2
+        exit 1
+    fi
+    for USERNAME in "${USERS[@]}"; do
+        SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+        [ -z "$SUFFIX" ] && continue
+        MATCHES="$(printf '%s\n' "$ALL_PROJECTS" | grep -E -- "([^0-9]|^)${SUFFIX}$" || true)"
+        COUNT="$(printf '%s' "$MATCHES" | grep -c . || true)"
+        if [ "$COUNT" = "1" ]; then
+            PROJECT_ID_PREFIX="${MATCHES%"${SUFFIX}"}"
+            echo "Derived project prefix '$PROJECT_ID_PREFIX' (from $MATCHES for $USERNAME)."
+            break
+        fi
+    done
+    if [ -z "$PROJECT_ID_PREFIX" ]; then
+        echo -e "${RED}Error: could not derive project prefix from any user in $LOCAL_CSV_FILE -- pass the prefix explicitly.${NC}" >&2
+        exit 1
+    fi
+fi
+
+ROWS=()
+RESOLVE_FAILED=0
+for USERNAME in "${USERS[@]}"; do
+    # Digits from the local part only, last group -- a domain like
+    # gcp2lab.me must not end up in the project id.
+    SUFFIX="$(printf '%s' "${USERNAME%%@*}" | grep -o '[0-9]\+' | tail -1)"
+    if [ -z "$SUFFIX" ]; then
+        echo -e "${RED}$USERNAME: no number in the username to build a project id from.${NC}" >&2
+        RESOLVE_FAILED=1
+        continue
+    fi
+    ROWS+=("$USERNAME ${PROJECT_ID_PREFIX}${SUFFIX}")
+done
+if [ "$RESOLVE_FAILED" = "1" ] || [ ${#ROWS[@]} -eq 0 ]; then
+    echo "Aborting due to project resolution errors." >&2
+    exit 1
+fi
+
+echo ""
+echo "About to START every Cloud SQL instance in ${#ROWS[@]} project(s)."
+echo -e "${YELLOW}A running instance costs ~\$1.70/day (parked: ~\$0.06/day).${NC}"
+echo -e "${YELLOW}Park them again after the event, or the fleet keeps billing.${NC}"
+if [ -t 0 ] && [ "$AUTO_CONFIRM" != "1" ] && [ "${BK_PREP_AUTO_CONFIRM:-0}" != "1" ]; then
+    echo -n "Press [ENTER] to confirm (or Ctrl+C to cancel)... "
+    read -r _unused
+fi
+echo ""
+echo "Waking ${#ROWS[@]} project(s), up to $PARALLEL in parallel ..."
+echo ""
+
+# One project: start everything it has. The patch is submitted --async on
+# purpose -- a cold start takes minutes, and blocking here would serialize
+# the fleet into PARALLEL-sized batches instead of starting all instances at
+# once. The wait phase below is what turns that back into a truthful report.
+wake_one() {
+    local username="$1" project="$2"
+    local instances inst state policy
+
+    instances="$(gcloud sql instances list --project="$project" \
+        --format='value(name)' 2>/dev/null)"
+    if [ -z "$instances" ]; then
+        # No instance at all is not "asleep", it is unprepped (or invisible
+        # to this caller) -- bk-verify-fleet is the tool that says which.
+        echo -e "${RED}$project: no Cloud SQL instance found${NC} ($username)"
+        touch "$STATUS_DIR/failed/${project}__NONE"
+        return
+    fi
+
+    for inst in $instances; do
+        read -r state policy < <(gcloud sql instances describe "$inst" \
+            --project="$project" \
+            --format='value(state,settings.activationPolicy)' 2>/dev/null)
+        if [ "$state" = "RUNNABLE" ] && [ "$policy" = "ALWAYS" ]; then
+            echo -e "${GREEN}$project/$inst already running${NC}"
+            continue
+        fi
+        if gcloud sql instances patch "$inst" --project="$project" \
+            --activation-policy=ALWAYS --async --quiet >/dev/null 2>&1; then
+            echo "$project/$inst starting (was ${state:-?}/${policy:-?}) ..."
+            touch "$STATUS_DIR/pending/${project}__${inst}"
+        else
+            echo -e "${RED}$project/$inst: start failed${NC} (no permission, or instance busy)"
+            touch "$STATUS_DIR/failed/${project}__${inst}"
+        fi
+    done
+}
+export -f wake_one
+export STATUS_DIR REGION RED GREEN YELLOW NC
+
+printf '%s\n' "${ROWS[@]}" | xargs -P "$PARALLEL" -L1 bash -c 'wake_one "$@"' _
+echo ""
+
+PENDING=("$STATUS_DIR"/pending/*)
+if [ ! -e "${PENDING[0]}" ]; then
+    echo "Nothing left to wait for."
+elif [ "$WAIT" = "0" ]; then
+    echo "Start requested for ${#PENDING[@]} instance(s); not waiting (--no-wait)."
+    echo "Check with: bk-verify-fleet \"$LOCAL_CSV_FILE\" $PROJECT_ID_PREFIX"
+else
+    # Poll until every instance reports RUNNABLE. A cold start is typically
+    # 2-5 minutes; the budget is generous because a fleet that is 90% up is
+    # not what you want to discover at the door.
+    echo "Waiting for ${#PENDING[@]} instance(s) to reach RUNNABLE (up to ${TIMEOUT}s) ..."
+    started=$SECONDS
+    while true; do
+        PENDING=("$STATUS_DIR"/pending/*)
+        [ -e "${PENDING[0]}" ] || break
+        for marker in "${PENDING[@]}"; do
+            key="$(basename "$marker")"
+            project="${key%%__*}"
+            inst="${key##*__}"
+            state="$(gcloud sql instances describe "$inst" --project="$project" \
+                --format='value(state)' 2>/dev/null)"
+            if [ "$state" = "RUNNABLE" ]; then
+                echo -e "${GREEN}$project/$inst up${NC}"
+                rm -f "$marker"
+            fi
+        done
+        PENDING=("$STATUS_DIR"/pending/*)
+        [ -e "${PENDING[0]}" ] || break
+        if [ $((SECONDS - started)) -ge "$TIMEOUT" ]; then
+            echo -e "${RED}Timed out after ${TIMEOUT}s with ${#PENDING[@]} instance(s) still starting.${NC}" >&2
+            for marker in "${PENDING[@]}"; do
+                mv "$marker" "$STATUS_DIR/failed/$(basename "$marker")"
+            done
+            break
+        fi
+        echo "  ${#PENDING[@]} still starting -- checking again in 15s ..."
+        sleep 15
+    done
+fi
+
+echo ""
+FAILED=("$STATUS_DIR"/failed/*)
+if [ ! -e "${FAILED[0]}" ]; then
+    echo -e "${GREEN}All Cloud SQL instances in ${#ROWS[@]} project(s) are running.${NC}"
+    rm -rf "$STATUS_DIR"
+else
+    names=()
+    for f in "${FAILED[@]}"; do
+        names+=("$(basename "$f" | sed -e 's/__NONE$/ (no instance)/' -e 's/__/\//')")
+    done
+    echo -e "${RED}${#names[@]} instance(s) not running: ${names[*]}${NC}" >&2
+    echo -e "${RED}Re-run this script for them (safe to repeat); if one stays down,${NC}" >&2
+    echo -e "${RED}bk-verify-fleet says whether the project was ever prepped.${NC}" >&2
+    rm -rf "$STATUS_DIR"
+    exit 1
+fi

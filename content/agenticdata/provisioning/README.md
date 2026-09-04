@@ -32,6 +32,14 @@ Single account (testing) — pass a username instead of the CSV:
 ./bk-verify-fleet devstar1234@gcplab.me
 ```
 
+Wake the fleet shortly before the stream starts — the parked Cloud SQL
+instances take a few minutes to come up, and doing it centrally means nobody
+waits in Lab 1:
+
+```bash
+./bk-wake-fleet "Bootkon Accounts - Sheet1.csv"
+```
+
 Reset a project completely — everything the stream created, provisioning
 *and* whatever the labs built (needs owner):
 
@@ -57,6 +65,7 @@ either order — the `@` disambiguates).
 |---|---|
 | `bk-prep-fleet` | Fan-out over the CSV (or one username; prefix optional). Default mode submits Cloud Builds (server-side, submit-and-return). Pass `--local` to run preps locally via xargs (`BK_PREP_PARALLEL`, default 8). |
 | `bk-prep-project` | The engine — everything below happens in here, identically on your laptop, in Cloud Shell and inside Cloud Build. |
+| `bk-wake-fleet` | Starts every Cloud SQL instance in every project (the prep parks them). Run it ~30 min before the stream; waits until all are RUNNABLE (`--no-wait` to fire and return). Idempotent. |
 | `bk-verify-fleet` | Read-only readiness check, ~26 checks per project (prefix optional). Green one-liner when ready; yellow with the pending components while a prep is still running; red with an ok/missing split otherwise. Exit code = fleet readiness. |
 | `cloudbuild.yaml` | Wraps `bk-prep-project` for Cloud Build. `$PROJECT_ID` is the built-in substitution, so every build preps the project it runs in. |
 | `terraform/` | The desired state (APIs, IAM, service accounts, network, private connection, jump VM, SQL, PSC endpoint). |
@@ -79,8 +88,8 @@ either order — the `@` disambiguates).
   create it stopped), then parked (`activation_policy NEVER`, storage-only
   cost ~$0.06/day). The participant's `. bk` wakes it in the background;
   Lab 1 carries a visible backup start. Prep days ahead is therefore cheap —
-  the only meaningful cost starts when participants wake their instances
-  (~$1.70/day each).
+  the only meaningful cost starts when the instances are woken
+  (~$1.70/day each), by the participants or centrally via `bk-wake-fleet`.
 - **Self-healing, rerun-safe.** Re-running preps only what is missing.
   On top of the idempotent applies: pre-existing same-named resources (e.g.
   from older manual runs) are **adopted** into the state via `terraform
