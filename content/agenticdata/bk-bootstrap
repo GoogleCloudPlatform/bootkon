@@ -58,6 +58,10 @@ pip install -q --no-warn-conflicts --disable-pip-version-check \
 # keeps npm's funding/audit chatter out of the bootstrap output; real
 # failures still print.
 echo "Installing the Dataform CLI ..."
+if ! command -v npm >/dev/null 2>&1; then
+    [ -s "${NVM_DIR:-}/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null || true
+    [ -s "$HOME/.nvm/nvm.sh" ] && \. "$HOME/.nvm/nvm.sh" 2>/dev/null || true
+fi
 npm config set allow-scripts=protobufjs --location=user \
     || step_failed "configuring npm (allow-scripts) failed"
 npm install -g @dataform/cli@3 --no-fund --no-audit --loglevel=error \

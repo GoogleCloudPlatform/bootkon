@@ -36,8 +36,17 @@ while true; do
         --location="$REGION" --format='value(state)' 2>/dev/null || true)"
     case "$state" in
         NOT_STARTED)
-            echo "Stream $NAME is created and ready to start."
-            exit 0
+            # Creating a stream takes ~2 minutes. Datastream sets state to NOT_STARTED
+            # while the create operation is still finalizing; an update issued then
+            # fails with "The resource is being created". Ensure no operations are active.
+            ops="$(gcloud datastream operations list --location="$REGION" \
+                --filter="metadata.target~streams/$NAME AND done=false" --format="value(name)" 2>/dev/null || true)"
+            if [ -n "$ops" ]; then
+                echo "Stream $NAME is being finalized by Datastream -- waiting ..."
+            else
+                echo "Stream $NAME is created and ready to start."
+                exit 0
+            fi
             ;;
         RUNNING)
             echo "Stream $NAME is already RUNNING -- nothing to wait for."

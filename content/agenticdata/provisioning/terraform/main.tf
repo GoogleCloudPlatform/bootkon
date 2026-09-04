@@ -47,6 +47,15 @@ resource "google_project_service_identity" "datastream" {
   depends_on = [google_project_service.this]
 }
 
+# Dataplex service agent: must exist so Lab 4's IAM policy binding
+# (serviceAccountTokenCreator on dataquality-service-account) can reference it
+# without failing with "Service account does not exist".
+resource "google_project_service_identity" "dataplex" {
+  provider   = google-beta
+  service    = "dataplex.googleapis.com"
+  depends_on = [google_project_service.this]
+}
+
 resource "google_project_iam_member" "datastream_agent" {
   project    = var.project_id
   role       = "roles/datastream.serviceAgent"

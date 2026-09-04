@@ -25,9 +25,11 @@ SET_VAR="$BK_DIR/.scripts/bk-set-var"
 if [ "${BK_DS_AGENT_PREP:-}" != "$PROJECT_ID" ]; then
     "$SET_VAR" --comment "Internal: project the background Datastream agent prep ran for" "$LOCAL" BK_DS_AGENT_PREP "$PROJECT_ID"
     (
-        gcloud services enable datastream.googleapis.com >/dev/null 2>&1 &&
+        gcloud services enable datastream.googleapis.com dataplex.googleapis.com >/dev/null 2>&1 &&
         gcloud beta services identity create --service=datastream.googleapis.com \
-            --project="$PROJECT_ID" >/dev/null 2>&1 &&
+            --project="$PROJECT_ID" --quiet >/dev/null 2>&1 &&
+        gcloud beta services identity create --service=dataplex.googleapis.com \
+            --project="$PROJECT_ID" --quiet >/dev/null 2>&1 &&
         gcloud projects add-iam-policy-binding "$PROJECT_ID" \
             --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-datastream.iam.gserviceaccount.com" \
             --role="roles/datastream.serviceAgent" --condition=None >/dev/null 2>&1
