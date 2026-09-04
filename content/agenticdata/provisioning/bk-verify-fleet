@@ -55,6 +55,16 @@ if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
     exit 1
 fi
 
+AUTH_ERR="$(mktemp "${TMPDIR:-/tmp}/bk-auth-err.XXXXXX")"
+if ! gcloud auth print-access-token >/dev/null 2>"$AUTH_ERR"; then
+    echo -e "${RED}Error: gcloud authentication failed for $CALLER:${NC}" >&2
+    cat "$AUTH_ERR" >&2
+    rm -f "$AUTH_ERR"
+    echo -e "${RED}Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+rm -f "$AUTH_ERR"
+
 REGION="${REGION:-us-central1}"
 PARALLEL="${BK_PREP_PARALLEL:-8}"
 STATUS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-verify.XXXXXX")"
@@ -84,9 +94,16 @@ fi
 # share the same prefix.
 if [ -z "$PROJECT_ID_PREFIX" ]; then
     echo "No project prefix given -- deriving it from the projects you can see ..."
-    ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>/dev/null)"
+    PROJECTS_ERR="$(mktemp "${TMPDIR:-/tmp}/bk-projects-err.XXXXXX")"
+    if ! ALL_PROJECTS="$(gcloud projects list --format='value(projectId)' 2>"$PROJECTS_ERR")"; then
+        echo -e "${RED}Error: 'gcloud projects list' failed:${NC}" >&2
+        cat "$PROJECTS_ERR" >&2
+        rm -f "$PROJECTS_ERR"
+        exit 1
+    fi
+    rm -f "$PROJECTS_ERR"
     if [ -z "$ALL_PROJECTS" ]; then
-        echo "Error: could not list any projects -- pass the prefix explicitly." >&2
+        echo -e "${RED}Error: could not list any projects for $CALLER -- pass the prefix explicitly.${NC}" >&2
         exit 1
     fi
     for USERNAME in "${USERS[@]}"; do
@@ -101,7 +118,7 @@ if [ -z "$PROJECT_ID_PREFIX" ]; then
         fi
     done
     if [ -z "$PROJECT_ID_PREFIX" ]; then
-        echo "Error: could not derive project prefix from any user in $LOCAL_CSV_FILE -- pass the prefix explicitly." >&2
+        echo -e "${RED}Error: could not derive project prefix from any user in $LOCAL_CSV_FILE -- pass the prefix explicitly.${NC}" >&2
         exit 1
     fi
 fi

@@ -22,6 +22,16 @@ if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
     exit 1
 fi
 
+AUTH_ERR="$(mktemp "${TMPDIR:-/tmp}/bk-auth-err.XXXXXX")"
+if ! gcloud auth print-access-token >/dev/null 2>"$AUTH_ERR"; then
+    echo -e "${RED}Error: gcloud authentication failed for $CALLER:${NC}" >&2
+    cat "$AUTH_ERR" >&2
+    rm -f "$AUTH_ERR"
+    echo -e "${RED}Run 'gcloud auth login' first.${NC}" >&2
+    exit 1
+fi
+rm -f "$AUTH_ERR"
+
 # Step 1: Count the number of users (rows) in the CSV (excluding the header)
 num_users=$(tail -n +2 "$LOCAL_CSV_FILE" | grep -cve '^\s*$')
 
