@@ -72,6 +72,23 @@ if [[ -z "$LOCAL_CSV_FILE" ]]; then
     exit 1
 fi
 
+# Isolate gcloud configuration to prevent mTLS / Context-Aware Access certificate
+# collisions (caa_cert.pem race condition) on corp machines.
+SRC_CONFIG="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}"
+MAIN_GCLOUD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bk-gcloud.XXXXXX")"
+trap 'rm -rf "$MAIN_GCLOUD_DIR" "${LOG_DIR:-}"' EXIT
+if [ -d "$SRC_CONFIG" ]; then
+    for f in "$SRC_CONFIG"/*; do
+        [ -e "$f" ] || continue
+        b="${f##*/}"
+        case "$b" in
+            caa_cert.pem|logs) continue ;;
+            *) ln -s "$f" "$MAIN_GCLOUD_DIR/$b" 2>/dev/null || true ;;
+        esac
+    done
+fi
+export CLOUDSDK_CONFIG="$MAIN_GCLOUD_DIR"
+
 CALLER="$(gcloud config get-value account 2>/dev/null)"
 if [ -z "$CALLER" ] || [ "$CALLER" = "(unset)" ]; then
     echo -e "${RED}Error: No active gcloud account set on this machine. Run 'gcloud auth login' first.${NC}" >&2
