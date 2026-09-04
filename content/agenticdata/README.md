@@ -2,21 +2,7 @@
 
 Welcome to Agentic Data Bootkon!
 
-Agentic Data Bootkon is an immersive half-day hackathon for data engineers, architects, and AI enthusiasts. In one afternoon (13:00–17:00) you build a complete **agentic data platform** on Google Cloud — from a live operational database all the way to AI agents that talk to each other about your data over an open protocol. Throughout the event, the **Antigravity CLI (`agy`)** works alongside you as an AI co-engineer: you run the infrastructure, agy writes the code, and the Cloud Console is where you verify what happened.
-
-This event is comprised of the following code labs:
-
-| Time | Duration | Topic | Details |
-| --- | --- | --- | --- |
-| 13:00 | 10min | Kickoff | Credentials, Cloud Shell, tutorial setup |
-| 13:10 | 20min | Environment Setup & agy | IAM, network, async database build, seed data, meet your AI co-engineer |
-| 13:30 | 40min | Live Replication | Cloud SQL for PostgreSQL → Datastream CDC → BigQuery bronze, with a live activity simulator |
-| 14:10 | 40min | Dataform with agy | agy authors the bronze→silver→gold medallion pipeline; you compile, run, and verify it |
-| 14:50 | 30min | Break | ☕ |
-| 15:20 | 30min | Data Governance | Knowledge Catalog: tier aspects, auto data quality, PII policy tags, glossary, lineage |
-| 15:50 | 20min | BigQuery Data Agent | A conversational analytics agent grounded on your governed gold layer |
-| 16:10 | 45min | A2A Finale | Two ADK agents — analytics via A2A, live order lookups via Cloud SQL — in one conversation |
-| 16:55 | 5min | Wrap-up | 🎉 |
+Agentic Data Bootkon is an immersive half-day hackathon for data engineers, architects, and AI enthusiasts. In one afternoon you build a complete **agentic data platform** on Google Cloud — from a live operational database all the way to AI agents that talk to each other about your data over an open protocol. Throughout the event, the **Antigravity CLI (`agy`)** works alongside you as an AI co-engineer: you run the infrastructure, agy writes the code, and the Cloud Console is where you verify what happened.
 
 You can navigate this handbook using the `<` and `>` buttons on the right and left hand side, respectively. To get started, please press the `>` button on the right hand side now.
 
