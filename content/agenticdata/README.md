@@ -4,8 +4,6 @@ Welcome to Agentic Data Bootkon!
 
 Agentic Data Bootkon is an immersive half-day hackathon for data engineers, architects, and AI enthusiasts. In one afternoon you build a complete **agentic data platform** on Google Cloud — from a live operational database all the way to AI agents that talk to each other about your data over an open protocol. Throughout the event, the **Antigravity CLI (`agy`)** works alongside you as an AI co-engineer: you run the infrastructure, agy writes the code, and the Cloud Console is where you verify what happened.
 
-You can navigate this handbook using the `<` and `>` buttons on the right and left hand side, respectively. To get started, please press the `>` button on the right hand side now.
-
 ## Use Case
 
 Your role: you are a data platform engineer at **Cymbal**, a commerce company whose order platform runs on PostgreSQL. The analytics team is drowning in one-off CSV exports, nobody trusts the numbers, and management wants "AI on our data" — safely. Over one afternoon, you will give Cymbal:
