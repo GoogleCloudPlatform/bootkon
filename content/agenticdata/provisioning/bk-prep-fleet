@@ -319,6 +319,25 @@ echo ""
 
 run_one() {
     local username="$1" project="$2"
+
+    # Isolate gcloud configuration per parallel worker to prevent mTLS / Context-Aware
+    # Access certificate collisions (caa_cert.pem race condition) on corp machines.
+    local src_config="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}"
+    local gcloud_dir
+    gcloud_dir="$(mktemp -d "${TMPDIR:-/tmp}/bk-gcloud.XXXXXX")"
+    trap 'rm -rf "$gcloud_dir"' EXIT
+    if [ -d "$src_config" ]; then
+        for f in "$src_config"/*; do
+            [ -e "$f" ] || continue
+            local b="${f##*/}"
+            case "$b" in
+                caa_cert.pem|logs) continue ;;
+                *) ln -s "$f" "$gcloud_dir/$b" 2>/dev/null || true ;;
+            esac
+        done
+    fi
+    export CLOUDSDK_CONFIG="$gcloud_dir"
+
     if "$PREP" "$project" "$username" >"$LOG_DIR/$project.log" 2>&1; then
         echo -e "${GREEN}$project prepared${NC} ($username)"
     else

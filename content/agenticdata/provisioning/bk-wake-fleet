@@ -190,8 +190,49 @@ wake_one() {
     local username="$1" project="$2"
     local instances inst state policy
 
-    instances="$(gcloud sql instances list --project="$project" \
-        --format='value(name)' 2>/dev/null)"
+    # Isolate gcloud configuration per parallel worker to prevent mTLS / Context-Aware
+    # Access certificate collisions (caa_cert.pem race condition) on corp machines.
+    local src_config="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}"
+    local gcloud_dir
+    gcloud_dir="$(mktemp -d "${TMPDIR:-/tmp}/bk-gcloud.XXXXXX")"
+    trap 'rm -rf "$gcloud_dir"' EXIT
+    if [ -d "$src_config" ]; then
+        for f in "$src_config"/*; do
+            [ -e "$f" ] || continue
+            local b="${f##*/}"
+            case "$b" in
+                caa_cert.pem|logs) continue ;;
+                *) ln -s "$f" "$gcloud_dir/$b" 2>/dev/null || true ;;
+            esac
+        done
+    fi
+    export CLOUDSDK_CONFIG="$gcloud_dir"
+
+    local err_file
+    err_file="$(mktemp "${TMPDIR:-/tmp}/bk-sql-err.XXXXXX")"
+    local attempt=0
+    local list_rc=1
+    while true; do
+        if instances="$(gcloud sql instances list --project="$project" \
+            --format='value(name)' 2>"$err_file")"; then
+            list_rc=0
+            break
+        fi
+        attempt=$((attempt + 1))
+        [ "$attempt" -ge 3 ] && break
+        sleep 0.5
+    done
+
+    if [ "$list_rc" -ne 0 ]; then
+        local err_msg
+        err_msg="$(head -n 1 "$err_file")"
+        rm -f "$err_file"
+        echo -e "${RED}$project: failed to list Cloud SQL instances${NC} ($username: ${err_msg:-unknown error})"
+        touch "$STATUS_DIR/failed/${project}__NONE"
+        return
+    fi
+    rm -f "$err_file"
+
     if [ -z "$instances" ]; then
         # No instance at all is not "asleep", it is unprepped (or invisible
         # to this caller) -- bk-verify-fleet is the tool that says which.
@@ -201,15 +242,32 @@ wake_one() {
     fi
 
     for inst in $instances; do
-        read -r state policy < <(gcloud sql instances describe "$inst" \
-            --project="$project" \
-            --format='value(state,settings.activationPolicy)' 2>/dev/null)
+        state="" policy=""
+        for attempt in 1 2 3; do
+            if read -r state policy < <(gcloud sql instances describe "$inst" \
+                --project="$project" \
+                --format='value(state,settings.activationPolicy)' 2>/dev/null); then
+                [ -n "$state" ] && break
+            fi
+            sleep 0.5
+        done
+
         if [ "$state" = "RUNNABLE" ] && [ "$policy" = "ALWAYS" ]; then
             echo -e "${GREEN}$project/$inst already running${NC}"
             continue
         fi
-        if gcloud sql instances patch "$inst" --project="$project" \
-            --activation-policy=ALWAYS --async --quiet >/dev/null 2>&1; then
+
+        local patch_ok=0
+        for attempt in 1 2 3; do
+            if gcloud sql instances patch "$inst" --project="$project" \
+                --activation-policy=ALWAYS --async --quiet >/dev/null 2>&1; then
+                patch_ok=1
+                break
+            fi
+            sleep 1
+        done
+
+        if [ "$patch_ok" -eq 1 ]; then
             echo "$project/$inst starting (was ${state:-?}/${policy:-?}) ..."
             touch "$STATUS_DIR/pending/${project}__${inst}"
         else

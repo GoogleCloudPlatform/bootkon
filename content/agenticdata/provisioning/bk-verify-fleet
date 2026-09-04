@@ -147,9 +147,51 @@ verify_one() {
     local username="$1" project="$2"
     local fails=() passes=()
 
+    # Isolate gcloud configuration per parallel worker to prevent mTLS / Context-Aware
+    # Access certificate collisions (caa_cert.pem race condition) on corp machines.
+    local src_config="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}"
+    local gcloud_dir
+    gcloud_dir="$(mktemp -d "${TMPDIR:-/tmp}/bk-gcloud.XXXXXX")"
+    trap 'rm -rf "$gcloud_dir"' EXIT
+    if [ -d "$src_config" ]; then
+        for f in "$src_config"/*; do
+            [ -e "$f" ] || continue
+            local b="${f##*/}"
+            case "$b" in
+                caa_cert.pem|logs) continue ;;
+                *) ln -s "$f" "$gcloud_dir/$b" 2>/dev/null || true ;;
+            esac
+        done
+    fi
+    export CLOUDSDK_CONFIG="$gcloud_dir"
+
+    # Retry helper for commands that return output
+    cmd_retry() {
+        local attempt=0 out
+        while true; do
+            if out="$("$@" 2>/dev/null)"; then
+                printf '%s\n' "$out"
+                return 0
+            fi
+            attempt=$((attempt + 1))
+            [ "$attempt" -ge 3 ] && return 1
+            sleep 0.5
+        done
+    }
+
     exists() {  # LABEL cmd... -- resource must describe cleanly
         local label="$1"; shift
-        if "$@" >/dev/null 2>&1; then passes+=("$label"); else fails+=("$label"); fi
+        local attempt=0
+        while true; do
+            if "$@" >/dev/null 2>&1; then
+                passes+=("$label")
+                return 0
+            fi
+            attempt=$((attempt + 1))
+            [ "$attempt" -ge 3 ] && break
+            sleep 0.5
+        done
+        fails+=("$label")
     }
 
     # Is a prep currently running against this project? Two signals: an
@@ -157,8 +199,8 @@ verify_one() {
     # state lock in the project's state bucket (any runner).
     local running=""
     local build_id
-    build_id="$(gcloud builds list --project="$project" \
-        --filter='status=WORKING OR status=QUEUED' --format='value(id)' --limit=1 2>/dev/null)"
+    build_id="$(cmd_retry gcloud builds list --project="$project" \
+        --filter='status=WORKING OR status=QUEUED' --format='value(id)' --limit=1)"
     [ -n "$build_id" ] && running="cloud build $build_id"
     if [ -z "$running" ] && gcloud storage ls "gs://${project}-tfstate/bootkon-prep/default.tflock" >/dev/null 2>&1; then
         running="terraform holds the state lock"
@@ -190,8 +232,8 @@ verify_one() {
         bq --project_id="$project" --format=none show --dataset "${project}:cymbal_bronze"
 
     local psc_state
-    psc_state="$(gcloud datastream private-connections describe cymbal-psc \
-        --location="$REGION" --project="$project" --format='value(state)' 2>/dev/null)"
+    psc_state="$(cmd_retry gcloud datastream private-connections describe cymbal-psc \
+        --location="$REGION" --project="$project" --format='value(state)')"
     if [ "$psc_state" = "CREATED" ]; then
         passes+=("private connection cymbal-psc")
     else
@@ -199,23 +241,29 @@ verify_one() {
     fi
 
     local sql_state sql_policy
-    sql_state="$(gcloud sql instances describe cymbal-oltp --project="$project" \
-        --format='value(state)' 2>/dev/null)"
-    sql_policy="$(gcloud sql instances describe cymbal-oltp --project="$project" \
-        --format='value(settings.activationPolicy)' 2>/dev/null)"
+    sql_state="$(cmd_retry gcloud sql instances describe cymbal-oltp --project="$project" \
+        --format='value(state)')"
+    sql_policy="$(cmd_retry gcloud sql instances describe cymbal-oltp --project="$project" \
+        --format='value(settings.activationPolicy)')"
     # Parked (STOPPED / activation policy NEVER) is the DESIRED pre-event
     # state -- the participant's `. bk` wakes the instance. Both parked and
     # running count as ready; the state/policy is shown for orientation.
     case "$sql_state" in
         RUNNABLE|STOPPED)
             passes+=("Cloud SQL cymbal-oltp ($sql_state, ${sql_policy:-?})") ;;
+        MAINTENANCE|PENDING_UPDATE)
+            if [ "$sql_policy" = "ALWAYS" ]; then
+                passes+=("Cloud SQL cymbal-oltp ($sql_state/waking, $sql_policy)")
+            else
+                fails+=("Cloud SQL cymbal-oltp (state: $sql_state, policy: ${sql_policy:-?})")
+            fi ;;
         *)
             fails+=("Cloud SQL cymbal-oltp (state: ${sql_state:-missing})") ;;
     esac
 
     # The labs' gateway APIs -- one enabled-services call, spot-checked.
     local enabled api
-    enabled="$(gcloud services list --enabled --project="$project" --format='value(config.name)' 2>/dev/null)"
+    enabled="$(cmd_retry gcloud services list --enabled --project="$project" --format='value(config.name)')"
     for api in datastream.googleapis.com sqladmin.googleapis.com compute.googleapis.com \
         bigquery.googleapis.com dataplex.googleapis.com aiplatform.googleapis.com \
         geminidataanalytics.googleapis.com; do
@@ -225,8 +273,8 @@ verify_one() {
     # The participant's roles and the Datastream service agent, from one
     # policy read.
     local policy pn
-    policy="$(gcloud projects get-iam-policy "$project" \
-        --flatten="bindings[].members" --format='value(bindings.role,bindings.members)' 2>/dev/null)"
+    policy="$(cmd_retry gcloud projects get-iam-policy "$project" \
+        --flatten="bindings[].members" --format='value(bindings.role,bindings.members)')"
     local role
     for role in roles/editor roles/resourcemanager.projectIamAdmin roles/datastream.admin \
         roles/bigquery.admin roles/dataplex.admin; do
@@ -236,7 +284,7 @@ verify_one() {
             fails+=("role $role for $username")
         fi
     done
-    pn="$(gcloud projects describe "$project" --format='value(projectNumber)' 2>/dev/null)"
+    pn="$(cmd_retry gcloud projects describe "$project" --format='value(projectNumber)')"
     if grep -qE "^roles/datastream.serviceAgent[[:space:]]+serviceAccount:service-${pn}@gcp-sa-datastream" <<< "$policy"; then
         passes+=("Datastream service agent role")
     else
