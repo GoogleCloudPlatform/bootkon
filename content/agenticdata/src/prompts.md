@@ -63,3 +63,28 @@ describes.
 ```
 
 Fallback: `git restore content/agenticdata/src/adk/cymbal_analyst/`
+
+## Lab 6 — debug the analyst
+
+Run inside `content/agenticdata/src/adk` after stopping the A2A server with
+`Ctrl+C`; participants paste the traceback from the analyst's terminal right
+after the brief:
+
+```
+/goal The cymbal_analyst A2A server fails when its tool calls the BigQuery data agent. The traceback is below. First explain the root cause to me and how you verified it, then fix it with the smallest possible change.
+```
+
+Root cause: `BK_DATA_AGENT_ID` holds the display name `cymbal-data-agent`
+from Lab 5, but the API addresses the agent by its console-generated ID.
+
+Fallback: list the data agents with their IDs, put the ID next to
+`cymbal-data-agent` into `vars.local.sh` as `BK_DATA_AGENT_ID`, then
+`. ~/bootkon/vars.local.sh` and restart uvicorn:
+
+```
+python3 - <<'PY'
+from google.cloud import geminidataanalytics as g
+for agent in g.DataAgentServiceClient().list_data_agents(parent="projects/<PROJECT_ID>/locations/global"):
+    print(agent.name.rsplit("/", 1)[-1], "|", agent.display_name)
+PY
+```

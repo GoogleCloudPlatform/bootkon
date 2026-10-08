@@ -78,6 +78,6 @@ fi
 "$SET_VAR" --comment "Route google-genai through Vertex AI" "$LOCAL" GOOGLE_GENAI_USE_VERTEXAI TRUE
 "$SET_VAR" --comment "Location for the GenAI/Vertex client" "$LOCAL" GOOGLE_CLOUD_LOCATION global
 "$SET_VAR" --comment "Gemini model id used by the Cymbal agents" "$LOCAL" BK_CYMBAL_MODEL gemini-2.5-flash
-"$SET_VAR" --comment "Conversational Analytics data agent id" "$LOCAL" BK_DATA_AGENT_ID cymbal-data-agent
+"$SET_VAR" --if-empty --comment "Conversational Analytics data agent id" "$LOCAL" BK_DATA_AGENT_ID cymbal-data-agent
 "$SET_VAR" --comment "Cymbal DB host (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_HOST localhost
 "$SET_VAR" --comment "Cymbal DB port (reached via the bk-tunnel)" "$LOCAL" BK_CYMBAL_DB_PORT 5432
