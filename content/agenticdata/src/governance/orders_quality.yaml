@@ -1,0 +1,16 @@
+# Data quality rules for Cymbal orders (Lab 4). The same checks as the
+# rowConditions in stg_orders.sqlx: bronze fails them (the planted 'shiped'
+# typo and the future-dated orders), silver passes.
+rules:
+  - name: status-is-known
+    column: status
+    dimension: VALIDITY
+    setExpectation:
+      values: [pending, paid, shipped, delivered, cancelled, returned]
+  - name: order-not-in-future
+    column: order_ts
+    dimension: ACCURACY
+    rowConditionExpectation:
+      sqlExpression: order_ts <= CURRENT_TIMESTAMP()
+samplingPercent: 100
+catalogPublishingEnabled: true

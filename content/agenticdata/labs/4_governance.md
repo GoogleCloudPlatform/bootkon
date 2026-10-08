@@ -5,49 +5,40 @@
 <walkthrough-tutorial-difficulty difficulty="2"></walkthrough-tutorial-difficulty>
 <bootkon-cloud-shell-note/>
 
-You have a working medallion — now make it *trustworthy*. In this lab you govern it with **Knowledge Catalog** (formerly Dataplex): label the tiers so everyone can find the right data, measure quality automatically, lock down PII, and give business terms a home. In Lab 5 an AI agent becomes a consumer of exactly this governed layer — governance is what keeps agents grounded.
-
-This lab is console-first: you built everything with code so far; now see how the platform describes itself.
+You have a working medallion — now make it *trustworthy*. Before an AI agent touches your data in Lab 5, you need three answers: **Can I find it? Can I trust it? Who may see it?** You answer each one with **Knowledge Catalog** (formerly Dataplex), and you'll find that the catalog has already done most of the work.
 
 ### About Knowledge Catalog
 
-Knowledge Catalog (formerly Dataplex Universal Catalog) is Google Cloud's metadata and governance layer. Every dataset, table and column is an **entry** in the catalog; you enrich entries with **aspects** (structured, typed metadata — like the data tiers you are about to define), attach **business glossary** terms, and let **data profiling** and **auto data quality** scans measure the actual content on a schedule or on demand. Because BigQuery reports **lineage** automatically, the catalog also knows where every table came from. All of this metadata is searchable — by humans and, increasingly, by Gemini and agents. That is the deeper point of this lab: a well-curated catalog is the grounding layer that keeps AI answers trustworthy.
+Knowledge Catalog is Google Cloud's metadata and governance layer, and it **fills itself**: every BigQuery dataset, table and column you created in Labs 2–3 is already in it, together with the descriptions from your Dataform code and the **lineage** that BigQuery records for every job. You add the two things the platform can't guess: **data quality rules**, which measure what's actually in a table, and **policy tags**, which decide who may read a sensitive column. Humans search this metadata, and agents rely on it to understand your data.
 
 Learn more:
 - [Knowledge Catalog overview](https://docs.cloud.google.com/dataplex/docs/introduction)
-- [Aspects and aspect types](https://docs.cloud.google.com/dataplex/docs/enrich-entries-metadata)
-- [Auto data quality](https://docs.cloud.google.com/dataplex/docs/auto-data-quality-overview) and [data profiling](https://docs.cloud.google.com/dataplex/docs/data-profiling-overview)
-- [Column-level security with policy tags](https://docs.cloud.google.com/bigquery/docs/column-level-security-intro)
-- [Business glossary](https://docs.cloud.google.com/dataplex/docs/manage-glossaries)
 - [Data lineage](https://docs.cloud.google.com/dataplex/docs/about-data-lineage)
+- [Auto data quality](https://docs.cloud.google.com/dataplex/docs/auto-data-quality-overview)
+- [Column-level security with policy tags](https://docs.cloud.google.com/bigquery/docs/column-level-security-intro)
 
-### Label the medallion tiers with aspects
+### Find your data
 
-Aspects are structured metadata attached to catalog entries. We'll create a **Data tier** aspect type and stamp bronze/silver/gold onto the datasets.
+Nobody has registered a single table, so search anyway. Open [Knowledge Catalog](https://console.cloud.google.com/dataplex), go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, and ask in plain English:
 
-1. Open [Knowledge Catalog](https://console.cloud.google.com/dataplex) and go to <walkthrough-spotlight-pointer locator="text('Metadata types')">Metadata types</walkthrough-spotlight-pointer> → <walkthrough-spotlight-pointer locator="semantic({tab 'Aspect types'})">Aspect types</walkthrough-spotlight-pointer>.
-2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create'})">Create</walkthrough-spotlight-pointer> (or *Create aspect type*) and use:
-    - Aspect type ID: `data-tier`
-    - Display name: `Data tier`
-    - Location: `global` — this matters: an aspect type can only be attached to entries in the same location or in `global`, and your BigQuery datasets live in the multi-region `us`. A regional aspect type (e.g. `us-central1`) will *not* show up when you try to attach it below.
-3. Add a field (under *Template*, click Add Field):
-    - Type: **Enum** (Type), Name: `tier`, Display name: `Tier`
-    - Enum values (click Add an Enum Value three times): `bronze`, `silver`, `gold`
-    - Check Is Required.
-4. Click Create.
+```
+Which tables contain revenue by day?
+```
 
-Now attach it. Go to <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, search for `cymbal_gold`, and open the dataset entry:
+`fct_daily_revenue` comes up (if the results look off, a plain `revenue` finds it too). The catalog picked it up from BigQuery automatically, with no crawler and no registration step.
 
-5. In the entry's details, find `Aspects` → under *Optional aspects* click <walkthrough-spotlight-pointer locator="text('Add')">Add</walkthrough-spotlight-pointer>, filter for **Data tier**, set Tier to `gold` → save.
-6. Repeat for `cymbal_silver` (`silver`) and `cymbal_bronze` (`bronze`).
+Now see what the catalog knows about it. In [BigQuery](https://console.cloud.google.com/bigquery), open `cymbal_gold` → `fct_daily_revenue`:
 
-Verify the point of the exercise: in the catalog search bar, filter by your new aspect (e.g. search for `cymbal` and use the aspect filter for `Data tier = gold`) — anyone in the company can now find the *consumable* data without asking around.
+1. <walkthrough-spotlight-pointer locator="semantic({tab 'Details'})">Details</walkthrough-spotlight-pointer>: if agy gave the model a `description` in its Dataform config, it shows up here, so documentation written in code lands in the catalog. (No description? An agent would have to guess what this table means. Lab 5 fixes that with agent instructions.)
+2. <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer>: bronze → silver → gold, captured automatically from your Dataform runs. (Datastream's Postgres → bronze hop doesn't draw lineage edges yet.)
 
-### Measure quality automatically
+### Hold bronze to a standard
 
-In Lab 3 your assertions tested what Dataform *built*. Knowledge Catalog's **auto data quality** watches tables *continuously* — no pipeline required. Let's point it at the flaws you know are in bronze.
+In Lab 3 your assertions tested what Dataform *built*, at build time. A **data quality scan** checks a table independently of any pipeline, on demand or on a schedule, and publishes a score to the catalog. Point one at bronze, where you know the flaws are.
 
-First, allow the Dataplex service agent to use your scan service account:
+The rules live in a short spec file: <walkthrough-editor-open-file filePath="content/agenticdata/src/governance/orders_quality.yaml">orders_quality.yaml</walkthrough-editor-open-file>. It has two rules, the same ones your silver assertions enforce: `status` must be one of six known values, and `order_ts` must not lie in the future.
+
+The scan runs as `dataquality-service-account`, which is pre-provisioned in your project with BigQuery read access. First, allow the Knowledge Catalog service agent to act as it:
 
 ```bash
 gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com \
@@ -55,39 +46,28 @@ gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{
     --role=roles/iam.serviceAccountTokenCreator
 ```
 
-Now profile the customer data:
+Then create the scan:
 
-1. In [Knowledge Catalog](https://console.cloud.google.com/dataplex), open <walkthrough-spotlight-pointer locator="text('Data profiling & quality')">Data profiling & quality</walkthrough-spotlight-pointer>.
-2. Click <walkthrough-spotlight-pointer locator="semantic({button 'Create data profile scan'})">Create data profile scan</walkthrough-spotlight-pointer>:
-    - Display name: `cymbal-profile-bronze-customers`
-    - Table: browse to `cymbal_bronze` → `cymbal_customers`
-    - Scope *Entire data*, sampling *All data*, Publish *results to Knowledge Catalog*
-    - Credential type: **Service account** → `dataquality-service-account`
-    - Schedule: *On-demand*
-3. Create it, open it, and click <walkthrough-spotlight-pointer locator="semantic({button 'Run now'})">Run now</walkthrough-spotlight-pointer>.
-4. When the job finishes (a few minutes), explore the results — look at the `country` column: there's your planted ~1.5% NULL rate, and the `email` column's distinct count hints at the duplicates.
+```bash
+cd ~/bootkon
+gcloud dataplex datascans create data-quality cymbal-dq-bronze-orders \
+    --location={{ REGION }} \
+    --data-source-resource=//bigquery.googleapis.com/projects/{{ PROJECT_ID }}/datasets/cymbal_bronze/tables/cymbal_orders \
+    --data-quality-spec-file=content/agenticdata/src/governance/orders_quality.yaml \
+    --service-account=dataquality-service-account@{{ PROJECT_ID }}.iam.gserviceaccount.com
+```
 
-Then hold bronze orders to a standard:
+A word on the flags: your datasets sit in the `us` multi-region, and a scan may live in any region inside it, so `{{ REGION }}` it is. With no `--schedule`, the scan runs on demand. The spec's `catalogPublishingEnabled: true` publishes every result to the catalog and to BigQuery.
 
-5. Back on the same page, click <walkthrough-spotlight-pointer locator="semantic({button 'Create data quality scan'})">Create data quality scan</walkthrough-spotlight-pointer>:
-    - Display name: `cymbal-dq-bronze-orders`
-    - Table: `cymbal_bronze` → `cymbal_orders`
-    - Scope *Entire data*, sampling *All data*, Publish *results to Knowledge Catalog*
-    - Credential type: **Service account** → `dataquality-service-account`
-    - Schedule: *On-demand*
-6. Add two rules (rule type *Row check* / validity):
+Now run it:
 
-   Dimension Validity:
-    ```
-    status IN ('pending','paid','shipped','delivered','cancelled','returned')
-    ```
+```bash
+gcloud dataplex datascans run cymbal-dq-bronze-orders --location={{ REGION }}
+```
 
-    Dimension Accuracy:
-    ```
-    order_ts <= CURRENT_TIMESTAMP()
-    ```
-    
-7. Run the scan. **It fails — on purpose.** The `shiped` typo and the future-dated orders you saw in Lab 3 are now caught by governance, not just by your pipeline. Discuss with your table: the same rules would pass on `cymbal_silver.stg_orders` — why keep both layers scanned? (If you have time, clone the scan onto silver and prove it passes.)
+The job takes two to three minutes. Then, in [BigQuery](https://console.cloud.google.com/bigquery), open `cymbal_bronze` → `cymbal_orders` and click <walkthrough-spotlight-pointer locator="semantic({tab 'Data quality'})">Data quality</walkthrough-spotlight-pointer> (refresh the page if the tab is still empty).
+
+**The scan fails, on purpose.** A few percent of rows break `status-is-known` (the `shiped` typo), and a handful break `order-not-in-future`. Your pipeline already cleans these flaws away, but now the catalog records them too, so anyone who opens this table sees that bronze is raw and shouldn't be consumed directly.
 
 ### Lock down PII
 
@@ -99,7 +79,7 @@ Then hold bronze orders to a standard:
 2. Create it, then toggle `Enforce access control` on.
 3. In [BigQuery](https://console.cloud.google.com/bigquery), open `cymbal_silver` → `stg_customers` → <walkthrough-spotlight-pointer locator="semantic({button 'Edit schema'})">Edit schema</walkthrough-spotlight-pointer>, select the `email` column, click *Add policy tag*, and pick `cymbal-governance > PII`. Save.
 
-Now prove it works — this query **must fail** with an access-denied error on the tagged column:
+Now prove it works. This query **must fail** with an access-denied error on the tagged column:
 
 ```sql
 SELECT email FROM `{{ PROJECT_ID }}.cymbal_silver.stg_customers` LIMIT 5
@@ -111,26 +91,17 @@ And this one works fine:
 SELECT * EXCEPT (email) FROM `{{ PROJECT_ID }}.cymbal_silver.stg_customers` LIMIT 5
 ```
 
-You are the project owner and *still* can't read that column — fine-grained access is a separate grant (Fine-Grained Reader). That's exactly the guarantee you want before letting AI agents loose on the warehouse. (At scale you wouldn't tag by hand: [Sensitive Data Protection discovery](https://docs.cloud.google.com/sensitive-data-protection/docs/data-profiles) profiles your tables continuously and pushes its findings into the catalog as aspects.)
+Even with admin rights on BigQuery, you can't read that column: reading tagged data needs a separate grant (**Fine-Grained Reader**). That's the guarantee you want before you let AI agents loose on the warehouse.
 
-### Give the business a vocabulary
+❗ If the first query suddenly works again later, a `dataform run` has rebuilt `stg_customers` and dropped the hand-attached tag. Attach it again (step 3).
 
-1. In [Knowledge Catalog](https://console.cloud.google.com/dataplex), open <walkthrough-spotlight-pointer locator="text('Glossaries')">Glossaries</walkthrough-spotlight-pointer> and create glossary `Cymbal Business Glossary` (location `us-central1`).
-2. Add a term: **Lifetime value** — Description: *"Gross revenue of a customer's non-cancelled orders, in the order currency. Source of truth: cymbal_gold.dim_customer_360.lifetime_value."*
-3. Open the `dim_customer_360` entry via catalog Search, go to its schema, select the `lifetime_value` column and attach the term.
+### Challenge: prove silver passes
 
-Then try the agentic side of governance — in the catalog <walkthrough-spotlight-pointer locator="text('Search')">Search</walkthrough-spotlight-pointer>, ask in natural language:
+**\[TASK\]** Take up to 5 minutes.
 
-```
-Which tables contain revenue by day?
-```
-
-Gemini-powered search reads the same metadata you just curated — every aspect, term, and description you add makes both humans *and* agents smarter.
-
-### Admire the Lineage
-
-One more look: open `cymbal_gold.fct_daily_revenue` in [BigQuery](https://console.cloud.google.com/bigquery) and its <walkthrough-spotlight-pointer locator="semantic({tab 'Lineage'})">Lineage</walkthrough-spotlight-pointer> tab. Bronze→silver→gold, captured automatically from the Dataform runs. (Datastream's Postgres→bronze hop publishes its metadata to the catalog in Preview, but doesn't draw lineage edges yet — watch that space.)
+1. Clone the scan onto `cymbal_silver.stg_orders`: use the same spec file and the new scan ID `cymbal-dq-silver-orders`. Only the scan ID and `--data-source-resource` change. Run it and compare both scores in the Data quality tab.
+2. Discuss with your table: if silver passes, why keep scanning bronze at all?
 
 ### Success
 
-🎉 Splendid{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your platform now explains itself: tiers are labeled, quality is measured continuously (and honestly — bronze fails, as it should), PII is locked down even against project owners, business terms live next to the data, and lineage draws itself. Governance done — the agents can come. 🛡️
+🎉 Splendid{% if MY_NAME %}, {{ MY_NAME }}{% endif %}! Your platform now explains itself: every table is findable and traceable without anyone registering it, bronze carries an honest (failing) quality score, and customer emails are locked down even against admins. Governance done — the agents can come. 🛡️
