@@ -63,3 +63,13 @@ describes.
 ```
 
 Fallback: `git restore content/agenticdata/src/adk/cymbal_analyst/`
+
+## Lab 6 — debug the analyst
+
+Run inside `content/agenticdata/src/adk` after stopping the A2A server with
+`Ctrl+C`; participants paste the traceback from the analyst's terminal right
+after the brief:
+
+```
+/goal The cymbal_analyst A2A server fails when its tool calls the BigQuery data agent. The traceback is below. First explain the root cause to me and how you verified it, then fix it with the smallest possible change.
+```

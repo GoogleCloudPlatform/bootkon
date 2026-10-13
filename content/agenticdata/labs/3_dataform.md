@@ -31,7 +31,7 @@ The Dataform CLI is already on your machine, and the project is pre-wired — th
 cd ~/bootkon/content/agenticdata/src/dataform
 ```
 
-Two files are worth a look before you brief anyone. <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/workflow_settings.yaml">workflow_settings.yaml</walkthrough-editor-open-file> (generated for you from the template by the bootstrap) — `defaultProject` should read `{{ PROJECT_ID }}`, and the git-ignored `.df-credentials.json` next to it tells the CLI to use your logged-in identity (Application Default Credentials) against BigQuery — no keys involved. And <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/definitions/sources.js">sources.js</walkthrough-editor-open-file>: it declares the six bronze tables so every model can reference them with `${ref(...)}`, which is what builds the dependency graph — and, later, your lineage.
+Two files are worth a look before you brief anyone. <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/workflow_settings.yaml">workflow_settings.yaml</walkthrough-editor-open-file> (generated for you from the template by the bootstrap) — `defaultProject` should read `{{ PROJECT_ID }}`, and the git-ignored `.df-credentials.json` next to it tells the CLI to use your logged-in identity (Application Default Credentials) against BigQuery — no keys involved. And <walkthrough-editor-open-file filePath="content/agenticdata/src/dataform/definitions/sources.js">sources.js</walkthrough-editor-open-file>: it declares the six bronze tables so every model can reference them with `${ref(...)}`, which is what builds the dependency graph.
 
 ### Brief your co-engineer
 
