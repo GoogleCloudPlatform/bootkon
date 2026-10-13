@@ -42,7 +42,7 @@ gcloud iam service-accounts add-iam-policy-binding dataquality-service-account@{
     --role=roles/iam.serviceAccountTokenCreator
 ```
 
-IAM changes take a moment to propagate, so give the binding about a minute before you create the scan. If the create command below fails with a permission error on the service account, that's propagation: wait a minute and run it again.
+IAM changes take a moment to propagate, so give the binding about a minute before you create the scan. If the create command below **fails** with a permission error on the service account, that's propagation: wait a minute and run it again.
 
 Then create the scan:
 
