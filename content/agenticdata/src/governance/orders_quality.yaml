@@ -2,13 +2,11 @@
 # rowConditions in stg_orders.sqlx: bronze fails them (the planted 'shiped'
 # typo and the future-dated orders), silver passes.
 rules:
-  - name: status-is-known
-    column: status
+  - column: status
     dimension: VALIDITY
     setExpectation:
       values: [pending, paid, shipped, delivered, cancelled, returned]
-  - name: order-not-in-future
-    column: order_ts
+  - column: order_ts
     dimension: ACCURACY
     rowConditionExpectation:
       sqlExpression: order_ts <= CURRENT_TIMESTAMP()
