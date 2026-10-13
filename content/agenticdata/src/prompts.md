@@ -82,9 +82,5 @@ Fallback: list the data agents with their IDs, put the ID next to
 `. ~/bootkon/vars.local.sh` and restart uvicorn:
 
 ```
-python3 - <<'PY'
-from google.cloud import geminidataanalytics as g
-for agent in g.DataAgentServiceClient().list_data_agents(parent="projects/<PROJECT_ID>/locations/global"):
-    print(agent.name.rsplit("/", 1)[-1], "|", agent.display_name)
-PY
+python3 -c 'from google.cloud import geminidataanalytics as g; [print(a.name.rsplit("/", 1)[-1], "|", a.display_name) for a in g.DataAgentServiceClient().list_data_agents(parent="projects/<PROJECT_ID>/locations/global")]'
 ```
