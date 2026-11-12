@@ -107,6 +107,17 @@ try() {  # try LABEL cmd...
     fi
 }
 
+if ! command -v python3 >/dev/null 2>&1; then
+    if [ -d "/usr/lib/google-cloud-sdk/platform/bundledpythonunix/bin" ]; then
+        export PATH="/usr/lib/google-cloud-sdk/platform/bundledpythonunix/bin:$PATH"
+    elif command -v gcloud >/dev/null 2>&1; then
+        _gcloud_py="$(gcloud info --format='value(basic.python_location)' 2>/dev/null || true)"
+        if [ -n "$_gcloud_py" ] && [ -x "$_gcloud_py" ]; then
+            export PATH="$(dirname "$_gcloud_py"):$PATH"
+        fi
+    fi
+fi
+
 TOKEN="$(gcloud auth print-access-token 2>/dev/null)"
 # REST helpers for the three surfaces that have no gcloud commands
 # (managed Dataform, Analytics Hub, Conversational Analytics agents).

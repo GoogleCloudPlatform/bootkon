@@ -23,6 +23,21 @@
 
 TF_VERSION="1.15.8"
 export PATH="$HOME/.local/bin:$PATH"
+
+# In newer cloud-sdk / google-cloud-cli images (e.g. Debian 13 Trixie-based),
+# python3 and pip are bundled inside gcloud rather than in system PATH.
+# Expose them so zipfile extraction, lock age checks, and seed data generation work.
+if ! command -v python3 >/dev/null 2>&1; then
+    if [ -d "/usr/lib/google-cloud-sdk/platform/bundledpythonunix/bin" ]; then
+        export PATH="/usr/lib/google-cloud-sdk/platform/bundledpythonunix/bin:$PATH"
+    elif command -v gcloud >/dev/null 2>&1; then
+        _gcloud_py="$(gcloud info --format='value(basic.python_location)' 2>/dev/null || true)"
+        if [ -n "$_gcloud_py" ] && [ -x "$_gcloud_py" ]; then
+            export PATH="$(dirname "$_gcloud_py"):$PATH"
+        fi
+    fi
+fi
+
 if ! command -v terraform >/dev/null 2>&1; then
     tf_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
     tf_arch="$(uname -m)"
@@ -34,8 +49,18 @@ if ! command -v terraform >/dev/null 2>&1; then
         echo "ERROR: downloading terraform failed." >&2
         return 1
     fi
-    if ! python3 -m zipfile -e "${TMPDIR:-/tmp}/terraform.zip" "$HOME/.local/bin/"; then
-        echo "ERROR: extracting terraform failed." >&2
+    if command -v unzip >/dev/null 2>&1; then
+        if ! unzip -q -o "${TMPDIR:-/tmp}/terraform.zip" -d "$HOME/.local/bin/"; then
+            echo "ERROR: extracting terraform failed." >&2
+            return 1
+        fi
+    elif command -v python3 >/dev/null 2>&1; then
+        if ! python3 -m zipfile -e "${TMPDIR:-/tmp}/terraform.zip" "$HOME/.local/bin/"; then
+            echo "ERROR: extracting terraform failed." >&2
+            return 1
+        fi
+    else
+        echo "ERROR: extracting terraform failed (neither unzip nor python3 found)." >&2
         return 1
     fi
     chmod +x "$HOME/.local/bin/terraform"
